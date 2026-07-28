@@ -349,6 +349,7 @@
   const DEFAULT_SYNC_URL = 'https://script.google.com/macros/s/AKfycbwieiIn14uwHYRoxO9wemckpwsqcMR3U_gjdFOzK92A6ZC8yIlTvtqMm5bCkuMzHwLk/exec';
   let syncUrl = localStorage.getItem(SYNC_URL_KEY) || DEFAULT_SYNC_URL;
   let syncTimer = null;
+  let pendingPush = false; // true entre une modification et l'envoi effectif au Sheet
 
   function setSyncStatus(state){
     const el = document.getElementById('syncStatus');
@@ -366,6 +367,7 @@
 
   function scheduleRemoteSync(){
     if(!syncUrl){ setSyncStatus('none'); return; }
+    pendingPush = true;
     setSyncStatus('pending');
     clearTimeout(syncTimer);
     syncTimer = setTimeout(pushToRemote, 700);
@@ -378,8 +380,14 @@
     setSyncStatus('syncing');
     return fetch(syncUrl, { method:'POST', body: JSON.stringify(data) })
       .then(r=>r.json())
-      .then(()=>{ setSyncStatus('ok'); })
-      .catch(()=>{ setSyncStatus('error'); });
+      .then(()=>{ pendingPush = false; setSyncStatus('ok'); })
+      .catch(()=>{
+        setSyncStatus('error');
+        // reste "en attente" et réessaie dans 5s tant que l'envoi échoue,
+        // pour ne jamais perdre silencieusement une modification.
+        clearTimeout(syncTimer);
+        syncTimer = setTimeout(pushToRemote, 5000);
+      });
   }
 
   function adoptRemote(remote){
@@ -405,6 +413,14 @@
       .then(r=>r.json())
       .then(remote=>{ adoptRemote(remote); setSyncStatus('ok'); })
       .catch(()=>{ setSyncStatus('error'); });
+  }
+
+  // Pull "silencieux" utilisé par le rafraîchissement automatique (toutes les
+  // 5s et au retour sur l'onglet) : ne fait rien s'il y a une modification
+  // locale pas encore envoyée, pour ne jamais écraser une saisie en cours.
+  function autoPull(){
+    if(!syncUrl || pendingPush) return;
+    pullFromRemote();
   }
 
   // Utilisé quand on connecte une nouvelle URL : si le Sheet est déjà rempli
@@ -750,7 +766,10 @@
 
     document.getElementById('ttTotal').textContent = sumDays(currentYear, 'teletravail');
 
-    save();
+    // Persistance locale uniquement (mémorise l'année affichée) : ne déclenche
+    // jamais d'envoi vers le Sheet, contrairement à save(). L'envoi ne doit se
+    // produire que suite à une vraie modification (statut, note, paramètre).
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
   }
 
   function renderSettings(){
@@ -958,15 +977,18 @@
   });
 
   document.addEventListener('visibilitychange', ()=>{
-    if(document.visibilityState === 'visible' && syncUrl){
-      pullFromRemote();
+    if(document.visibilityState === 'visible'){
+      autoPull();
     }
   });
+
+  // Rafraîchissement automatique depuis le Sheet toutes les ~5 secondes.
+  setInterval(autoPull, 5000);
 
   renderSettings();
   renderYear();
   setSyncStatus(syncUrl ? 'ok' : 'none');
-  if(syncUrl){ smartSync(); }
+  if(syncUrl){ autoPull(); }
 })();
 </script>
 </body>
