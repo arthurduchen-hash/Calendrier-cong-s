@@ -1042,6 +1042,37 @@
     if(!syncUrl){ alert('Renseigne d\'abord une URL de script.'); return; }
     pushToRemote().then(()=>alert('Données envoyées vers le Sheet.'));
   });
+  // Navigation par glissement (souris) / balayage (tactile) : swipe vers la
+  // gauche = période suivante, vers la droite = période précédente. Utilise
+  // les Pointer Events (couvrent souris, doigt et stylet en un seul code).
+  (function setupSwipeNav(){
+    const zone = document.getElementById('calendarGrid');
+    let startX = null, startY = null, startTarget = null;
+    const SWIPE_THRESHOLD = 60; // px minimum pour compter comme un balayage volontaire
+
+    zone.addEventListener('pointerdown', (e)=>{
+      startX = e.clientX;
+      startY = e.clientY;
+      startTarget = e.target;
+    });
+
+    zone.addEventListener('pointerup', (e)=>{
+      if(startX === null) return;
+      // Ne pas interpréter comme un balayage si le geste commence dans une
+      // note (pour laisser la sélection de texte fonctionner normalement).
+      const startedInNote = startTarget && startTarget.closest && startTarget.closest('.note');
+      const dx = e.clientX - startX;
+      const dy = e.clientY - startY;
+      startX = null; startY = null; startTarget = null;
+      if(startedInNote) return;
+      if(Math.abs(dx) > SWIPE_THRESHOLD && Math.abs(dx) > Math.abs(dy) * 1.5){
+        navigatePeriod(dx < 0 ? 1 : -1);
+      }
+    });
+
+    zone.addEventListener('pointercancel', ()=>{ startX = null; startY = null; startTarget = null; });
+  })();
+
   // Rafraîchissement automatique depuis le Sheet : à l'ouverture (plus bas)
   // puis toutes les ~10 minutes. Uniquement ces deux moments, pas davantage.
   setInterval(autoPull, 10 * 60 * 1000);
