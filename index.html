@@ -41,7 +41,6 @@
   #toggleSettings:hover, #exportBtn:hover, #importBtn:hover { background:#eee; }
   #resetData { color:#c0392b; border-color:#e6b3ac; }
   #resetData:hover { background:#fdecea; }
-
   .summary { display:flex; gap:16px; flex-wrap:wrap; margin-bottom:16px; }
   .card {
     background:var(--card-bg); border:1px solid var(--border); border-radius:10px; padding:12px 18px;
@@ -58,12 +57,10 @@
   .legend { display:flex; gap:16px; flex-wrap:wrap; font-size:12px; color:#666; margin-bottom:16px; align-items:center; }
   .legend .item { display:flex; align-items:center; gap:6px; }
   .legend .box { width:14px; height:14px; border-radius:3px; border:1px solid rgba(0,0,0,0.1); }
-
   #settingsPanel {
     background:var(--card-bg); border:1px solid var(--border); border-radius:10px; padding:18px 20px; margin-bottom:20px;
   }
   #settingsPanel.hidden { display:none; }
-
   .brush-bar {
     display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:16px;
     background:var(--card-bg); border:1px solid var(--border); border-radius:10px; padding:10px 14px;
@@ -99,7 +96,6 @@
   .sync-status.ok { background:#d1e7dd; color:#0f5132; }
   .sync-status.error { background:#f8d7da; color:#842029; }
   .hint { font-size:12px; color:#888; margin:-4px 0 12px; }
-
   table#holidayTable { width:100%; border-collapse:collapse; font-size:13px; margin-bottom:10px; }
   table#holidayTable th, table#holidayTable td { border-bottom:1px solid var(--border); padding:6px 6px; text-align:left; }
   table#holidayTable input[type=text] { width:100%; padding:4px 6px; border:1px solid var(--border); border-radius:5px; }
@@ -108,13 +104,11 @@
   .del-btn { background:none; border:none; color:#c0392b; cursor:pointer; font-size:15px; }
   #addHoliday { margin-top:4px; border:1px dashed #aaa; background:#fff; padding:6px 12px; border-radius:6px; cursor:pointer; font-size:13px; }
   .settings-actions { display:flex; gap:10px; margin-top:16px; flex-wrap:wrap; }
-
   .months-grid {
     display:grid; grid-template-columns: repeat(3, 1fr); gap:16px;
   }
   @media (max-width:1000px){ .months-grid { grid-template-columns: repeat(2,1fr); } }
   @media (max-width:640px){ .months-grid { grid-template-columns: 1fr; } body{padding:10px;} }
-
   .month-block { background:var(--card-bg); border:1px solid var(--border); border-radius:10px; padding:10px; }
   .month-title { font-weight:600; font-size:14px; text-align:center; margin-bottom:8px; text-transform:capitalize; }
   .week-header { display:grid; grid-template-columns: repeat(7,1fr); font-size:10px; color:#999; margin-bottom:4px; }
@@ -135,10 +129,23 @@
   .day.rtt-pm { background:linear-gradient(to bottom, #fff 50%, var(--orange-rtt) 50%); }
   .day.teletravail-am { background:linear-gradient(to bottom, var(--vert-tt) 50%, #fff 50%); }
   .day.teletravail-pm { background:linear-gradient(to bottom, #fff 50%, var(--vert-tt) 50%); }
+  .day.flagged::after {
+    content:'';
+    position:absolute;
+    inset:0;
+    background: rgba(229, 57, 83, 0.22);
+    pointer-events:none;
+    border-radius:5px;
+  }
+  .flag-dot {
+    position:absolute; top:2px; right:3px; width:8px; height:8px; border-radius:50%;
+    background:rgba(0,0,0,0.10); cursor:pointer; z-index:2;
+  }
+  .flag-dot:hover { background:rgba(229,57,83,0.6); }
+  .flag-dot.active { background:#e5395a; box-shadow:0 0 0 2px rgba(229,57,83,0.28); }
   .daynum {
     font-size:11px; font-weight:600; padding:2px 4px; cursor:pointer; user-select:none;
   }
-
   .status-menu {
     position:fixed; z-index:1000; background:#fff; border:1px solid var(--border); border-radius:8px;
     box-shadow:0 6px 18px rgba(0,0,0,0.15); padding:4px; min-width:190px; font-size:13px;
@@ -160,7 +167,6 @@
   .day:hover .note:empty:before { content:"note…"; color:#aaa; }
   .day.today { box-shadow: inset 0 0 0 2px #e53935; }
   .day.today .daynum { color:#e53935; font-weight:800; }
-
   footer { margin-top:20px; font-size:11px; color:#999; text-align:center; }
 </style>
 </head>
@@ -175,7 +181,6 @@
     </div>
     <button id="toggleSettings">⚙ Paramètres</button>
   </header>
-
   <div class="brush-bar">
     <span class="brush-label">Type à poser :</span>
     <button class="brush-btn conge active" data-brush="conge">Congé</button>
@@ -187,7 +192,6 @@
       <button id="cancelPending">Annuler</button>
     </span>
   </div>
-
   <div class="summary">
     <div class="card conge-card">
       <div class="card-title"><span class="swatch"></span> Congés payés</div>
@@ -215,16 +219,15 @@
       </div>
     </div>
   </div>
-
   <div class="legend">
     <div class="item"><span class="box" style="background:var(--bleu-conge)"></span> Congé posé</div>
     <div class="item"><span class="box" style="background:var(--orange-rtt)"></span> RTT posé</div>
     <div class="item"><span class="box" style="background:var(--vert-tt)"></span> Télétravail</div>
     <div class="item"><span class="box" style="background:var(--gris-off)"></span> Week-end / jour férié</div>
     <div class="item"><span class="box" style="background:#fff;border:1px solid #ccc"></span> Jour travaillé</div>
-    <div class="item" style="color:#999">Choisissez le type ci-dessus, cliquez un 1er jour puis un 2nd jour pour poser une période, re-cliquez le même jour (demi-journée pour les congés uniquement)</div>
+    <div class="item"><span class="box" style="background:rgba(229,57,83,0.35)"></span> Jour flagué (événement)</div>
+    <div class="item" style="color:#999">Choisissez le type ci-dessus, cliquez un 1er jour puis un 2nd jour pour poser une période, re-cliquez le même jour (demi-journée pour les congés uniquement). Petit point en haut à droite de chaque case = flaguer un événement.</div>
   </div>
-
   <div id="settingsPanel" class="hidden">
     <h3>Paramètres généraux</h3>
     <div class="settings-row">
@@ -245,14 +248,12 @@
       <label for="startYear">Année de départ (pas de report avant)</label>
       <input type="number" id="startYear" min="2000" max="2100">
     </div>
-
     <h3>Jours fériés (paramétrables)</h3>
     <table id="holidayTable">
       <thead><tr><th>Libellé</th><th>Type</th><th>Détail</th><th></th></tr></thead>
       <tbody id="holidayTableBody"></tbody>
     </table>
     <button id="addHoliday">+ Ajouter un jour férié</button>
-
     <h3>Synchronisation Google Sheet</h3>
     <div class="settings-row">
       <label for="syncUrlInput">URL du script (Apps Script Web App)</label>
@@ -265,7 +266,6 @@
       <span id="syncStatus" class="sync-status none"></span>
     </div>
     <div class="hint">Colle ici l'URL obtenue après avoir déployé le script Google Apps Script fourni (Code.gs). Utilise la même URL sur tous tes appareils pour qu'ils partagent les mêmes données. Sans URL, le calendrier fonctionne comme avant, uniquement en local.</div>
-
     <div class="settings-actions">
       <button id="exportBtn">⬇ Exporter mes données (JSON)</button>
       <button id="importBtn">⬆ Importer un fichier JSON</button>
@@ -273,20 +273,15 @@
       <button id="resetData">🗑 Réinitialiser toutes les données</button>
     </div>
   </div>
-
   <div id="calendarGrid" class="months-grid"></div>
-
   <footer>Les données sont enregistrées automatiquement dans le stockage local de ce navigateur. Si une synchronisation Google Sheet est configurée (Paramètres), elles sont aussi envoyées vers le Sheet pour être accessibles depuis tes autres appareils. Pensez à exporter régulièrement une sauvegarde JSON.</footer>
 </div>
-
 <div id="statusMenu" class="status-menu hidden"></div>
-
 <script>
 (function(){
   const STORAGE_KEY = 'congesCalendarData_v1';
   const MOIS = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
   const JOURS = ['Lun','Mar','Mer','Jeu','Ven','Sam','Dim'];
-
   function defaultHolidayRules(){
     return [
       {type:'fixed', month:1, day:1, label:"Jour de l'an"},
@@ -302,7 +297,6 @@
       {type:'fixed', month:12, day:25, label:"Noël"}
     ];
   }
-
   function defaultData(){
     const y = new Date().getFullYear();
     return {
@@ -315,10 +309,9 @@
         holidayRules: defaultHolidayRules()
       },
       lastViewedYear: y,
-      days: {} // "YYYY-MM-DD": {status:'conge'|'rtt'|'', note:'...'}
+      days: {} // "YYYY-MM-DD": {status:'conge'|'rtt'|'', note:'...', flag:true|false}
     };
   }
-
   function load(){
     try{
       const raw = localStorage.getItem(STORAGE_KEY);
@@ -335,22 +328,18 @@
       return defaultData();
     }
   }
-
   function save(){
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
     scheduleRemoteSync();
   }
-
   let data = load();
   let currentYear = data.lastViewedYear;
-
   // ---- Synchronisation Google Sheet (optionnelle) ----
   const SYNC_URL_KEY = 'congesCalendarSyncUrl_v1';
   const DEFAULT_SYNC_URL = 'https://script.google.com/macros/s/AKfycbwieiIn14uwHYRoxO9wemckpwsqcMR3U_gjdFOzK92A6ZC8yIlTvtqMm5bCkuMzHwLk/exec';
   let syncUrl = localStorage.getItem(SYNC_URL_KEY) || DEFAULT_SYNC_URL;
   let syncTimer = null;
   let pendingPush = false; // true entre une modification et l'envoi effectif au Sheet
-
   function setSyncStatus(state){
     const el = document.getElementById('syncStatus');
     if(!el) return;
@@ -364,7 +353,6 @@
     el.textContent = map[state] || '';
     el.className = 'sync-status ' + state;
   }
-
   function scheduleRemoteSync(){
     if(!syncUrl){ setSyncStatus('none'); return; }
     pendingPush = true;
@@ -372,7 +360,6 @@
     clearTimeout(syncTimer);
     syncTimer = setTimeout(pushToRemote, 700);
   }
-
   // Envoie l'intégralité des données locales vers le Sheet (POST en text/plain
   // pour éviter un préflight CORS bloqué par Apps Script).
   function pushToRemote(){
@@ -389,7 +376,6 @@
         syncTimer = setTimeout(pushToRemote, 5000);
       });
   }
-
   function adoptRemote(remote){
     const merged = defaultData();
     merged.settings = Object.assign(merged.settings, remote.settings||{});
@@ -404,7 +390,6 @@
     renderSettings();
     renderYear();
   }
-
   // Recharge inconditionnellement depuis le Sheet (le Sheet fait autorité).
   function pullFromRemote(){
     if(!syncUrl) return Promise.resolve();
@@ -414,7 +399,6 @@
       .then(remote=>{ adoptRemote(remote); setSyncStatus('ok'); })
       .catch(()=>{ setSyncStatus('error'); });
   }
-
   // Pull "silencieux" utilisé par le rafraîchissement automatique (toutes les
   // 5s et au retour sur l'onglet) : ne fait rien s'il y a une modification
   // locale pas encore envoyée, pour ne jamais écraser une saisie en cours.
@@ -422,7 +406,6 @@
     if(!syncUrl || pendingPush) return;
     pullFromRemote();
   }
-
   // Utilisé quand on connecte une nouvelle URL : si le Sheet est déjà rempli
   // (autre appareil), on l'adopte ; s'il est vide, on l'alimente avec les
   // données locales existantes plutôt que de les écraser.
@@ -442,10 +425,8 @@
       })
       .catch(()=>{ setSyncStatus('error'); });
   }
-
   function pad(n){ return String(n).padStart(2,'0'); }
   function dateStr(y,m,d){ return `${y}-${pad(m+1)}-${pad(d)}`; }
-
   // Meeus/Jones/Butcher Easter algorithm
   function easterDate(year){
     const a = year % 19;
@@ -464,7 +445,6 @@
     const day = ((h+l-7*m+114) % 31) + 1;
     return new Date(year, month-1, day);
   }
-
   function holidaysForYear(year){
     const map = {};
     (data.settings.holidayRules||[]).forEach(rule=>{
@@ -480,7 +460,6 @@
     });
     return map;
   }
-
   // type = 'conge' or 'rtt'. Counts full days as 1, half-days (_am/_pm) as 0.5.
   function sumDays(year, type){
     let total = 0;
@@ -492,12 +471,10 @@
     });
     return total;
   }
-
   function computeCongeBalance(year){
     const startYear = Number(data.settings.startYear) || year;
     const congesParAn = Number(data.settings.congesParAn) || 0;
     const cap = data.settings.capReportEnabled ? Number(data.settings.capReport)||0 : null;
-
     if(year < startYear){
       const pris = sumDays(year, 'conge');
       return { disponible: congesParAn, pris, report: 0, restant: congesParAn - pris };
@@ -515,29 +492,31 @@
     }
     return result;
   }
-
   function computeRttBalance(year){
     const rttParAn = Number(data.settings.rttParAn) || 0;
     const pris = sumDays(year, 'rtt');
     return { disponible: rttParAn, pris, restant: rttParAn - pris };
   }
-
   let currentBrush = 'conge'; // 'conge' | 'rtt' | '' (effacer)
   let pendingStart = null; // dateStr of the first click, awaiting a second click
-
   function setStatus(ds, value){
     if(!data.days[ds]) data.days[ds] = {};
     data.days[ds].status = value;
-    if(!data.days[ds].status && !data.days[ds].note) delete data.days[ds];
+    if(!data.days[ds].status && !data.days[ds].note && !data.days[ds].flag) delete data.days[ds];
     save();
   }
-
+  function toggleFlag(ds){
+    if(!data.days[ds]) data.days[ds] = {};
+    data.days[ds].flag = !data.days[ds].flag;
+    if(!data.days[ds].status && !data.days[ds].note && !data.days[ds].flag) delete data.days[ds];
+    save();
+    renderYear();
+  }
   function closeStatusMenu(){
     const menu = document.getElementById('statusMenu');
     menu.classList.add('hidden');
     menu.innerHTML = '';
   }
-
   // Small popup shown when re-clicking the same (pending) day: lets you pick
   // journée entière / matin / après-midi (or clear) for that single day.
   function openHalfDayMenu(ds, rect){
@@ -582,14 +561,12 @@
     menu.style.left = left + 'px';
     menu.style.top = top + 'px';
   }
-
   document.addEventListener('click', (e)=>{
     const menu = document.getElementById('statusMenu');
     if(!menu.classList.contains('hidden') && !menu.contains(e.target)){
       closeStatusMenu();
     }
   });
-
   // Applies currentBrush (or clears, if '') as a full-day status across every
   // working day between dsA and dsB inclusive (order-independent).
   function applyRange(dsA, dsB, brush){
@@ -611,7 +588,6 @@
       d.setDate(d.getDate() + 1);
     }
   }
-
   function updatePendingHint(){
     const hint = document.getElementById('pendingHint');
     if(pendingStart){
@@ -621,7 +597,6 @@
       hint.classList.add('hidden');
     }
   }
-
   function handleDayClick(ds, numEl){
     if(pendingStart === null){
       pendingStart = ds;
@@ -649,15 +624,13 @@
       renderYear();
     }
   }
-
   function updateNote(ds, text){
     text = text.trim();
     if(!data.days[ds]) data.days[ds] = {};
     data.days[ds].note = text;
-    if(!data.days[ds].status && !data.days[ds].note) delete data.days[ds];
+    if(!data.days[ds].status && !data.days[ds].note && !data.days[ds].flag) delete data.days[ds];
     save();
   }
-
   function renderMonth(year, month, holidays){
     const wrap = document.createElement('div');
     wrap.className = 'month-block';
@@ -665,25 +638,20 @@
     title.className = 'month-title';
     title.textContent = MOIS[month] + ' ' + year;
     wrap.appendChild(title);
-
     const wh = document.createElement('div');
     wh.className = 'week-header';
     JOURS.forEach(j=>{ const c = document.createElement('div'); c.textContent = j; wh.appendChild(c); });
     wrap.appendChild(wh);
-
     const grid = document.createElement('div');
     grid.className = 'days-grid';
-
     const firstDow = (new Date(year, month, 1).getDay() + 6) % 7; // Monday=0
     const daysInMonth = new Date(year, month+1, 0).getDate();
     const todayStr = dateStr(new Date().getFullYear(), new Date().getMonth(), new Date().getDate());
-
     for(let i=0;i<firstDow;i++){
       const e = document.createElement('div');
       e.className = 'day empty';
       grid.appendChild(e);
     }
-
     for(let d=1; d<=daysInMonth; d++){
       const ds = dateStr(year, month, d);
       const dow = new Date(year, month, d).getDay();
@@ -691,12 +659,12 @@
       const holidayLabel = holidays[ds];
       const dayData = data.days[ds] || {};
       const status = dayData.status || '';
-
       const cell = document.createElement('div');
       cell.className = 'day';
       if(ds === todayStr) cell.classList.add('today');
       if(ds === pendingStart) cell.classList.add('pending');
       if(isWeekend || holidayLabel) cell.classList.add('off');
+      if(dayData.flag) cell.classList.add('flagged');
       const statusClassMap = {
         conge:'conge', conge_am:'conge-am', conge_pm:'conge-pm',
         rtt:'rtt', rtt_am:'rtt-am', rtt_pm:'rtt-pm',
@@ -708,9 +676,11 @@
         rtt:'RTT (journée)', rtt_am:'RTT (matin)', rtt_pm:'RTT (après-midi)',
         teletravail:'Télétravail (journée)', teletravail_am:'Télétravail (matin)', teletravail_pm:'Télétravail (après-midi)'
       };
-      if(holidayLabel) cell.title = holidayLabel;
-      else if(statusLabels[status]) cell.title = statusLabels[status];
-
+      const titleParts = [];
+      if(holidayLabel) titleParts.push(holidayLabel);
+      if(statusLabels[status]) titleParts.push(statusLabels[status]);
+      if(dayData.flag) titleParts.push('Événement flagué');
+      if(titleParts.length) cell.title = titleParts.join(' · ');
       const num = document.createElement('div');
       num.className = 'daynum';
       num.textContent = d;
@@ -718,14 +688,17 @@
         num.addEventListener('click', (e)=>{ e.stopPropagation(); handleDayClick(ds, num); });
       }
       cell.appendChild(num);
-
+      const flagDot = document.createElement('div');
+      flagDot.className = 'flag-dot' + (dayData.flag ? ' active' : '');
+      flagDot.title = dayData.flag ? 'Retirer le flag événement' : 'Flaguer un événement ce jour';
+      flagDot.addEventListener('click', (e)=>{ e.stopPropagation(); toggleFlag(ds); });
+      cell.appendChild(flagDot);
       if(holidayLabel){
         const hl = document.createElement('div');
         hl.className = 'holiday-label';
         hl.textContent = holidayLabel;
         cell.appendChild(hl);
       }
-
       const note = document.createElement('div');
       note.className = 'note';
       note.contentEditable = 'true';
@@ -733,45 +706,36 @@
       note.addEventListener('blur', ()=>updateNote(ds, note.textContent));
       note.addEventListener('keydown', (e)=>{ if(e.key === 'Enter'){ e.preventDefault(); note.blur(); } });
       cell.appendChild(note);
-
       grid.appendChild(cell);
     }
-
     wrap.appendChild(grid);
     return wrap;
   }
-
   function renderYear(){
     currentYear = Number(currentYear);
     data.lastViewedYear = currentYear;
     document.getElementById('yearLabel').textContent = currentYear;
     const holidays = holidaysForYear(currentYear);
-
     const gridWrap = document.getElementById('calendarGrid');
     gridWrap.innerHTML = '';
     for(let m=0;m<12;m++){
       gridWrap.appendChild(renderMonth(currentYear, m, holidays));
     }
-
     const cb = computeCongeBalance(currentYear);
     document.getElementById('congeDispo').textContent = cb.disponible;
     document.getElementById('congePris').textContent = cb.pris;
     document.getElementById('congeRestant').textContent = cb.restant;
     document.getElementById('congeReport').textContent = cb.report;
-
     const rb = computeRttBalance(currentYear);
     document.getElementById('rttDispo').textContent = rb.disponible;
     document.getElementById('rttPris').textContent = rb.pris;
     document.getElementById('rttRestant').textContent = rb.restant;
-
     document.getElementById('ttTotal').textContent = sumDays(currentYear, 'teletravail');
-
     // Persistance locale uniquement (mémorise l'année affichée) : ne déclenche
     // jamais d'envoi vers le Sheet, contrairement à save(). L'envoi ne doit se
-    // produire que suite à une vraie modification (statut, note, paramètre).
+    // produire que suite à une vraie modification (statut, note, paramètre, flag).
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
   }
-
   function renderSettings(){
     document.getElementById('congesParAn').value = data.settings.congesParAn;
     document.getElementById('rttParAn').value = data.settings.rttParAn;
@@ -780,12 +744,10 @@
     document.getElementById('capReport').disabled = !data.settings.capReportEnabled;
     document.getElementById('startYear').value = data.settings.startYear;
     document.getElementById('syncUrlInput').value = syncUrl;
-
     const tbody = document.getElementById('holidayTableBody');
     tbody.innerHTML = '';
     (data.settings.holidayRules||[]).forEach((rule, idx)=>{
       const tr = document.createElement('tr');
-
       const tdLabel = document.createElement('td');
       const inLabel = document.createElement('input');
       inLabel.type = 'text';
@@ -793,7 +755,6 @@
       inLabel.addEventListener('input', ()=>{ rule.label = inLabel.value; save(); renderYear(); });
       tdLabel.appendChild(inLabel);
       tr.appendChild(tdLabel);
-
       const tdType = document.createElement('td');
       const sel = document.createElement('select');
       const opt1 = document.createElement('option'); opt1.value='fixed'; opt1.textContent='Date fixe';
@@ -808,7 +769,6 @@
       });
       tdType.appendChild(sel);
       tr.appendChild(tdType);
-
       const tdDetail = document.createElement('td');
       if(rule.type === 'fixed'){
         const inMonth = document.createElement('input');
@@ -831,7 +791,6 @@
         tdDetail.appendChild(document.createTextNode(' j après Pâques'));
       }
       tr.appendChild(tdDetail);
-
       const tdDel = document.createElement('td');
       const delBtn = document.createElement('button');
       delBtn.className = 'del-btn';
@@ -842,11 +801,9 @@
       });
       tdDel.appendChild(delBtn);
       tr.appendChild(tdDel);
-
       tbody.appendChild(tr);
     });
   }
-
   // wire settings inputs
   document.getElementById('congesParAn').addEventListener('input', (e)=>{
     data.settings.congesParAn = Number(e.target.value)||0; save(); renderYear();
@@ -869,11 +826,9 @@
     data.settings.holidayRules.push({type:'fixed', month:1, day:1, label:'Nouveau jour férié'});
     save(); renderSettings(); renderYear();
   });
-
   document.getElementById('toggleSettings').addEventListener('click', ()=>{
     document.getElementById('settingsPanel').classList.toggle('hidden');
   });
-
   document.querySelectorAll('.brush-btn').forEach(btn=>{
     btn.addEventListener('click', ()=>{
       currentBrush = btn.dataset.brush;
@@ -887,16 +842,13 @@
       }
     });
   });
-
   document.getElementById('cancelPending').addEventListener('click', ()=>{
     pendingStart = null;
     updatePendingHint();
     renderYear();
   });
-
   document.getElementById('prevYear').addEventListener('click', ()=>{ currentYear--; renderYear(); });
   document.getElementById('nextYear').addEventListener('click', ()=>{ currentYear++; renderYear(); });
-
   document.getElementById('resetData').addEventListener('click', ()=>{
     if(confirm('Réinitialiser toutes les données (congés posés, notes, paramètres) ? Cette action est irréversible.')){
       localStorage.removeItem(STORAGE_KEY);
@@ -906,7 +858,6 @@
       renderYear();
     }
   });
-
   document.getElementById('exportBtn').addEventListener('click', ()=>{
     const blob = new Blob([JSON.stringify(data, null, 2)], {type:'application/json'});
     const url = URL.createObjectURL(blob);
@@ -916,7 +867,6 @@
     a.click();
     URL.revokeObjectURL(url);
   });
-
   document.getElementById('importBtn').addEventListener('click', ()=>{
     document.getElementById('importFile').click();
   });
@@ -944,7 +894,6 @@
     reader.readAsText(file);
     e.target.value = '';
   });
-
   document.getElementById('syncUrlInput').addEventListener('change', (e)=>{
     syncUrl = e.target.value.trim();
     localStorage.setItem(SYNC_URL_KEY, syncUrl);
@@ -954,7 +903,6 @@
       setSyncStatus('none');
     }
   });
-
   document.getElementById('testSync').addEventListener('click', ()=>{
     if(!syncUrl){ alert('Renseigne d\'abord une URL de script.'); return; }
     setSyncStatus('syncing');
@@ -963,28 +911,23 @@
       .then(()=>{ setSyncStatus('ok'); alert('Connexion réussie !'); })
       .catch(err=>{ setSyncStatus('error'); alert('Échec de connexion : ' + err.message); });
   });
-
   document.getElementById('pullNow').addEventListener('click', ()=>{
     if(!syncUrl){ alert('Renseigne d\'abord une URL de script.'); return; }
     if(confirm('Recharger depuis le Sheet va remplacer les données affichées ici par celles du Sheet. Continuer ?')){
       pullFromRemote();
     }
   });
-
   document.getElementById('pushNow').addEventListener('click', ()=>{
     if(!syncUrl){ alert('Renseigne d\'abord une URL de script.'); return; }
     pushToRemote().then(()=>alert('Données envoyées vers le Sheet.'));
   });
-
   document.addEventListener('visibilitychange', ()=>{
     if(document.visibilityState === 'visible'){
       autoPull();
     }
   });
-
   // Rafraîchissement automatique depuis le Sheet toutes les ~5 secondes.
   setInterval(autoPull, 5000);
-
   renderSettings();
   renderYear();
   setSyncStatus(syncUrl ? 'ok' : 'none');
