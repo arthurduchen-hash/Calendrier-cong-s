@@ -30,6 +30,13 @@
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   }
   #app { max-width:1400px; margin:0 auto; }
+  /* Bandeau figé (en-tête + sélecteur congé/RTT/télétravail) : reste visible
+     en haut de l'écran quel que soit le défilement, comme des volets figés. */
+  #stickyTop {
+    position:sticky; top:0; z-index:50; background:var(--bg);
+    margin:-24px -24px 16px; padding:24px 24px 12px;
+    box-shadow:0 4px 6px -4px rgba(0,0,0,0.08);
+  }
   header {
     display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px;
     margin-bottom:16px;
@@ -46,11 +53,11 @@
     font-size:13px; font-weight:600; color:#666;
   }
   .view-btn.active { background:#fff; color:var(--text); box-shadow:0 1px 3px rgba(0,0,0,0.15); }
-  #toggleSettings, #exportBtn, #importBtn, #resetData, #todayBtn, #addEventBtn, #testSync, #pullNow, #pushNow {
+  #toggleSettings, #exportBtn, #importBtn, #resetData, #todayBtn, #testSync, #pullNow, #pushNow, #toggleRecap {
     border:1px solid var(--border); background:#fff; padding:8px 14px; border-radius:10px; cursor:pointer; font-size:14px;
   }
-  #toggleSettings:hover, #exportBtn:hover, #importBtn:hover, #todayBtn:hover, #addEventBtn:hover, #testSync:hover, #pullNow:hover, #pushNow:hover { background:#eee; }
-  #addEventBtn.hidden { display:none; }
+  #toggleSettings:hover, #exportBtn:hover, #importBtn:hover, #todayBtn:hover, #testSync:hover, #pullNow:hover, #pushNow:hover, #toggleRecap:hover { background:#eee; }
+  #toggleRecap.active { background:var(--bleu-conge); border-color:var(--bleu-conge-dark); }
   #resetData { color:#c0392b; border-color:#e6b3ac; }
   #resetData:hover { background:#fdecea; }
   .summary { display:flex; gap:16px; flex-wrap:wrap; margin-bottom:16px; }
@@ -73,11 +80,11 @@
     background:var(--card-bg); border:1px solid var(--border); border-radius:10px; padding:18px 20px; margin-bottom:20px;
   }
   #settingsPanel.hidden { display:none; }
+  #recapPanel.hidden { display:none; }
   .brush-bar {
     display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:16px;
     background:var(--card-bg); border:1px solid var(--border); border-radius:10px; padding:10px 14px;
   }
-  .brush-label { font-size:13px; font-weight:600; color:#555; }
   .brush-btn {
     border:2px solid var(--border); background:#fff; padding:6px 16px; border-radius:20px; cursor:pointer;
     font-size:13px; font-weight:600; color:#555;
@@ -127,6 +134,10 @@
   .month-title { font-weight:600; font-size:14px; text-align:center; margin-bottom:8px; text-transform:capitalize; }
   .month-block.large .month-title { font-size:18px; margin-bottom:14px; }
   .week-header { display:grid; grid-template-columns: repeat(7,1fr); font-size:10px; color:#999; margin-bottom:4px; }
+  /* Copie de la ligne des jours de la semaine posée dans le bandeau figé du
+     haut (#stickyExtra, vue Mois uniquement) : pas de titre, un peu moins de
+     marge, pour s'intégrer proprement sous la barre congé/RTT/télétravail. */
+  .month-block.sticky-week-header { margin-bottom:0; padding-bottom:6px; }
   .week-header div { text-align:center; }
   .days-grid { display:grid; grid-template-columns: repeat(7,1fr); gap:3px; }
   .day {
@@ -187,6 +198,7 @@
     overflow:hidden; text-overflow:ellipsis; white-space:nowrap; cursor:pointer; z-index:2;
     box-shadow:0 1px 3px rgba(0,0,0,0.12);
   }
+  .day-allday-bar.small { height:12px; line-height:12px; font-size:8px; padding:0 4px; border-radius:4px; }
   .day-allday-bar:hover { filter:brightness(0.95); }
 
   /* Vues Jour / Semaine : pas de grille façon tableur — des rectangles à
@@ -208,14 +220,19 @@
     display:flex; flex-direction:column; gap:3px;
   }
   .timegrid-allday-cell .event-chip { font-size:11px; padding:3px 7px; border-radius:6px; }
-  .timegrid-body { max-height:600px; overflow-y:auto; overflow-x:hidden; position:relative; padding:1px; }
+  /* Pas de défilement interne ici : la grille horaire fait sa hauteur
+     complète et c'est la page elle-même qui défile (une seule barre de
+     défilement, celle du navigateur) — sinon la barre de défilement interne
+     rognait la largeur disponible et désalignait les colonnes par rapport
+     au bandeau "Journée" au-dessus, qui n'a pas ce problème. */
+  .timegrid-body { position:relative; padding:1px; }
   .timegrid-inner { display:grid; position:relative; gap:6px; }
   .timegrid-hourcol {}
   .timegrid-hourlabel {
     font-size:10px; color:#bbb; text-align:right; padding-right:8px; box-sizing:border-box;
   }
   .timegrid-col {
-    position:relative; box-sizing:border-box; background:var(--card-bg); border-radius:12px; overflow:hidden;
+    position:relative; box-sizing:border-box; background:var(--card-bg); border-radius:12px;
     box-shadow: inset 0 0 0 1px #eee;
   }
   .timegrid-hourline {
@@ -268,68 +285,72 @@
 </head>
 <body>
 <div id="app">
-  <header>
-    <h1>📅 Calendrier</h1>
-    <div class="year-nav">
-      <button id="prevPeriod">‹</button>
-      <span id="periodLabel">Juillet 2026</span>
-      <button id="nextPeriod">›</button>
+  <div id="stickyTop">
+    <header>
+      <h1>📅 Calendrier</h1>
+      <div class="year-nav">
+        <button id="prevPeriod">‹</button>
+        <span id="periodLabel">Juillet 2026</span>
+        <button id="nextPeriod">›</button>
+      </div>
+      <div class="view-switch">
+        <button class="view-btn" data-view="day">Jour</button>
+        <button class="view-btn" data-view="week">Semaine</button>
+        <button class="view-btn active" data-view="month">Mois</button>
+        <button class="view-btn" data-view="year">Année</button>
+      </div>
+      <button id="todayBtn">Aujourd'hui</button>
+      <button id="toggleRecap" title="Récap">📊</button>
+      <button id="toggleSettings" title="Paramètres">⚙</button>
+    </header>
+    <div class="brush-bar">
+      <button class="brush-btn conge active" data-brush="conge">Congé</button>
+      <button class="brush-btn rtt" data-brush="rtt">RTT</button>
+      <button class="brush-btn teletravail" data-brush="teletravail">Télétravail</button>
+      <button class="brush-btn erase" data-brush="">Effacer</button>
+      <span id="pendingHint" class="pending-hint hidden">
+        Depuis <b id="pendingDateLabel"></b>
+        <button id="cancelPending">Annuler</button>
+      </span>
     </div>
-    <div class="view-switch">
-      <button class="view-btn" data-view="day">Jour</button>
-      <button class="view-btn" data-view="week">Semaine</button>
-      <button class="view-btn active" data-view="month">Mois</button>
-      <button class="view-btn" data-view="year">Année</button>
-    </div>
-    <button id="todayBtn">Aujourd'hui</button>
-    <button id="addEventBtn" class="hidden">+ Évènement</button>
-    <button id="toggleSettings">⚙ Paramètres</button>
-  </header>
-  <div class="brush-bar">
-    <span class="brush-label">Type à poser :</span>
-    <button class="brush-btn conge active" data-brush="conge">Congé</button>
-    <button class="brush-btn rtt" data-brush="rtt">RTT</button>
-    <button class="brush-btn teletravail" data-brush="teletravail">Télétravail</button>
-    <button class="brush-btn erase" data-brush="">Effacer</button>
-    <span id="pendingHint" class="pending-hint hidden">
-      Sélection depuis <b id="pendingDateLabel"></b> — cliquez un autre jour pour poser la période, ou re-cliquez le même jour (demi-journée possible pour les congés uniquement).
-      <button id="cancelPending">Annuler</button>
-    </span>
+    <div id="stickyExtra"></div>
   </div>
-  <div class="summary">
-    <div class="card conge-card">
-      <div class="card-title"><span class="swatch"></span> Congés payés</div>
-      <div class="card-body">
-        <span>Disponible sur l'année : <b id="congeDispo">0</b> j</span>
-        <span>Pris : <b id="congePris">0</b> j</span>
-        <span>Restant : <b id="congeRestant">0</b> j</span>
-        <span class="sub">dont report de l'année précédente : <span id="congeReport">0</span> j</span>
+  <div id="recapPanel" class="hidden">
+    <div class="summary">
+      <div class="card conge-card">
+        <div class="card-title"><span class="swatch"></span> Congés payés</div>
+        <div class="card-body">
+          <span>Disponible sur l'année : <b id="congeDispo">0</b> j</span>
+          <span>Pris : <b id="congePris">0</b> j</span>
+          <span>Restant : <b id="congeRestant">0</b> j</span>
+          <span class="sub">dont report de l'année précédente : <span id="congeReport">0</span> j</span>
+        </div>
+      </div>
+      <div class="card rtt-card">
+        <div class="card-title"><span class="swatch"></span> RTT</div>
+        <div class="card-body">
+          <span>Disponible sur l'année : <b id="rttDispo">0</b> j</span>
+          <span>Pris : <b id="rttPris">0</b> j</span>
+          <span>Restant : <b id="rttRestant">0</b> j</span>
+          <span class="sub">non reportables (perdus au 31/12)</span>
+        </div>
+      </div>
+      <div class="card tt-card">
+        <div class="card-title"><span class="swatch"></span> Télétravail</div>
+        <div class="card-body">
+          <span>Jours cette année : <b id="ttTotal">0</b> j</span>
+          <span class="sub">simple repère, sans quota</span>
+        </div>
       </div>
     </div>
-    <div class="card rtt-card">
-      <div class="card-title"><span class="swatch"></span> RTT</div>
-      <div class="card-body">
-        <span>Disponible sur l'année : <b id="rttDispo">0</b> j</span>
-        <span>Pris : <b id="rttPris">0</b> j</span>
-        <span>Restant : <b id="rttRestant">0</b> j</span>
-        <span class="sub">non reportables (perdus au 31/12)</span>
-      </div>
+    <div class="legend">
+      <div class="item"><span class="box" style="background:var(--bleu-conge)"></span> Congé posé</div>
+      <div class="item"><span class="box" style="background:var(--orange-rtt)"></span> RTT posé</div>
+      <div class="item"><span class="box" style="background:var(--vert-tt)"></span> Télétravail</div>
+      <div class="item"><span class="box" style="background:var(--gris-off)"></span> Week-end / jour férié</div>
+      <div class="item"><span class="box" style="background:#fff;border:1px solid #ccc"></span> Jour travaillé</div>
+      <div class="item" style="color:#999">Choisissez le type ci-dessus, cliquez un 1er jour puis un 2nd jour pour poser une période, re-cliquez le même jour (demi-journée pour les congés uniquement).</div>
     </div>
-    <div class="card tt-card">
-      <div class="card-title"><span class="swatch"></span> Télétravail</div>
-      <div class="card-body">
-        <span>Jours cette année : <b id="ttTotal">0</b> j</span>
-        <span class="sub">simple repère, sans quota</span>
-      </div>
-    </div>
-  </div>
-  <div class="legend">
-    <div class="item"><span class="box" style="background:var(--bleu-conge)"></span> Congé posé</div>
-    <div class="item"><span class="box" style="background:var(--orange-rtt)"></span> RTT posé</div>
-    <div class="item"><span class="box" style="background:var(--vert-tt)"></span> Télétravail</div>
-    <div class="item"><span class="box" style="background:var(--gris-off)"></span> Week-end / jour férié</div>
-    <div class="item"><span class="box" style="background:#fff;border:1px solid #ccc"></span> Jour travaillé</div>
-    <div class="item" style="color:#999">Choisissez le type ci-dessus, cliquez un 1er jour puis un 2nd jour pour poser une période, re-cliquez le même jour (demi-journée pour les congés uniquement).</div>
   </div>
   <div id="settingsPanel" class="hidden">
     <h3>Paramètres généraux</h3>
@@ -499,6 +520,11 @@
   let viewDate = new Date();
   viewDate.setHours(0, 0, 0, 0);
   let currentYear = viewDate.getFullYear();
+  // Vrai juste après un passage explicite en vue Jour/Semaine (bouton de vue,
+  // ou clic sur un jour) : sert à ouvrir la page sur les heures de journée
+  // (~7h) une seule fois, sans revenir y forcer le défilement à chaque
+  // re-rendu (édition d'évènement, etc.).
+  let pendingOpenHourScroll = false;
   let holidayCacheByYear = {};
   function getHolidayLabel(ds){
     const year = Number(ds.slice(0, 4));
@@ -852,6 +878,7 @@
   function goToDayView(ds){
     viewDate = new Date(ds + 'T00:00:00');
     viewMode = 'day';
+    pendingOpenHourScroll = true;
     document.querySelectorAll('.view-btn').forEach(b=>b.classList.toggle('active', b.dataset.view === 'day'));
     renderYear();
   }
@@ -918,7 +945,7 @@
       // Réserve la place occupée visuellement par le bandeau qui recouvre
       // cette case, pour que les autres chips ne passent pas dessous.
       const spacer = document.createElement('div');
-      spacer.style.height = '19px';
+      spacer.style.height = big ? '19px' : '12px';
       spacer.style.flexShrink = '0';
       evList.appendChild(spacer);
     }
@@ -990,36 +1017,47 @@
     return spans;
   }
 
-  function renderMonth(year, month, big){
+  // Construit juste la ligne "Lun Mar Mer..." (utilisée telle quelle dans
+  // les mini-mois de la vue Année, et dupliquée dans le bandeau figé unique
+  // du haut pour la vue Mois — voir renderYear).
+  function buildWeekHeaderRow(){
+    const wh = document.createElement('div');
+    wh.className = 'week-header';
+    JOURS.forEach(j=>{ const c = document.createElement('div'); c.textContent = j; wh.appendChild(c); });
+    return wh;
+  }
+  // skipWeekHeader : en vue Mois (big), la ligne des jours de la semaine est
+  // construite séparément et posée dans le bandeau figé unique du haut (voir
+  // renderYear) plutôt qu'ici, pour qu'elle ne fasse plus qu'un avec l'en-tête
+  // et la barre congé/RTT/télétravail (un seul bloc immobile, sans étage
+  // intermédiaire qui pourrait se décaler indépendamment).
+  function renderMonth(year, month, big, skipWeekHeader){
     const wrap = document.createElement('div');
     wrap.className = 'month-block' + (big ? ' large' : '');
     const title = document.createElement('div');
     title.className = 'month-title';
     title.textContent = MOIS[month] + ' ' + year;
     wrap.appendChild(title);
-    const wh = document.createElement('div');
-    wh.className = 'week-header';
-    JOURS.forEach(j=>{ const c = document.createElement('div'); c.textContent = j; wh.appendChild(c); });
-    wrap.appendChild(wh);
+    if(!skipWeekHeader){
+      wrap.appendChild(buildWeekHeaderRow());
+    }
     const grid = document.createElement('div');
     grid.className = 'days-grid';
     const firstDow = (new Date(year, month, 1).getDay() + 6) % 7; // Monday=0
     const daysInMonth = new Date(year, month+1, 0).getDate();
-    // En vue Mois (big), un évènement journée entière identique sur des jours
-    // consécutifs devient un seul bandeau qui s'étire sur ces jours (voir
-    // computeAllDaySpans) : on calcule d'abord quels évènements masquer dans
-    // les cases concernées, avant de construire les cases elles-mêmes.
-    let spans = [];
-    let hiddenByDs = {};
-    if(big){
-      spans = computeAllDaySpans(year, month);
-      spans.forEach(sp=>{
-        sp.hiddenIds.forEach(h=>{
-          if(!hiddenByDs[h.ds]) hiddenByDs[h.ds] = new Set();
-          hiddenByDs[h.ds].add(h.id);
-        });
+    // Un évènement journée entière identique sur des jours consécutifs
+    // devient un seul bandeau qui s'étire sur ces jours (voir
+    // computeAllDaySpans), en vue Mois comme en vue Année : on calcule
+    // d'abord quels évènements masquer dans les cases concernées, avant de
+    // construire les cases elles-mêmes.
+    const spans = computeAllDaySpans(year, month);
+    const hiddenByDs = {};
+    spans.forEach(sp=>{
+      sp.hiddenIds.forEach(h=>{
+        if(!hiddenByDs[h.ds]) hiddenByDs[h.ds] = new Set();
+        hiddenByDs[h.ds].add(h.id);
       });
-    }
+    });
     const cellByIndex = [];
     for(let i=0;i<firstDow;i++){
       const e = document.createElement('div');
@@ -1034,7 +1072,7 @@
       cellByIndex.push(cellEl);
     }
     wrap.appendChild(grid);
-    if(big && spans.length){
+    if(spans.length){
       // Les bandeaux sont positionnés en pixels (position:absolute), une fois
       // la grille réellement posée dans le document, plutôt que via des
       // lignes de grille CSS explicites : une position de grille explicite
@@ -1042,7 +1080,9 @@
       // placement automatique des cases-jours, ce qui décalait toutes les
       // cases suivantes vers la mauvaise colonne. L'absolute positioning
       // sort complètement les bandeaux du flux de la grille et évite ce
-      // conflit.
+      // conflit. Le décalage vertical et la taille du bandeau s'adaptent
+      // à la taille des cases (grande case en vue Mois, mini-case en Année).
+      const topOffset = big ? 27 : 16;
       grid.style.position = 'relative';
       requestAnimationFrame(()=>{
         if(!grid.isConnected) return;
@@ -1054,11 +1094,11 @@
           const r1 = startEl.getBoundingClientRect();
           const r2 = endEl.getBoundingClientRect();
           const bar = document.createElement('div');
-          bar.className = 'day-allday-bar';
+          bar.className = 'day-allday-bar' + (big ? '' : ' small');
           bar.textContent = sp.title;
           bar.title = sp.title;
           bar.style.left = (r1.left - gridRect.left) + 'px';
-          bar.style.top = (r1.top - gridRect.top + 27) + 'px';
+          bar.style.top = (r1.top - gridRect.top + topOffset) + 'px';
           bar.style.width = (r2.right - r1.left) + 'px';
           bar.addEventListener('click', (e)=>{ e.stopPropagation(); openEventModal(sp.ds, sp.id); });
           grid.appendChild(bar);
@@ -1073,6 +1113,12 @@
     if(!t) return 0;
     const parts = String(t).split(':');
     return (Number(parts[0])||0) * 60 + (Number(parts[1])||0);
+  }
+  // Renvoie l'heure "HH:MM" une heure après t (utilisé comme valeur par
+  // défaut de l'heure de fin d'un évènement horaire).
+  function addOneHour(t){
+    const mins = (timeToMinutes(t || '00:00') + 60) % (24 * 60);
+    return pad(Math.floor(mins / 60)) + ':' + pad(mins % 60);
   }
   // Bloc positionné (top/height) représentant un évènement avec horaire,
   // affiché dans la colonne du jour concerné. showTime : n'affiche l'horaire
@@ -1124,12 +1170,19 @@
   // Grille horaire générique (00h-23h), utilisée pour la vue Jour (1 colonne)
   // et la vue Semaine (7 colonnes) : bandeau "journée entière" en haut, puis
   // corps défilable avec les évènements positionnés selon leur horaire.
-  function renderTimeGrid(container, dates){
+  // stickyContainer : conteneur (dans le bandeau figé unique du haut, voir
+  // renderYear) où sont posées la ligne des jours et le bandeau "Journée",
+  // plutôt que dans le bloc défilant — pour qu'ils forment un seul bloc
+  // immobile avec l'en-tête et la barre congé/RTT/télétravail, sans étage
+  // intermédiaire qui pourrait se décaler indépendamment.
+  function renderTimeGrid(container, dates, stickyContainer){
     const todayStr = dateStr(new Date().getFullYear(), new Date().getMonth(), new Date().getDate());
     const showTime = dates.length === 1; // horaire en texte réservé à la vue Jour
     const cols = `60px repeat(${dates.length}, 1fr)`;
     const wrap = document.createElement('div');
     wrap.className = 'timegrid-wrap';
+    const stickyWrap = document.createElement('div');
+    stickyWrap.className = 'timegrid-wrap';
 
     if(dates.length > 1){
       const header = document.createElement('div');
@@ -1145,7 +1198,7 @@
         lbl.textContent = JOURS[(d.getDay()+6)%7] + ' ' + d.getDate();
         header.appendChild(lbl);
       });
-      wrap.appendChild(header);
+      stickyWrap.appendChild(header);
     }
 
     const dsList = dates.map(d=>dateStr(d.getFullYear(), d.getMonth(), d.getDate()));
@@ -1159,9 +1212,11 @@
     });
 
     const allDayRow = document.createElement('div');
+    // position:relative sert d'ancre aux bandeaux d'évènements multi-jours
+    // positionnés en absolu à l'intérieur (voir plus bas).
     allDayRow.className = 'timegrid-allday';
-    allDayRow.style.gridTemplateColumns = cols;
     allDayRow.style.position = 'relative';
+    allDayRow.style.gridTemplateColumns = cols;
     const adLabel = document.createElement('div');
     adLabel.className = 'timegrid-corner-label';
     adLabel.textContent = 'Journée';
@@ -1184,7 +1239,9 @@
       allDayRow.appendChild(cell);
       allDayCellEls.push(cell);
     });
-    wrap.appendChild(allDayRow);
+    stickyWrap.appendChild(allDayRow);
+    if(stickyContainer) stickyContainer.appendChild(stickyWrap);
+    else wrap.appendChild(stickyWrap);
 
     if(spans.length){
       // Même technique que pour la vue Mois : positionnement en pixels après
@@ -1254,18 +1311,17 @@
     body.appendChild(inner);
     wrap.appendChild(body);
     container.appendChild(wrap);
-    body.scrollTop = 7 * HOUR_H; // ouvre la grille autour de 7h par défaut
   }
 
-  function renderWeekBody(container){
+  function renderWeekBody(container, stickyContainer){
     const start = startOfWeek(viewDate);
     const dates = [];
     for(let i=0;i<7;i++){ const d = new Date(start); d.setDate(d.getDate()+i); dates.push(d); }
-    renderTimeGrid(container, dates);
+    renderTimeGrid(container, dates, stickyContainer);
   }
 
-  function renderDayBody(container){
-    renderTimeGrid(container, [viewDate]);
+  function renderDayBody(container, stickyContainer){
+    renderTimeGrid(container, [viewDate], stickyContainer);
   }
 
   function formatPeriodLabel(){
@@ -1288,19 +1344,30 @@
     document.getElementById('periodLabel').textContent = formatPeriodLabel();
     const gridWrap = document.getElementById('calendarGrid');
     gridWrap.innerHTML = '';
+    // stickyExtra : posé dans le bandeau figé unique du haut (#stickyTop),
+    // reçoit la ligne des jours de la semaine (vue Mois) ou la ligne des
+    // jours + le bandeau "Journée" (vues Jour/Semaine), pour qu'ils ne
+    // fassent qu'un avec l'en-tête et la barre congé/RTT/télétravail — un
+    // seul bloc immobile, rien ne bouge avant lui.
+    const stickyExtra = document.getElementById('stickyExtra');
+    stickyExtra.innerHTML = '';
     const viewClass = { year:'', month:' single-view', day:' single-view', week:' wide-view' }[viewMode] || '';
     gridWrap.className = 'months-grid' + viewClass;
-    document.getElementById('addEventBtn').classList.toggle('hidden', !(viewMode === 'day' || viewMode === 'week'));
+    stickyExtra.className = 'months-grid' + viewClass;
     if(viewMode === 'year'){
       for(let m=0;m<12;m++){
         gridWrap.appendChild(renderMonth(currentYear, m, false));
       }
     } else if(viewMode === 'month'){
-      gridWrap.appendChild(renderMonth(viewDate.getFullYear(), viewDate.getMonth(), true));
+      const stickyBlock = document.createElement('div');
+      stickyBlock.className = 'month-block large sticky-week-header';
+      stickyBlock.appendChild(buildWeekHeaderRow());
+      stickyExtra.appendChild(stickyBlock);
+      gridWrap.appendChild(renderMonth(viewDate.getFullYear(), viewDate.getMonth(), true, true));
     } else if(viewMode === 'week'){
-      renderWeekBody(gridWrap);
+      renderWeekBody(gridWrap, stickyExtra);
     } else {
-      renderDayBody(gridWrap);
+      renderDayBody(gridWrap, stickyExtra);
     }
     const cb = computeCongeBalance(currentYear);
     document.getElementById('congeDispo').textContent = cb.disponible;
@@ -1316,6 +1383,17 @@
     // jamais d'envoi vers le Sheet, contrairement à save(). L'envoi ne doit se
     // produire que suite à une vraie modification (statut, évènement, paramètre).
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    if(pendingOpenHourScroll && (viewMode === 'day' || viewMode === 'week')){
+      pendingOpenHourScroll = false;
+      requestAnimationFrame(()=>{
+        const col = document.querySelector('.timegrid-col');
+        const stickyTop = document.getElementById('stickyTop');
+        if(!col || !stickyTop) return;
+        const stickyH = stickyTop.getBoundingClientRect().height;
+        const target = window.scrollY + col.getBoundingClientRect().top + (7 * HOUR_H) - stickyH;
+        window.scrollTo({ top: Math.max(0, target), behavior:'auto' });
+      });
+    }
   }
   function renderSettings(){
     document.getElementById('congesParAn').value = data.settings.congesParAn;
@@ -1410,6 +1488,11 @@
   document.getElementById('toggleSettings').addEventListener('click', ()=>{
     document.getElementById('settingsPanel').classList.toggle('hidden');
   });
+  document.getElementById('toggleRecap').addEventListener('click', ()=>{
+    const panel = document.getElementById('recapPanel');
+    panel.classList.toggle('hidden');
+    document.getElementById('toggleRecap').classList.toggle('active', !panel.classList.contains('hidden'));
+  });
   document.querySelectorAll('.brush-btn').forEach(btn=>{
     btn.addEventListener('click', ()=>{
       currentBrush = btn.dataset.brush;
@@ -1445,6 +1528,7 @@
   document.querySelectorAll('.view-btn').forEach(btn=>{
     btn.addEventListener('click', ()=>{
       viewMode = btn.dataset.view;
+      if(viewMode === 'day' || viewMode === 'week') pendingOpenHourScroll = true;
       document.querySelectorAll('.view-btn').forEach(b=>b.classList.remove('active'));
       btn.classList.add('active');
       renderYear();
@@ -1462,8 +1546,10 @@
     document.getElementById('evTitle').value = ev ? (ev.title || '') : '';
     const allDay = ev ? !!ev.allDay : !!defaults.allDay;
     document.getElementById('evAllDay').checked = allDay;
-    document.getElementById('evStart').value = ev ? (ev.start || '') : (defaults.start || '09:00');
-    document.getElementById('evEnd').value = ev ? (ev.end || '') : (defaults.end || '');
+    const startVal = ev ? (ev.start || '') : (defaults.start || '09:00');
+    document.getElementById('evStart').value = startVal;
+    // Par défaut, l'heure de fin est une heure après le début.
+    document.getElementById('evEnd').value = ev ? (ev.end || '') : (defaults.end || addOneHour(startVal));
     // Plage de dates (évènement journée entière) : par défaut le jour sur
     // lequel on a cliqué ; si on édite un évènement existant, sa plage réelle
     // (dateStart/dateEnd), disponible sur chacune de ses copies quotidiennes.
@@ -1483,6 +1569,11 @@
     const allDay = e.target.checked;
     document.getElementById('evTimeRow').style.display = allDay ? 'none' : 'flex';
     document.getElementById('evDateRow').style.display = allDay ? 'flex' : 'none';
+  });
+  // En changeant l'heure de début, l'heure de fin suit automatiquement pour
+  // rester une heure plus tard.
+  document.getElementById('evStart').addEventListener('change', (e)=>{
+    document.getElementById('evEnd').value = addOneHour(e.target.value);
   });
   document.getElementById('evCancel').addEventListener('click', closeEventModal);
   document.getElementById('evClose').addEventListener('click', closeEventModal);
@@ -1519,13 +1610,6 @@
       renderYear();
     }
   });
-  document.getElementById('addEventBtn').addEventListener('click', ()=>{
-    const ds = viewMode === 'week'
-      ? dateStr(startOfWeek(viewDate).getFullYear(), startOfWeek(viewDate).getMonth(), startOfWeek(viewDate).getDate())
-      : dateStr(viewDate.getFullYear(), viewDate.getMonth(), viewDate.getDate());
-    openEventModal(ds, null, { allDay:false, start:'09:00' });
-  });
-
   document.getElementById('resetData').addEventListener('click', ()=>{
     if(confirm('Réinitialiser toutes les données (congés posés, notes, paramètres) ? Cette action est irréversible.')){
       localStorage.removeItem(STORAGE_KEY);
