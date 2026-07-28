@@ -39,10 +39,16 @@
     width:34px; height:34px; border-radius:8px; border:1px solid var(--border); background:#fff; cursor:pointer; font-size:16px;
   }
   .year-nav button:hover { background:#eee; }
-  #toggleSettings, #exportBtn, #importBtn, #resetData {
+  .view-switch { display:flex; gap:4px; background:#eee; border-radius:8px; padding:3px; }
+  .view-btn {
+    border:none; background:transparent; padding:6px 14px; border-radius:6px; cursor:pointer;
+    font-size:13px; font-weight:600; color:#666;
+  }
+  .view-btn.active { background:#fff; color:var(--text); box-shadow:0 1px 3px rgba(0,0,0,0.15); }
+  #toggleSettings, #exportBtn, #importBtn, #resetData, #todayBtn {
     border:1px solid var(--border); background:#fff; padding:8px 14px; border-radius:8px; cursor:pointer; font-size:14px;
   }
-  #toggleSettings:hover, #exportBtn:hover, #importBtn:hover { background:#eee; }
+  #toggleSettings:hover, #exportBtn:hover, #importBtn:hover, #todayBtn:hover { background:#eee; }
   #resetData { color:#c0392b; border-color:#e6b3ac; }
   #resetData:hover { background:#fdecea; }
   .summary { display:flex; gap:16px; flex-wrap:wrap; margin-bottom:16px; }
@@ -113,8 +119,10 @@
   }
   @media (max-width:1000px){ .months-grid { grid-template-columns: repeat(2,1fr); } }
   @media (max-width:640px){ .months-grid { grid-template-columns: 1fr; } body{padding:10px;} }
+  .months-grid.single-view { display:block; max-width:900px; margin:0 auto; }
   .month-block { background:var(--card-bg); border:1px solid var(--border); border-radius:10px; padding:10px; }
   .month-title { font-weight:600; font-size:14px; text-align:center; margin-bottom:8px; text-transform:capitalize; }
+  .month-block.large .month-title { font-size:18px; margin-bottom:14px; }
   .week-header { display:grid; grid-template-columns: repeat(7,1fr); font-size:10px; color:#999; margin-bottom:4px; }
   .week-header div { text-align:center; }
   .days-grid { display:grid; grid-template-columns: repeat(7,1fr); gap:3px; }
@@ -122,6 +130,15 @@
     min-height:52px; border-radius:5px; background:#fff; border:1px solid #eee;
     display:flex; flex-direction:column; overflow:hidden; position:relative;
   }
+  .day.big { min-height:110px; }
+  .day.big .daynum { font-size:16px; padding:5px 8px; }
+  .day.big .note { font-size:12.5px; padding:0 8px 8px; }
+  .day.big .holiday-label { font-size:11px; padding:0 8px 3px; }
+  .day.big .flag-dot { width:12px; height:12px; }
+  .day-view-wrap { max-width:520px; margin:0 auto; }
+  .day-view-wrap .day.big { min-height:360px; }
+  .day-view-wrap .day.big .daynum { font-size:26px; }
+  .day-view-wrap .day.big .note { font-size:15px; }
   .day.empty { background:transparent; border:none; }
   .day.off { background:var(--gris-off); }
   .day.conge { background:var(--bleu-conge); }
@@ -179,10 +196,17 @@
   <header>
     <h1>📅 Calendrier</h1>
     <div class="year-nav">
-      <button id="prevYear">‹</button>
-      <span id="yearLabel">2026</span>
-      <button id="nextYear">›</button>
+      <button id="prevPeriod">‹</button>
+      <span id="periodLabel">Juillet 2026</span>
+      <button id="nextPeriod">›</button>
     </div>
+    <div class="view-switch">
+      <button class="view-btn" data-view="day">Jour</button>
+      <button class="view-btn" data-view="week">Semaine</button>
+      <button class="view-btn active" data-view="month">Mois</button>
+      <button class="view-btn" data-view="year">Année</button>
+    </div>
+    <button id="todayBtn">Aujourd'hui</button>
     <button id="toggleSettings">⚙ Paramètres</button>
   </header>
   <div class="brush-bar">
@@ -286,6 +310,7 @@
   const STORAGE_KEY = 'congesCalendarData_v1';
   const MOIS = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
   const JOURS = ['Lun','Mar','Mer','Jeu','Ven','Sam','Dim'];
+  const JOURS_LONG = ['Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi','Dimanche'];
   function defaultHolidayRules(){
     return [
       {type:'fixed', month:1, day:1, label:"Jour de l'an"},
@@ -337,7 +362,24 @@
     scheduleRemoteSync();
   }
   let data = load();
-  let currentYear = data.lastViewedYear;
+  // Vue : toujours ouverte sur le mois en cours, jamais restaurée depuis une
+  // session précédente ni depuis le Sheet (demande explicite de l'utilisateur).
+  let viewMode = 'month'; // 'day' | 'week' | 'month' | 'year'
+  let viewDate = new Date();
+  viewDate.setHours(0, 0, 0, 0);
+  let currentYear = viewDate.getFullYear();
+  let holidayCacheByYear = {};
+  function getHolidayLabel(ds){
+    const year = Number(ds.slice(0, 4));
+    if(!holidayCacheByYear[year]) holidayCacheByYear[year] = holidaysForYear(year);
+    return holidayCacheByYear[year][ds];
+  }
+  function startOfWeek(d){
+    const nd = new Date(d);
+    const offset = (nd.getDay() + 6) % 7; // Monday=0
+    nd.setDate(nd.getDate() - offset);
+    return nd;
+  }
   // ---- Synchronisation Google Sheet (optionnelle) ----
   const SYNC_URL_KEY = 'congesCalendarSyncUrl_v1';
   const DEFAULT_SYNC_URL = 'https://script.google.com/macros/s/AKfycbwieiIn14uwHYRoxO9wemckpwsqcMR3U_gjdFOzK92A6ZC8yIlTvtqMm5bCkuMzHwLk/exec';
@@ -637,9 +679,67 @@
     if(!data.days[ds].status && !data.days[ds].note && !data.days[ds].flag) delete data.days[ds];
     save();
   }
-  function renderMonth(year, month, holidays){
+  // Construit une case-jour complète (utilisée par les 4 vues : jour, semaine, mois, année).
+  function buildDayCell(ds, big){
+    const dow = new Date(ds + 'T00:00:00').getDay();
+    const isWeekend = (dow === 0 || dow === 6);
+    const holidayLabel = getHolidayLabel(ds);
+    const dayData = data.days[ds] || {};
+    const status = dayData.status || '';
+    const todayStr = dateStr(new Date().getFullYear(), new Date().getMonth(), new Date().getDate());
+    const cell = document.createElement('div');
+    cell.className = 'day' + (big ? ' big' : '');
+    if(ds === todayStr) cell.classList.add('today');
+    if(ds === pendingStart) cell.classList.add('pending');
+    if(isWeekend || holidayLabel) cell.classList.add('off');
+    if(dayData.flag) cell.classList.add('flagged');
+    const statusClassMap = {
+      conge:'conge', conge_am:'conge-am', conge_pm:'conge-pm',
+      rtt:'rtt', rtt_am:'rtt-am', rtt_pm:'rtt-pm',
+      teletravail:'teletravail', teletravail_am:'teletravail-am', teletravail_pm:'teletravail-pm'
+    };
+    if(statusClassMap[status]) cell.classList.add(statusClassMap[status]);
+    const statusLabels = {
+      conge:'Congé (journée)', conge_am:'Congé (matin)', conge_pm:'Congé (après-midi)',
+      rtt:'RTT (journée)', rtt_am:'RTT (matin)', rtt_pm:'RTT (après-midi)',
+      teletravail:'Télétravail (journée)', teletravail_am:'Télétravail (matin)', teletravail_pm:'Télétravail (après-midi)'
+    };
+    const titleParts = [];
+    if(holidayLabel) titleParts.push(holidayLabel);
+    if(statusLabels[status]) titleParts.push(statusLabels[status]);
+    if(dayData.flag) titleParts.push('Événement flagué');
+    if(titleParts.length) cell.title = titleParts.join(' · ');
+    const num = document.createElement('div');
+    num.className = 'daynum';
+    num.textContent = Number(ds.slice(8, 10));
+    if(!isWeekend && !holidayLabel){
+      num.addEventListener('click', (e)=>{ e.stopPropagation(); handleDayClick(ds, num); });
+    }
+    cell.appendChild(num);
+    const flagDot = document.createElement('div');
+    flagDot.className = 'flag-dot' + (dayData.flag ? ' active' : '');
+    flagDot.title = dayData.flag ? 'Retirer le flag événement' : 'Flaguer un événement ce jour';
+    flagDot.addEventListener('click', (e)=>{ e.stopPropagation(); toggleFlag(ds); });
+    cell.appendChild(flagDot);
+    if(holidayLabel){
+      const hl = document.createElement('div');
+      hl.className = 'holiday-label';
+      hl.textContent = holidayLabel;
+      cell.appendChild(hl);
+    }
+    const note = document.createElement('div');
+    note.className = 'note';
+    note.contentEditable = 'true';
+    note.textContent = dayData.note || '';
+    note.addEventListener('blur', ()=>updateNote(ds, note.textContent));
+    note.addEventListener('keydown', (e)=>{ if(e.key === 'Enter'){ e.preventDefault(); note.blur(); } });
+    cell.appendChild(note);
+    return cell;
+  }
+
+  function renderMonth(year, month, big){
     const wrap = document.createElement('div');
-    wrap.className = 'month-block';
+    wrap.className = 'month-block' + (big ? ' large' : '');
     const title = document.createElement('div');
     title.className = 'month-title';
     title.textContent = MOIS[month] + ' ' + year;
@@ -652,80 +752,77 @@
     grid.className = 'days-grid';
     const firstDow = (new Date(year, month, 1).getDay() + 6) % 7; // Monday=0
     const daysInMonth = new Date(year, month+1, 0).getDate();
-    const todayStr = dateStr(new Date().getFullYear(), new Date().getMonth(), new Date().getDate());
     for(let i=0;i<firstDow;i++){
       const e = document.createElement('div');
       e.className = 'day empty';
       grid.appendChild(e);
     }
     for(let d=1; d<=daysInMonth; d++){
-      const ds = dateStr(year, month, d);
-      const dow = new Date(year, month, d).getDay();
-      const isWeekend = (dow === 0 || dow === 6);
-      const holidayLabel = holidays[ds];
-      const dayData = data.days[ds] || {};
-      const status = dayData.status || '';
-      const cell = document.createElement('div');
-      cell.className = 'day';
-      if(ds === todayStr) cell.classList.add('today');
-      if(ds === pendingStart) cell.classList.add('pending');
-      if(isWeekend || holidayLabel) cell.classList.add('off');
-      if(dayData.flag) cell.classList.add('flagged');
-      const statusClassMap = {
-        conge:'conge', conge_am:'conge-am', conge_pm:'conge-pm',
-        rtt:'rtt', rtt_am:'rtt-am', rtt_pm:'rtt-pm',
-        teletravail:'teletravail', teletravail_am:'teletravail-am', teletravail_pm:'teletravail-pm'
-      };
-      if(statusClassMap[status]) cell.classList.add(statusClassMap[status]);
-      const statusLabels = {
-        conge:'Congé (journée)', conge_am:'Congé (matin)', conge_pm:'Congé (après-midi)',
-        rtt:'RTT (journée)', rtt_am:'RTT (matin)', rtt_pm:'RTT (après-midi)',
-        teletravail:'Télétravail (journée)', teletravail_am:'Télétravail (matin)', teletravail_pm:'Télétravail (après-midi)'
-      };
-      const titleParts = [];
-      if(holidayLabel) titleParts.push(holidayLabel);
-      if(statusLabels[status]) titleParts.push(statusLabels[status]);
-      if(dayData.flag) titleParts.push('Événement flagué');
-      if(titleParts.length) cell.title = titleParts.join(' · ');
-      const num = document.createElement('div');
-      num.className = 'daynum';
-      num.textContent = d;
-      if(!isWeekend && !holidayLabel){
-        num.addEventListener('click', (e)=>{ e.stopPropagation(); handleDayClick(ds, num); });
-      }
-      cell.appendChild(num);
-      const flagDot = document.createElement('div');
-      flagDot.className = 'flag-dot' + (dayData.flag ? ' active' : '');
-      flagDot.title = dayData.flag ? 'Retirer le flag événement' : 'Flaguer un événement ce jour';
-      flagDot.addEventListener('click', (e)=>{ e.stopPropagation(); toggleFlag(ds); });
-      cell.appendChild(flagDot);
-      if(holidayLabel){
-        const hl = document.createElement('div');
-        hl.className = 'holiday-label';
-        hl.textContent = holidayLabel;
-        cell.appendChild(hl);
-      }
-      const note = document.createElement('div');
-      note.className = 'note';
-      note.contentEditable = 'true';
-      note.textContent = dayData.note || '';
-      note.addEventListener('blur', ()=>updateNote(ds, note.textContent));
-      note.addEventListener('keydown', (e)=>{ if(e.key === 'Enter'){ e.preventDefault(); note.blur(); } });
-      cell.appendChild(note);
-      grid.appendChild(cell);
+      grid.appendChild(buildDayCell(dateStr(year, month, d), big));
     }
     wrap.appendChild(grid);
     return wrap;
   }
+
+  function renderWeekBody(container){
+    const start = startOfWeek(viewDate);
+    const wh = document.createElement('div');
+    wh.className = 'week-header';
+    for(let i=0;i<7;i++){
+      const d = new Date(start); d.setDate(d.getDate()+i);
+      const c = document.createElement('div');
+      c.textContent = JOURS[i] + ' ' + d.getDate();
+      wh.appendChild(c);
+    }
+    container.appendChild(wh);
+    const grid = document.createElement('div');
+    grid.className = 'days-grid';
+    for(let i=0;i<7;i++){
+      const d = new Date(start); d.setDate(d.getDate()+i);
+      grid.appendChild(buildDayCell(dateStr(d.getFullYear(), d.getMonth(), d.getDate()), true));
+    }
+    container.appendChild(grid);
+  }
+
+  function renderDayBody(container){
+    const wrap = document.createElement('div');
+    wrap.className = 'day-view-wrap';
+    const ds = dateStr(viewDate.getFullYear(), viewDate.getMonth(), viewDate.getDate());
+    wrap.appendChild(buildDayCell(ds, true));
+    container.appendChild(wrap);
+  }
+
+  function formatPeriodLabel(){
+    if(viewMode === 'year') return String(currentYear);
+    if(viewMode === 'month') return MOIS[viewDate.getMonth()] + ' ' + viewDate.getFullYear();
+    if(viewMode === 'week'){
+      const start = startOfWeek(viewDate);
+      const end = new Date(start); end.setDate(end.getDate()+6);
+      const fmt = (d)=> d.getDate() + ' ' + MOIS[d.getMonth()].slice(0,3);
+      return 'Semaine du ' + fmt(start) + ' au ' + fmt(end) + ' ' + end.getFullYear();
+    }
+    const dow = (viewDate.getDay() + 6) % 7;
+    return JOURS_LONG[dow] + ' ' + viewDate.getDate() + ' ' + MOIS[viewDate.getMonth()] + ' ' + viewDate.getFullYear();
+  }
+
   function renderYear(){
-    currentYear = Number(currentYear);
-    data.lastViewedYear = currentYear;
-    document.getElementById('yearLabel').textContent = currentYear;
-    const holidays = holidaysForYear(currentYear);
+    currentYear = viewDate.getFullYear();
+    data.lastViewedYear = currentYear; // informatif seulement, ne pilote plus la vue
+    holidayCacheByYear = {};
+    document.getElementById('periodLabel').textContent = formatPeriodLabel();
     const gridWrap = document.getElementById('calendarGrid');
     gridWrap.innerHTML = '';
-    for(let m=0;m<12;m++){
-      gridWrap.appendChild(renderMonth(currentYear, m, holidays));
+    gridWrap.className = 'months-grid' + (viewMode === 'year' ? '' : ' single-view');
+    if(viewMode === 'year'){
+      for(let m=0;m<12;m++){
+        gridWrap.appendChild(renderMonth(currentYear, m, false));
+      }
+    } else if(viewMode === 'month'){
+      gridWrap.appendChild(renderMonth(viewDate.getFullYear(), viewDate.getMonth(), true));
+    } else if(viewMode === 'week'){
+      renderWeekBody(gridWrap);
+    } else {
+      renderDayBody(gridWrap);
     }
     const cb = computeCongeBalance(currentYear);
     document.getElementById('congeDispo').textContent = cb.disponible;
@@ -853,13 +950,32 @@
     updatePendingHint();
     renderYear();
   });
-  document.getElementById('prevYear').addEventListener('click', ()=>{ currentYear--; renderYear(); });
-  document.getElementById('nextYear').addEventListener('click', ()=>{ currentYear++; renderYear(); });
+  function navigatePeriod(dir){
+    if(viewMode === 'day') viewDate.setDate(viewDate.getDate() + dir);
+    else if(viewMode === 'week') viewDate.setDate(viewDate.getDate() + dir*7);
+    else if(viewMode === 'month') viewDate.setMonth(viewDate.getMonth() + dir);
+    else viewDate.setFullYear(viewDate.getFullYear() + dir);
+    renderYear();
+  }
+  document.getElementById('prevPeriod').addEventListener('click', ()=>navigatePeriod(-1));
+  document.getElementById('nextPeriod').addEventListener('click', ()=>navigatePeriod(1));
+  document.getElementById('todayBtn').addEventListener('click', ()=>{
+    viewDate = new Date();
+    viewDate.setHours(0, 0, 0, 0);
+    renderYear();
+  });
+  document.querySelectorAll('.view-btn').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      viewMode = btn.dataset.view;
+      document.querySelectorAll('.view-btn').forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+      renderYear();
+    });
+  });
   document.getElementById('resetData').addEventListener('click', ()=>{
     if(confirm('Réinitialiser toutes les données (congés posés, notes, paramètres) ? Cette action est irréversible.')){
       localStorage.removeItem(STORAGE_KEY);
       data = defaultData();
-      currentYear = data.lastViewedYear;
       renderSettings();
       renderYear();
     }
@@ -888,7 +1004,6 @@
         d.lastViewedYear = parsed.lastViewedYear || d.lastViewedYear;
         d.days = parsed.days || {};
         data = d;
-        currentYear = data.lastViewedYear;
         save();
         renderSettings();
         renderYear();
