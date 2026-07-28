@@ -1,0 +1,972 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Calendrier Congés &amp; RTT</title>
+<style>
+  :root{
+    --bleu-conge: #90caf9;
+    --bleu-conge-dark: #1976d2;
+    --orange-rtt: #ffcc80;
+    --orange-rtt-dark: #ef6c00;
+    --vert-tt: #a5d6a7;
+    --vert-tt-dark: #2e7d32;
+    --gris-off: #dcdcdc;
+    --gris-off-text: #777;
+    --bg: #f5f6f8;
+    --card-bg: #ffffff;
+    --border: #dcdfe4;
+    --text: #2b2f36;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin:0; padding:24px; background:var(--bg); color:var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  #app { max-width:1400px; margin:0 auto; }
+  header {
+    display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px;
+    margin-bottom:16px;
+  }
+  h1 { font-size:22px; margin:0; }
+  .year-nav { display:flex; align-items:center; gap:10px; font-size:20px; font-weight:600; }
+  .year-nav button {
+    width:34px; height:34px; border-radius:8px; border:1px solid var(--border); background:#fff; cursor:pointer; font-size:16px;
+  }
+  .year-nav button:hover { background:#eee; }
+  #toggleSettings, #exportBtn, #importBtn, #resetData {
+    border:1px solid var(--border); background:#fff; padding:8px 14px; border-radius:8px; cursor:pointer; font-size:14px;
+  }
+  #toggleSettings:hover, #exportBtn:hover, #importBtn:hover { background:#eee; }
+  #resetData { color:#c0392b; border-color:#e6b3ac; }
+  #resetData:hover { background:#fdecea; }
+
+  .summary { display:flex; gap:16px; flex-wrap:wrap; margin-bottom:16px; }
+  .card {
+    background:var(--card-bg); border:1px solid var(--border); border-radius:10px; padding:12px 18px;
+    min-width:230px; flex:1;
+  }
+  .card-title { font-weight:600; font-size:14px; margin-bottom:8px; display:flex; align-items:center; gap:8px;}
+  .swatch { width:12px; height:12px; border-radius:3px; display:inline-block; }
+  .conge-card .swatch { background:var(--bleu-conge); }
+  .rtt-card .swatch { background:var(--orange-rtt); }
+  .tt-card .swatch { background:var(--vert-tt); }
+  .card-body { display:flex; flex-direction:column; gap:3px; font-size:13px; }
+  .card-body b { font-size:15px; }
+  .card-body .sub { color:#888; font-size:12px; }
+  .legend { display:flex; gap:16px; flex-wrap:wrap; font-size:12px; color:#666; margin-bottom:16px; align-items:center; }
+  .legend .item { display:flex; align-items:center; gap:6px; }
+  .legend .box { width:14px; height:14px; border-radius:3px; border:1px solid rgba(0,0,0,0.1); }
+
+  #settingsPanel {
+    background:var(--card-bg); border:1px solid var(--border); border-radius:10px; padding:18px 20px; margin-bottom:20px;
+  }
+  #settingsPanel.hidden { display:none; }
+
+  .brush-bar {
+    display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:16px;
+    background:var(--card-bg); border:1px solid var(--border); border-radius:10px; padding:10px 14px;
+  }
+  .brush-label { font-size:13px; font-weight:600; color:#555; }
+  .brush-btn {
+    border:2px solid var(--border); background:#fff; padding:6px 16px; border-radius:20px; cursor:pointer;
+    font-size:13px; font-weight:600; color:#555;
+  }
+  .brush-btn.conge.active { background:var(--bleu-conge); border-color:var(--bleu-conge-dark); color:#0d3c61; }
+  .brush-btn.rtt.active { background:var(--orange-rtt); border-color:var(--orange-rtt-dark); color:#7a3c00; }
+  .brush-btn.teletravail.active { background:var(--vert-tt); border-color:var(--vert-tt-dark); color:#1b4d1e; }
+  .brush-btn.erase.active { background:#e0e0e0; border-color:#999; color:#333; }
+  .pending-hint {
+    font-size:12px; color:#555; background:#fff8e1; border:1px solid #ffe082; border-radius:8px; padding:6px 10px;
+    display:flex; align-items:center; gap:8px; flex-wrap:wrap;
+  }
+  .pending-hint.hidden { display:none; }
+  #cancelPending {
+    border:1px solid var(--border); background:#fff; border-radius:6px; padding:3px 10px; cursor:pointer; font-size:12px;
+  }
+  .day.pending { outline:2px dashed #555; outline-offset:-2px; }
+  #settingsPanel h3 { margin:18px 0 8px; font-size:15px; }
+  #settingsPanel h3:first-child { margin-top:0; }
+  .settings-row { display:flex; align-items:center; gap:10px; margin-bottom:10px; flex-wrap:wrap; }
+  .settings-row label { font-size:13px; min-width:220px; }
+  .settings-row input[type=number] { width:90px; padding:5px 8px; border:1px solid var(--border); border-radius:6px; }
+  .settings-row input[type=checkbox] { width:16px; height:16px; }
+  .settings-row input[type=text] { padding:5px 8px; border:1px solid var(--border); border-radius:6px; }
+  .sync-status { font-size:12px; padding:4px 10px; border-radius:12px; background:#eee; color:#666; }
+  .sync-status.pending { background:#fff3cd; color:#8a6d3b; }
+  .sync-status.syncing { background:#cfe2ff; color:#084298; }
+  .sync-status.ok { background:#d1e7dd; color:#0f5132; }
+  .sync-status.error { background:#f8d7da; color:#842029; }
+  .hint { font-size:12px; color:#888; margin:-4px 0 12px; }
+
+  table#holidayTable { width:100%; border-collapse:collapse; font-size:13px; margin-bottom:10px; }
+  table#holidayTable th, table#holidayTable td { border-bottom:1px solid var(--border); padding:6px 6px; text-align:left; }
+  table#holidayTable input[type=text] { width:100%; padding:4px 6px; border:1px solid var(--border); border-radius:5px; }
+  table#holidayTable input[type=number] { width:60px; padding:4px 6px; border:1px solid var(--border); border-radius:5px; }
+  table#holidayTable select { padding:4px 6px; border:1px solid var(--border); border-radius:5px; }
+  .del-btn { background:none; border:none; color:#c0392b; cursor:pointer; font-size:15px; }
+  #addHoliday { margin-top:4px; border:1px dashed #aaa; background:#fff; padding:6px 12px; border-radius:6px; cursor:pointer; font-size:13px; }
+  .settings-actions { display:flex; gap:10px; margin-top:16px; flex-wrap:wrap; }
+
+  .months-grid {
+    display:grid; grid-template-columns: repeat(3, 1fr); gap:16px;
+  }
+  @media (max-width:1000px){ .months-grid { grid-template-columns: repeat(2,1fr); } }
+  @media (max-width:640px){ .months-grid { grid-template-columns: 1fr; } body{padding:10px;} }
+
+  .month-block { background:var(--card-bg); border:1px solid var(--border); border-radius:10px; padding:10px; }
+  .month-title { font-weight:600; font-size:14px; text-align:center; margin-bottom:8px; text-transform:capitalize; }
+  .week-header { display:grid; grid-template-columns: repeat(7,1fr); font-size:10px; color:#999; margin-bottom:4px; }
+  .week-header div { text-align:center; }
+  .days-grid { display:grid; grid-template-columns: repeat(7,1fr); gap:3px; }
+  .day {
+    min-height:52px; border-radius:5px; background:#fff; border:1px solid #eee;
+    display:flex; flex-direction:column; overflow:hidden; position:relative;
+  }
+  .day.empty { background:transparent; border:none; }
+  .day.off { background:var(--gris-off); }
+  .day.conge { background:var(--bleu-conge); }
+  .day.rtt { background:var(--orange-rtt); }
+  .day.teletravail { background:var(--vert-tt); }
+  .day.conge-am { background:linear-gradient(to bottom, var(--bleu-conge) 50%, #fff 50%); }
+  .day.conge-pm { background:linear-gradient(to bottom, #fff 50%, var(--bleu-conge) 50%); }
+  .day.rtt-am { background:linear-gradient(to bottom, var(--orange-rtt) 50%, #fff 50%); }
+  .day.rtt-pm { background:linear-gradient(to bottom, #fff 50%, var(--orange-rtt) 50%); }
+  .day.teletravail-am { background:linear-gradient(to bottom, var(--vert-tt) 50%, #fff 50%); }
+  .day.teletravail-pm { background:linear-gradient(to bottom, #fff 50%, var(--vert-tt) 50%); }
+  .daynum {
+    font-size:11px; font-weight:600; padding:2px 4px; cursor:pointer; user-select:none;
+  }
+
+  .status-menu {
+    position:fixed; z-index:1000; background:#fff; border:1px solid var(--border); border-radius:8px;
+    box-shadow:0 6px 18px rgba(0,0,0,0.15); padding:4px; min-width:190px; font-size:13px;
+  }
+  .status-menu.hidden { display:none; }
+  .status-menu button {
+    display:block; width:100%; text-align:left; padding:6px 10px; border:none; background:none;
+    border-radius:5px; cursor:pointer; font-size:13px;
+  }
+  .status-menu button:hover { background:#eee; }
+  .status-menu .sw { display:inline-block; width:10px; height:10px; border-radius:3px; margin-right:8px; vertical-align:middle; }
+  .day.off .daynum { cursor:default; color:var(--gris-off-text); }
+  .holiday-label { font-size:8px; color:#666; padding:0 4px 2px; line-height:1.1; }
+  .note {
+    flex:1; font-size:9.5px; padding:0 4px 3px; outline:none; overflow:hidden; word-break:break-word;
+    line-height:1.2; cursor:text;
+  }
+  .note:empty:before { content:"+"; color:#bbb; }
+  .day:hover .note:empty:before { content:"note…"; color:#aaa; }
+  .day.today { box-shadow: inset 0 0 0 2px #e53935; }
+  .day.today .daynum { color:#e53935; font-weight:800; }
+
+  footer { margin-top:20px; font-size:11px; color:#999; text-align:center; }
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <h1>📅 Calendrier congés &amp; RTT</h1>
+    <div class="year-nav">
+      <button id="prevYear">‹</button>
+      <span id="yearLabel">2026</span>
+      <button id="nextYear">›</button>
+    </div>
+    <button id="toggleSettings">⚙ Paramètres</button>
+  </header>
+
+  <div class="brush-bar">
+    <span class="brush-label">Type à poser :</span>
+    <button class="brush-btn conge active" data-brush="conge">Congé</button>
+    <button class="brush-btn rtt" data-brush="rtt">RTT</button>
+    <button class="brush-btn teletravail" data-brush="teletravail">Télétravail</button>
+    <button class="brush-btn erase" data-brush="">Effacer</button>
+    <span id="pendingHint" class="pending-hint hidden">
+      Sélection depuis <b id="pendingDateLabel"></b> — cliquez un autre jour pour poser la période, ou re-cliquez le même jour (demi-journée possible pour les congés uniquement).
+      <button id="cancelPending">Annuler</button>
+    </span>
+  </div>
+
+  <div class="summary">
+    <div class="card conge-card">
+      <div class="card-title"><span class="swatch"></span> Congés payés</div>
+      <div class="card-body">
+        <span>Disponible sur l'année : <b id="congeDispo">0</b> j</span>
+        <span>Pris : <b id="congePris">0</b> j</span>
+        <span>Restant : <b id="congeRestant">0</b> j</span>
+        <span class="sub">dont report de l'année précédente : <span id="congeReport">0</span> j</span>
+      </div>
+    </div>
+    <div class="card rtt-card">
+      <div class="card-title"><span class="swatch"></span> RTT</div>
+      <div class="card-body">
+        <span>Disponible sur l'année : <b id="rttDispo">0</b> j</span>
+        <span>Pris : <b id="rttPris">0</b> j</span>
+        <span>Restant : <b id="rttRestant">0</b> j</span>
+        <span class="sub">non reportables (perdus au 31/12)</span>
+      </div>
+    </div>
+    <div class="card tt-card">
+      <div class="card-title"><span class="swatch"></span> Télétravail</div>
+      <div class="card-body">
+        <span>Jours cette année : <b id="ttTotal">0</b> j</span>
+        <span class="sub">simple repère, sans quota</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="legend">
+    <div class="item"><span class="box" style="background:var(--bleu-conge)"></span> Congé posé</div>
+    <div class="item"><span class="box" style="background:var(--orange-rtt)"></span> RTT posé</div>
+    <div class="item"><span class="box" style="background:var(--vert-tt)"></span> Télétravail</div>
+    <div class="item"><span class="box" style="background:var(--gris-off)"></span> Week-end / jour férié</div>
+    <div class="item"><span class="box" style="background:#fff;border:1px solid #ccc"></span> Jour travaillé</div>
+    <div class="item" style="color:#999">Choisissez le type ci-dessus, cliquez un 1er jour puis un 2nd jour pour poser une période, re-cliquez le même jour (demi-journée pour les congés uniquement)</div>
+  </div>
+
+  <div id="settingsPanel" class="hidden">
+    <h3>Paramètres généraux</h3>
+    <div class="settings-row">
+      <label for="congesParAn">Congés payés par an (jours)</label>
+      <input type="number" id="congesParAn" min="0" step="0.5">
+    </div>
+    <div class="settings-row">
+      <label for="rttParAn">RTT par an (jours)</label>
+      <input type="number" id="rttParAn" min="0" step="0.5">
+    </div>
+    <div class="settings-row">
+      <label for="capReport">Plafond de report des congés non pris</label>
+      <input type="checkbox" id="capReportEnabled">
+      <input type="number" id="capReport" min="0" step="0.5" placeholder="nb de jours max">
+    </div>
+    <div class="hint">Si décoché : report illimité. Les RTT ne se reportent jamais (perdus en fin d'année).</div>
+    <div class="settings-row">
+      <label for="startYear">Année de départ (pas de report avant)</label>
+      <input type="number" id="startYear" min="2000" max="2100">
+    </div>
+
+    <h3>Jours fériés (paramétrables)</h3>
+    <table id="holidayTable">
+      <thead><tr><th>Libellé</th><th>Type</th><th>Détail</th><th></th></tr></thead>
+      <tbody id="holidayTableBody"></tbody>
+    </table>
+    <button id="addHoliday">+ Ajouter un jour férié</button>
+
+    <h3>Synchronisation Google Sheet</h3>
+    <div class="settings-row">
+      <label for="syncUrlInput">URL du script (Apps Script Web App)</label>
+      <input type="text" id="syncUrlInput" placeholder="https://script.google.com/macros/s/AKfycb.../exec" style="flex:1;min-width:280px;">
+    </div>
+    <div class="settings-row">
+      <button id="testSync">Tester la connexion</button>
+      <button id="pullNow">⬇ Recharger depuis le Sheet</button>
+      <button id="pushNow">⬆ Forcer l'envoi vers le Sheet</button>
+      <span id="syncStatus" class="sync-status none"></span>
+    </div>
+    <div class="hint">Colle ici l'URL obtenue après avoir déployé le script Google Apps Script fourni (Code.gs). Utilise la même URL sur tous tes appareils pour qu'ils partagent les mêmes données. Sans URL, le calendrier fonctionne comme avant, uniquement en local.</div>
+
+    <div class="settings-actions">
+      <button id="exportBtn">⬇ Exporter mes données (JSON)</button>
+      <button id="importBtn">⬆ Importer un fichier JSON</button>
+      <input type="file" id="importFile" accept="application/json" style="display:none">
+      <button id="resetData">🗑 Réinitialiser toutes les données</button>
+    </div>
+  </div>
+
+  <div id="calendarGrid" class="months-grid"></div>
+
+  <footer>Les données sont enregistrées automatiquement dans le stockage local de ce navigateur. Si une synchronisation Google Sheet est configurée (Paramètres), elles sont aussi envoyées vers le Sheet pour être accessibles depuis tes autres appareils. Pensez à exporter régulièrement une sauvegarde JSON.</footer>
+</div>
+
+<div id="statusMenu" class="status-menu hidden"></div>
+
+<script>
+(function(){
+  const STORAGE_KEY = 'congesCalendarData_v1';
+  const MOIS = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
+  const JOURS = ['Lun','Mar','Mer','Jeu','Ven','Sam','Dim'];
+
+  function defaultHolidayRules(){
+    return [
+      {type:'fixed', month:1, day:1, label:"Jour de l'an"},
+      {type:'offset', offset:1, label:"Lundi de Pâques"},
+      {type:'fixed', month:5, day:1, label:"Fête du travail"},
+      {type:'fixed', month:5, day:8, label:"Victoire 1945"},
+      {type:'offset', offset:39, label:"Ascension"},
+      {type:'offset', offset:50, label:"Lundi de Pentecôte"},
+      {type:'fixed', month:7, day:14, label:"Fête nationale"},
+      {type:'fixed', month:8, day:15, label:"Assomption"},
+      {type:'fixed', month:11, day:1, label:"Toussaint"},
+      {type:'fixed', month:11, day:11, label:"Armistice"},
+      {type:'fixed', month:12, day:25, label:"Noël"}
+    ];
+  }
+
+  function defaultData(){
+    const y = new Date().getFullYear();
+    return {
+      settings: {
+        congesParAn: 25,
+        rttParAn: 10,
+        capReportEnabled: true,
+        capReport: 5,
+        startYear: y,
+        holidayRules: defaultHolidayRules()
+      },
+      lastViewedYear: y,
+      days: {} // "YYYY-MM-DD": {status:'conge'|'rtt'|'', note:'...'}
+    };
+  }
+
+  function load(){
+    try{
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if(!raw) return defaultData();
+      const parsed = JSON.parse(raw);
+      // merge with defaults to survive schema additions
+      const d = defaultData();
+      d.settings = Object.assign(d.settings, parsed.settings||{});
+      d.lastViewedYear = parsed.lastViewedYear || d.lastViewedYear;
+      d.days = parsed.days || {};
+      return d;
+    }catch(e){
+      console.error('Erreur chargement', e);
+      return defaultData();
+    }
+  }
+
+  function save(){
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    scheduleRemoteSync();
+  }
+
+  let data = load();
+  let currentYear = data.lastViewedYear;
+
+  // ---- Synchronisation Google Sheet (optionnelle) ----
+  const SYNC_URL_KEY = 'congesCalendarSyncUrl_v1';
+  let syncUrl = localStorage.getItem(SYNC_URL_KEY) || '';
+  let syncTimer = null;
+
+  function setSyncStatus(state){
+    const el = document.getElementById('syncStatus');
+    if(!el) return;
+    const map = {
+      none: '☁️ Non connecté',
+      pending: '🔄 Modifications en attente…',
+      syncing: '🔄 Synchronisation…',
+      ok: '✅ Synchronisé',
+      error: '⚠️ Erreur de synchronisation'
+    };
+    el.textContent = map[state] || '';
+    el.className = 'sync-status ' + state;
+  }
+
+  function scheduleRemoteSync(){
+    if(!syncUrl){ setSyncStatus('none'); return; }
+    setSyncStatus('pending');
+    clearTimeout(syncTimer);
+    syncTimer = setTimeout(pushToRemote, 700);
+  }
+
+  // Envoie l'intégralité des données locales vers le Sheet (POST en text/plain
+  // pour éviter un préflight CORS bloqué par Apps Script).
+  function pushToRemote(){
+    if(!syncUrl) return Promise.resolve();
+    setSyncStatus('syncing');
+    return fetch(syncUrl, { method:'POST', body: JSON.stringify(data) })
+      .then(r=>r.json())
+      .then(()=>{ setSyncStatus('ok'); })
+      .catch(()=>{ setSyncStatus('error'); });
+  }
+
+  function adoptRemote(remote){
+    const merged = defaultData();
+    merged.settings = Object.assign(merged.settings, remote.settings||{});
+    if(!(remote.settings && remote.settings.holidayRules && remote.settings.holidayRules.length)){
+      merged.settings.holidayRules = data.settings.holidayRules || merged.settings.holidayRules;
+    }
+    merged.lastViewedYear = remote.lastViewedYear || currentYear || merged.lastViewedYear;
+    merged.days = remote.days || {};
+    data = merged;
+    currentYear = data.lastViewedYear;
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    renderSettings();
+    renderYear();
+  }
+
+  // Recharge inconditionnellement depuis le Sheet (le Sheet fait autorité).
+  function pullFromRemote(){
+    if(!syncUrl) return Promise.resolve();
+    setSyncStatus('syncing');
+    return fetch(syncUrl)
+      .then(r=>r.json())
+      .then(remote=>{ adoptRemote(remote); setSyncStatus('ok'); })
+      .catch(()=>{ setSyncStatus('error'); });
+  }
+
+  // Utilisé quand on connecte une nouvelle URL : si le Sheet est déjà rempli
+  // (autre appareil), on l'adopte ; s'il est vide, on l'alimente avec les
+  // données locales existantes plutôt que de les écraser.
+  function smartSync(){
+    if(!syncUrl) return Promise.resolve();
+    setSyncStatus('syncing');
+    return fetch(syncUrl)
+      .then(r=>r.json())
+      .then(remote=>{
+        const remoteHasDays = remote && remote.days && Object.keys(remote.days).length > 0;
+        if(remoteHasDays){
+          adoptRemote(remote);
+          setSyncStatus('ok');
+        } else {
+          return pushToRemote();
+        }
+      })
+      .catch(()=>{ setSyncStatus('error'); });
+  }
+
+  function pad(n){ return String(n).padStart(2,'0'); }
+  function dateStr(y,m,d){ return `${y}-${pad(m+1)}-${pad(d)}`; }
+
+  // Meeus/Jones/Butcher Easter algorithm
+  function easterDate(year){
+    const a = year % 19;
+    const b = Math.floor(year/100);
+    const c = year % 100;
+    const d = Math.floor(b/4);
+    const e = b % 4;
+    const f = Math.floor((b+8)/25);
+    const g = Math.floor((b-f+1)/3);
+    const h = (19*a+b-d-g+15) % 30;
+    const i = Math.floor(c/4);
+    const k = c % 4;
+    const l = (32+2*e+2*i-h-k) % 7;
+    const m = Math.floor((a+11*h+22*l)/451);
+    const month = Math.floor((h+l-7*m+114)/31);
+    const day = ((h+l-7*m+114) % 31) + 1;
+    return new Date(year, month-1, day);
+  }
+
+  function holidaysForYear(year){
+    const map = {};
+    (data.settings.holidayRules||[]).forEach(rule=>{
+      let d;
+      if(rule.type === 'fixed'){
+        d = new Date(year, (rule.month||1)-1, rule.day||1);
+      } else {
+        d = easterDate(year);
+        d.setDate(d.getDate() + (Number(rule.offset)||0));
+      }
+      const key = dateStr(d.getFullYear(), d.getMonth(), d.getDate());
+      map[key] = rule.label || 'Férié';
+    });
+    return map;
+  }
+
+  // type = 'conge' or 'rtt'. Counts full days as 1, half-days (_am/_pm) as 0.5.
+  function sumDays(year, type){
+    let total = 0;
+    Object.keys(data.days).forEach(k=>{
+      if(!k.startsWith(String(year)+'-')) return;
+      const st = data.days[k].status;
+      if(st === type) total += 1;
+      else if(st === type+'_am' || st === type+'_pm') total += 0.5;
+    });
+    return total;
+  }
+
+  function computeCongeBalance(year){
+    const startYear = Number(data.settings.startYear) || year;
+    const congesParAn = Number(data.settings.congesParAn) || 0;
+    const cap = data.settings.capReportEnabled ? Number(data.settings.capReport)||0 : null;
+
+    if(year < startYear){
+      const pris = sumDays(year, 'conge');
+      return { disponible: congesParAn, pris, report: 0, restant: congesParAn - pris };
+    }
+    let report = 0;
+    let result = null;
+    for(let y = startYear; y <= year; y++){
+      const disponible = report + congesParAn;
+      const pris = sumDays(y, 'conge');
+      let carry = disponible - pris;
+      if(carry < 0) carry = 0;
+      if(cap !== null) carry = Math.min(carry, cap);
+      result = { disponible, pris, report, restant: disponible - pris };
+      report = carry;
+    }
+    return result;
+  }
+
+  function computeRttBalance(year){
+    const rttParAn = Number(data.settings.rttParAn) || 0;
+    const pris = sumDays(year, 'rtt');
+    return { disponible: rttParAn, pris, restant: rttParAn - pris };
+  }
+
+  let currentBrush = 'conge'; // 'conge' | 'rtt' | '' (effacer)
+  let pendingStart = null; // dateStr of the first click, awaiting a second click
+
+  function setStatus(ds, value){
+    if(!data.days[ds]) data.days[ds] = {};
+    data.days[ds].status = value;
+    if(!data.days[ds].status && !data.days[ds].note) delete data.days[ds];
+    save();
+  }
+
+  function closeStatusMenu(){
+    const menu = document.getElementById('statusMenu');
+    menu.classList.add('hidden');
+    menu.innerHTML = '';
+  }
+
+  // Small popup shown when re-clicking the same (pending) day: lets you pick
+  // journée entière / matin / après-midi (or clear) for that single day.
+  function openHalfDayMenu(ds, rect){
+    const menu = document.getElementById('statusMenu');
+    menu.innerHTML = '';
+    const brushMeta = {
+      conge: {label:'Congé', color:'var(--bleu-conge)'},
+      rtt: {label:'RTT', color:'var(--orange-rtt)'},
+      teletravail: {label:'Télétravail', color:'var(--vert-tt)'}
+    }[currentBrush] || {label:currentBrush, color:'#ccc'};
+    const brushLabel = brushMeta.label;
+    const brushColor = brushMeta.color;
+    const options = [
+      {value: currentBrush, label: brushLabel + ' — journée entière', color: brushColor},
+      {value: currentBrush + '_am', label: brushLabel + ' — matin', color: brushColor},
+      {value: currentBrush + '_pm', label: brushLabel + ' — après-midi', color: brushColor},
+      {value: '', label: 'Rien (effacer ce jour)', color: null}
+    ];
+    options.forEach(opt=>{
+      const btn = document.createElement('button');
+      if(opt.color){
+        const sw = document.createElement('span');
+        sw.className = 'sw';
+        sw.style.background = opt.color;
+        btn.appendChild(sw);
+      }
+      btn.appendChild(document.createTextNode(opt.label));
+      btn.addEventListener('click', (e)=>{
+        e.stopPropagation();
+        setStatus(ds, opt.value);
+        closeStatusMenu();
+        renderYear();
+      });
+      menu.appendChild(btn);
+    });
+    menu.classList.remove('hidden');
+    const menuWidth = 210;
+    let left = rect.left;
+    if(left + menuWidth > window.innerWidth) left = window.innerWidth - menuWidth - 8;
+    let top = rect.bottom + 4;
+    if(top + 220 > window.innerHeight) top = Math.max(8, rect.top - 224);
+    menu.style.left = left + 'px';
+    menu.style.top = top + 'px';
+  }
+
+  document.addEventListener('click', (e)=>{
+    const menu = document.getElementById('statusMenu');
+    if(!menu.classList.contains('hidden') && !menu.contains(e.target)){
+      closeStatusMenu();
+    }
+  });
+
+  // Applies currentBrush (or clears, if '') as a full-day status across every
+  // working day between dsA and dsB inclusive (order-independent).
+  function applyRange(dsA, dsB, brush){
+    let start = new Date(dsA + 'T00:00:00');
+    let end = new Date(dsB + 'T00:00:00');
+    if(start > end){ const tmp = start; start = end; end = tmp; }
+    const holidayCache = {};
+    const d = new Date(start);
+    while(d <= end){
+      const y = d.getFullYear();
+      if(!holidayCache[y]) holidayCache[y] = holidaysForYear(y);
+      const ds = dateStr(y, d.getMonth(), d.getDate());
+      const dow = d.getDay();
+      const isWeekend = (dow === 0 || dow === 6);
+      const isHoliday = !!holidayCache[y][ds];
+      if(!isWeekend && !isHoliday){
+        setStatus(ds, brush);
+      }
+      d.setDate(d.getDate() + 1);
+    }
+  }
+
+  function updatePendingHint(){
+    const hint = document.getElementById('pendingHint');
+    if(pendingStart){
+      document.getElementById('pendingDateLabel').textContent = pendingStart;
+      hint.classList.remove('hidden');
+    } else {
+      hint.classList.add('hidden');
+    }
+  }
+
+  function handleDayClick(ds, numEl){
+    if(pendingStart === null){
+      pendingStart = ds;
+      updatePendingHint();
+      renderYear();
+    } else if(pendingStart === ds){
+      if(currentBrush === 'conge'){
+        // Seuls les congés peuvent être posés en demi-journée.
+        const rect = numEl.getBoundingClientRect();
+        pendingStart = null;
+        updatePendingHint();
+        renderYear();
+        openHalfDayMenu(ds, rect);
+      } else {
+        // RTT, Télétravail, Effacer : re-cliquer applique/efface directement la journée entière.
+        setStatus(ds, currentBrush);
+        pendingStart = null;
+        updatePendingHint();
+        renderYear();
+      }
+    } else {
+      applyRange(pendingStart, ds, currentBrush);
+      pendingStart = null;
+      updatePendingHint();
+      renderYear();
+    }
+  }
+
+  function updateNote(ds, text){
+    text = text.trim();
+    if(!data.days[ds]) data.days[ds] = {};
+    data.days[ds].note = text;
+    if(!data.days[ds].status && !data.days[ds].note) delete data.days[ds];
+    save();
+  }
+
+  function renderMonth(year, month, holidays){
+    const wrap = document.createElement('div');
+    wrap.className = 'month-block';
+    const title = document.createElement('div');
+    title.className = 'month-title';
+    title.textContent = MOIS[month] + ' ' + year;
+    wrap.appendChild(title);
+
+    const wh = document.createElement('div');
+    wh.className = 'week-header';
+    JOURS.forEach(j=>{ const c = document.createElement('div'); c.textContent = j; wh.appendChild(c); });
+    wrap.appendChild(wh);
+
+    const grid = document.createElement('div');
+    grid.className = 'days-grid';
+
+    const firstDow = (new Date(year, month, 1).getDay() + 6) % 7; // Monday=0
+    const daysInMonth = new Date(year, month+1, 0).getDate();
+    const todayStr = dateStr(new Date().getFullYear(), new Date().getMonth(), new Date().getDate());
+
+    for(let i=0;i<firstDow;i++){
+      const e = document.createElement('div');
+      e.className = 'day empty';
+      grid.appendChild(e);
+    }
+
+    for(let d=1; d<=daysInMonth; d++){
+      const ds = dateStr(year, month, d);
+      const dow = new Date(year, month, d).getDay();
+      const isWeekend = (dow === 0 || dow === 6);
+      const holidayLabel = holidays[ds];
+      const dayData = data.days[ds] || {};
+      const status = dayData.status || '';
+
+      const cell = document.createElement('div');
+      cell.className = 'day';
+      if(ds === todayStr) cell.classList.add('today');
+      if(ds === pendingStart) cell.classList.add('pending');
+      if(isWeekend || holidayLabel) cell.classList.add('off');
+      const statusClassMap = {
+        conge:'conge', conge_am:'conge-am', conge_pm:'conge-pm',
+        rtt:'rtt', rtt_am:'rtt-am', rtt_pm:'rtt-pm',
+        teletravail:'teletravail', teletravail_am:'teletravail-am', teletravail_pm:'teletravail-pm'
+      };
+      if(statusClassMap[status]) cell.classList.add(statusClassMap[status]);
+      const statusLabels = {
+        conge:'Congé (journée)', conge_am:'Congé (matin)', conge_pm:'Congé (après-midi)',
+        rtt:'RTT (journée)', rtt_am:'RTT (matin)', rtt_pm:'RTT (après-midi)',
+        teletravail:'Télétravail (journée)', teletravail_am:'Télétravail (matin)', teletravail_pm:'Télétravail (après-midi)'
+      };
+      if(holidayLabel) cell.title = holidayLabel;
+      else if(statusLabels[status]) cell.title = statusLabels[status];
+
+      const num = document.createElement('div');
+      num.className = 'daynum';
+      num.textContent = d;
+      if(!isWeekend && !holidayLabel){
+        num.addEventListener('click', (e)=>{ e.stopPropagation(); handleDayClick(ds, num); });
+      }
+      cell.appendChild(num);
+
+      if(holidayLabel){
+        const hl = document.createElement('div');
+        hl.className = 'holiday-label';
+        hl.textContent = holidayLabel;
+        cell.appendChild(hl);
+      }
+
+      const note = document.createElement('div');
+      note.className = 'note';
+      note.contentEditable = 'true';
+      note.textContent = dayData.note || '';
+      note.addEventListener('blur', ()=>updateNote(ds, note.textContent));
+      note.addEventListener('keydown', (e)=>{ if(e.key === 'Enter'){ e.preventDefault(); note.blur(); } });
+      cell.appendChild(note);
+
+      grid.appendChild(cell);
+    }
+
+    wrap.appendChild(grid);
+    return wrap;
+  }
+
+  function renderYear(){
+    currentYear = Number(currentYear);
+    data.lastViewedYear = currentYear;
+    document.getElementById('yearLabel').textContent = currentYear;
+    const holidays = holidaysForYear(currentYear);
+
+    const gridWrap = document.getElementById('calendarGrid');
+    gridWrap.innerHTML = '';
+    for(let m=0;m<12;m++){
+      gridWrap.appendChild(renderMonth(currentYear, m, holidays));
+    }
+
+    const cb = computeCongeBalance(currentYear);
+    document.getElementById('congeDispo').textContent = cb.disponible;
+    document.getElementById('congePris').textContent = cb.pris;
+    document.getElementById('congeRestant').textContent = cb.restant;
+    document.getElementById('congeReport').textContent = cb.report;
+
+    const rb = computeRttBalance(currentYear);
+    document.getElementById('rttDispo').textContent = rb.disponible;
+    document.getElementById('rttPris').textContent = rb.pris;
+    document.getElementById('rttRestant').textContent = rb.restant;
+
+    document.getElementById('ttTotal').textContent = sumDays(currentYear, 'teletravail');
+
+    save();
+  }
+
+  function renderSettings(){
+    document.getElementById('congesParAn').value = data.settings.congesParAn;
+    document.getElementById('rttParAn').value = data.settings.rttParAn;
+    document.getElementById('capReportEnabled').checked = !!data.settings.capReportEnabled;
+    document.getElementById('capReport').value = data.settings.capReport;
+    document.getElementById('capReport').disabled = !data.settings.capReportEnabled;
+    document.getElementById('startYear').value = data.settings.startYear;
+    document.getElementById('syncUrlInput').value = syncUrl;
+
+    const tbody = document.getElementById('holidayTableBody');
+    tbody.innerHTML = '';
+    (data.settings.holidayRules||[]).forEach((rule, idx)=>{
+      const tr = document.createElement('tr');
+
+      const tdLabel = document.createElement('td');
+      const inLabel = document.createElement('input');
+      inLabel.type = 'text';
+      inLabel.value = rule.label || '';
+      inLabel.addEventListener('input', ()=>{ rule.label = inLabel.value; save(); renderYear(); });
+      tdLabel.appendChild(inLabel);
+      tr.appendChild(tdLabel);
+
+      const tdType = document.createElement('td');
+      const sel = document.createElement('select');
+      const opt1 = document.createElement('option'); opt1.value='fixed'; opt1.textContent='Date fixe';
+      const opt2 = document.createElement('option'); opt2.value='offset'; opt2.textContent='Décalage / Pâques';
+      sel.appendChild(opt1); sel.appendChild(opt2);
+      sel.value = rule.type;
+      sel.addEventListener('change', ()=>{
+        rule.type = sel.value;
+        if(rule.type === 'fixed'){ rule.month = rule.month||1; rule.day = rule.day||1; }
+        else { rule.offset = rule.offset||0; }
+        save(); renderSettings(); renderYear();
+      });
+      tdType.appendChild(sel);
+      tr.appendChild(tdType);
+
+      const tdDetail = document.createElement('td');
+      if(rule.type === 'fixed'){
+        const inMonth = document.createElement('input');
+        inMonth.type='number'; inMonth.min=1; inMonth.max=12; inMonth.value = rule.month||1;
+        inMonth.title = 'Mois';
+        inMonth.addEventListener('input', ()=>{ rule.month = Number(inMonth.value); save(); renderYear(); });
+        const inDay = document.createElement('input');
+        inDay.type='number'; inDay.min=1; inDay.max=31; inDay.value = rule.day||1;
+        inDay.title = 'Jour';
+        inDay.addEventListener('input', ()=>{ rule.day = Number(inDay.value); save(); renderYear(); });
+        tdDetail.appendChild(inMonth);
+        tdDetail.appendChild(document.createTextNode(' / '));
+        tdDetail.appendChild(inDay);
+      } else {
+        const inOffset = document.createElement('input');
+        inOffset.type='number'; inOffset.value = rule.offset||0;
+        inOffset.title = 'Nombre de jours après Pâques (peut être négatif)';
+        inOffset.addEventListener('input', ()=>{ rule.offset = Number(inOffset.value); save(); renderYear(); });
+        tdDetail.appendChild(inOffset);
+        tdDetail.appendChild(document.createTextNode(' j après Pâques'));
+      }
+      tr.appendChild(tdDetail);
+
+      const tdDel = document.createElement('td');
+      const delBtn = document.createElement('button');
+      delBtn.className = 'del-btn';
+      delBtn.textContent = '✕';
+      delBtn.addEventListener('click', ()=>{
+        data.settings.holidayRules.splice(idx,1);
+        save(); renderSettings(); renderYear();
+      });
+      tdDel.appendChild(delBtn);
+      tr.appendChild(tdDel);
+
+      tbody.appendChild(tr);
+    });
+  }
+
+  // wire settings inputs
+  document.getElementById('congesParAn').addEventListener('input', (e)=>{
+    data.settings.congesParAn = Number(e.target.value)||0; save(); renderYear();
+  });
+  document.getElementById('rttParAn').addEventListener('input', (e)=>{
+    data.settings.rttParAn = Number(e.target.value)||0; save(); renderYear();
+  });
+  document.getElementById('capReportEnabled').addEventListener('change', (e)=>{
+    data.settings.capReportEnabled = e.target.checked;
+    document.getElementById('capReport').disabled = !e.target.checked;
+    save(); renderYear();
+  });
+  document.getElementById('capReport').addEventListener('input', (e)=>{
+    data.settings.capReport = Number(e.target.value)||0; save(); renderYear();
+  });
+  document.getElementById('startYear').addEventListener('input', (e)=>{
+    data.settings.startYear = Number(e.target.value)||currentYear; save(); renderYear();
+  });
+  document.getElementById('addHoliday').addEventListener('click', ()=>{
+    data.settings.holidayRules.push({type:'fixed', month:1, day:1, label:'Nouveau jour férié'});
+    save(); renderSettings(); renderYear();
+  });
+
+  document.getElementById('toggleSettings').addEventListener('click', ()=>{
+    document.getElementById('settingsPanel').classList.toggle('hidden');
+  });
+
+  document.querySelectorAll('.brush-btn').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      currentBrush = btn.dataset.brush;
+      document.querySelectorAll('.brush-btn').forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+      // changing brush mid-selection cancels any pending range to avoid ambiguity
+      if(pendingStart !== null){
+        pendingStart = null;
+        updatePendingHint();
+        renderYear();
+      }
+    });
+  });
+
+  document.getElementById('cancelPending').addEventListener('click', ()=>{
+    pendingStart = null;
+    updatePendingHint();
+    renderYear();
+  });
+
+  document.getElementById('prevYear').addEventListener('click', ()=>{ currentYear--; renderYear(); });
+  document.getElementById('nextYear').addEventListener('click', ()=>{ currentYear++; renderYear(); });
+
+  document.getElementById('resetData').addEventListener('click', ()=>{
+    if(confirm('Réinitialiser toutes les données (congés posés, notes, paramètres) ? Cette action est irréversible.')){
+      localStorage.removeItem(STORAGE_KEY);
+      data = defaultData();
+      currentYear = data.lastViewedYear;
+      renderSettings();
+      renderYear();
+    }
+  });
+
+  document.getElementById('exportBtn').addEventListener('click', ()=>{
+    const blob = new Blob([JSON.stringify(data, null, 2)], {type:'application/json'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'calendrier-conges-sauvegarde.json';
+    a.click();
+    URL.revokeObjectURL(url);
+  });
+
+  document.getElementById('importBtn').addEventListener('click', ()=>{
+    document.getElementById('importFile').click();
+  });
+  document.getElementById('importFile').addEventListener('change', (e)=>{
+    const file = e.target.files[0];
+    if(!file) return;
+    const reader = new FileReader();
+    reader.onload = ()=>{
+      try{
+        const parsed = JSON.parse(reader.result);
+        const d = defaultData();
+        d.settings = Object.assign(d.settings, parsed.settings||{});
+        d.lastViewedYear = parsed.lastViewedYear || d.lastViewedYear;
+        d.days = parsed.days || {};
+        data = d;
+        currentYear = data.lastViewedYear;
+        save();
+        renderSettings();
+        renderYear();
+        alert('Import réussi.');
+      }catch(err){
+        alert('Fichier invalide : ' + err.message);
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = '';
+  });
+
+  document.getElementById('syncUrlInput').addEventListener('change', (e)=>{
+    syncUrl = e.target.value.trim();
+    localStorage.setItem(SYNC_URL_KEY, syncUrl);
+    if(syncUrl){
+      smartSync();
+    } else {
+      setSyncStatus('none');
+    }
+  });
+
+  document.getElementById('testSync').addEventListener('click', ()=>{
+    if(!syncUrl){ alert('Renseigne d\'abord une URL de script.'); return; }
+    setSyncStatus('syncing');
+    fetch(syncUrl)
+      .then(r=>r.json())
+      .then(()=>{ setSyncStatus('ok'); alert('Connexion réussie !'); })
+      .catch(err=>{ setSyncStatus('error'); alert('Échec de connexion : ' + err.message); });
+  });
+
+  document.getElementById('pullNow').addEventListener('click', ()=>{
+    if(!syncUrl){ alert('Renseigne d\'abord une URL de script.'); return; }
+    if(confirm('Recharger depuis le Sheet va remplacer les données affichées ici par celles du Sheet. Continuer ?')){
+      pullFromRemote();
+    }
+  });
+
+  document.getElementById('pushNow').addEventListener('click', ()=>{
+    if(!syncUrl){ alert('Renseigne d\'abord une URL de script.'); return; }
+    pushToRemote().then(()=>alert('Données envoyées vers le Sheet.'));
+  });
+
+  document.addEventListener('visibilitychange', ()=>{
+    if(document.visibilityState === 'visible' && syncUrl){
+      pullFromRemote();
+    }
+  });
+
+  renderSettings();
+  renderYear();
+  setSyncStatus(syncUrl ? 'ok' : 'none');
+  if(syncUrl){ smartSync(); }
+})();
+</script>
+</body>
+</html>
