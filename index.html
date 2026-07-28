@@ -45,10 +45,11 @@
     font-size:13px; font-weight:600; color:#666;
   }
   .view-btn.active { background:#fff; color:var(--text); box-shadow:0 1px 3px rgba(0,0,0,0.15); }
-  #toggleSettings, #exportBtn, #importBtn, #resetData, #todayBtn {
+  #toggleSettings, #exportBtn, #importBtn, #resetData, #todayBtn, #addEventBtn {
     border:1px solid var(--border); background:#fff; padding:8px 14px; border-radius:8px; cursor:pointer; font-size:14px;
   }
-  #toggleSettings:hover, #exportBtn:hover, #importBtn:hover, #todayBtn:hover { background:#eee; }
+  #toggleSettings:hover, #exportBtn:hover, #importBtn:hover, #todayBtn:hover, #addEventBtn:hover { background:#eee; }
+  #addEventBtn.hidden { display:none; }
   #resetData { color:#c0392b; border-color:#e6b3ac; }
   #resetData:hover { background:#fdecea; }
   .summary { display:flex; gap:16px; flex-wrap:wrap; margin-bottom:16px; }
@@ -120,6 +121,7 @@
   @media (max-width:1000px){ .months-grid { grid-template-columns: repeat(2,1fr); } }
   @media (max-width:640px){ .months-grid { grid-template-columns: 1fr; } body{padding:10px;} }
   .months-grid.single-view { display:block; max-width:900px; margin:0 auto; }
+  .months-grid.wide-view { display:block; max-width:1200px; margin:0 auto; }
   .month-block { background:var(--card-bg); border:1px solid var(--border); border-radius:10px; padding:10px; }
   .month-title { font-weight:600; font-size:14px; text-align:center; margin-bottom:8px; text-transform:capitalize; }
   .month-block.large .month-title { font-size:18px; margin-bottom:14px; }
@@ -128,17 +130,12 @@
   .days-grid { display:grid; grid-template-columns: repeat(7,1fr); gap:3px; }
   .day {
     min-height:52px; border-radius:5px; background:#fff; border:1px solid #eee;
-    display:flex; flex-direction:column; overflow:hidden; position:relative;
+    display:flex; flex-direction:column; overflow:hidden; position:relative; cursor:pointer;
   }
-  .day.big { min-height:110px; }
+  .day.big { min-height:110px; cursor:pointer; }
   .day.big .daynum { font-size:16px; padding:5px 8px; }
-  .day.big .note { font-size:12.5px; padding:0 8px 8px; }
   .day.big .holiday-label { font-size:11px; padding:0 8px 3px; }
   .day.big .flag-dot { width:12px; height:12px; }
-  .day-view-wrap { max-width:520px; margin:0 auto; }
-  .day-view-wrap .day.big { min-height:360px; }
-  .day-view-wrap .day.big .daynum { font-size:26px; }
-  .day-view-wrap .day.big .note { font-size:15px; }
   .day.empty { background:transparent; border:none; }
   .day.off { background:var(--gris-off); }
   .day.conge { background:var(--bleu-conge); }
@@ -180,15 +177,68 @@
   .status-menu .sw { display:inline-block; width:10px; height:10px; border-radius:3px; margin-right:8px; vertical-align:middle; }
   .day.off .daynum { cursor:default; color:var(--gris-off-text); }
   .holiday-label { font-size:8px; color:#666; padding:0 4px 2px; line-height:1.1; }
-  .note {
-    flex:1; font-size:9.5px; padding:0 4px 3px; outline:none; overflow:hidden; word-break:break-word;
-    line-height:1.2; cursor:text;
-  }
-  .note:empty:before { content:"+"; color:#bbb; }
-  .day:hover .note:empty:before { content:"note…"; color:#aaa; }
   .day.today { box-shadow: inset 0 0 0 2px #e53935; }
   .day.today .daynum { color:#e53935; font-weight:800; }
   footer { margin-top:20px; font-size:11px; color:#999; text-align:center; }
+
+  /* Évènements : chips compactes (mois/année/bandeau journée entière) */
+  .day-events { flex:1; display:flex; flex-direction:column; gap:2px; padding:0 4px 4px; overflow:hidden; }
+  .event-chip {
+    background:#e3f2fd; color:#0d47a1; border-radius:4px; padding:1px 5px; font-size:9px;
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap; cursor:pointer;
+  }
+  .day.big .event-chip { font-size:11px; padding:2px 6px; }
+  .event-chip:hover { filter:brightness(0.95); }
+  .event-more { font-size:9px; color:#888; cursor:pointer; padding:1px 5px; }
+  .event-more:hover { text-decoration:underline; }
+
+  /* Grille horaire (vues Jour / Semaine) */
+  .timegrid-wrap { background:var(--card-bg); border:1px solid var(--border); border-radius:10px; overflow:hidden; }
+  .timegrid-header, .timegrid-allday { display:grid; border-bottom:1px solid var(--border); }
+  .timegrid-corner, .timegrid-corner-label {
+    border-right:1px solid var(--border); font-size:10px; color:#999; padding:6px;
+    display:flex; align-items:center; justify-content:center; text-align:center;
+  }
+  .timegrid-daylabel {
+    padding:8px 4px; text-align:center; font-size:13px; font-weight:600;
+    border-right:1px solid var(--border); text-transform:capitalize;
+  }
+  .timegrid-daylabel:last-child { border-right:none; }
+  .timegrid-daylabel.today { color:#e53935; }
+  .timegrid-allday-cell {
+    border-right:1px solid var(--border); min-height:30px; padding:3px 4px; cursor:pointer;
+    display:flex; flex-direction:column; gap:2px;
+  }
+  .timegrid-allday-cell:last-child { border-right:none; }
+  .timegrid-allday-cell .event-chip { font-size:11px; padding:2px 6px; }
+  .timegrid-body { max-height:600px; overflow-y:auto; position:relative; }
+  .timegrid-inner { display:grid; position:relative; }
+  .timegrid-hourcol { border-right:1px solid var(--border); }
+  .timegrid-hourlabel {
+    font-size:10px; color:#999; text-align:right; padding-right:6px; box-sizing:border-box;
+    border-bottom:1px solid #f2f2f2;
+  }
+  .timegrid-col { position:relative; border-right:1px solid var(--border); box-sizing:border-box; }
+  .timegrid-col:last-child { border-right:none; }
+  .timegrid-hourline {
+    position:absolute; left:0; right:0; border-bottom:1px solid #f2f2f2; cursor:pointer; box-sizing:border-box;
+  }
+  .timegrid-hourline:hover { background:#f8f9fb; }
+  .event-block {
+    position:absolute; left:2px; right:2px; background:var(--bleu-conge); color:#0d3c61;
+    border-radius:4px; padding:2px 5px; font-size:11px; overflow:hidden; cursor:pointer;
+    box-shadow:0 1px 2px rgba(0,0,0,0.15); z-index:1;
+  }
+  .event-block:hover { filter:brightness(0.96); }
+
+  /* Modale évènement */
+  .modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.45); display:flex; align-items:center; justify-content:center; z-index:2000; }
+  .modal-overlay.hidden { display:none; }
+  .modal-box { background:#fff; border-radius:12px; padding:20px 22px; width:320px; max-width:90vw; box-shadow:0 10px 40px rgba(0,0,0,0.3); }
+  .modal-box h3 { margin:0 0 14px; font-size:16px; }
+  .modal-box .settings-row label { min-width:90px; }
+  .modal-box input[type=text], .modal-box input[type=time] { flex:1; padding:6px 8px; border:1px solid var(--border); border-radius:6px; }
+  #evDelete { color:#c0392b; border-color:#e6b3ac; }
 </style>
 </head>
 <body>
@@ -207,6 +257,7 @@
       <button class="view-btn" data-view="year">Année</button>
     </div>
     <button id="todayBtn">Aujourd'hui</button>
+    <button id="addEventBtn" class="hidden">+ Évènement</button>
     <button id="toggleSettings">⚙ Paramètres</button>
   </header>
   <div class="brush-bar">
@@ -305,6 +356,31 @@
   <footer>Les données sont enregistrées automatiquement dans le stockage local de ce navigateur. Si une synchronisation Google Sheet est configurée (Paramètres), elles sont aussi envoyées vers le Sheet pour être accessibles depuis tes autres appareils. Pensez à exporter régulièrement une sauvegarde JSON.</footer>
 </div>
 <div id="statusMenu" class="status-menu hidden"></div>
+
+<div id="eventModal" class="modal-overlay hidden">
+  <div class="modal-box">
+    <h3 id="eventModalTitle">Nouvel évènement</h3>
+    <div class="settings-row">
+      <label for="evTitle">Titre</label>
+      <input type="text" id="evTitle" placeholder="Réunion, anniversaire...">
+    </div>
+    <div class="settings-row">
+      <label for="evAllDay">Journée entière</label>
+      <input type="checkbox" id="evAllDay">
+    </div>
+    <div class="settings-row" id="evTimeRow">
+      <label for="evStart">De</label>
+      <input type="time" id="evStart">
+      <label for="evEnd">à</label>
+      <input type="time" id="evEnd">
+    </div>
+    <div class="settings-actions">
+      <button id="evSave">Enregistrer</button>
+      <button id="evDelete">🗑 Supprimer</button>
+      <button id="evCancel">Annuler</button>
+    </div>
+  </div>
+</div>
 <script>
 (function(){
   const STORAGE_KEY = 'congesCalendarData_v1';
@@ -338,8 +414,23 @@
         holidayRules: defaultHolidayRules()
       },
       lastViewedYear: y,
-      days: {} // "YYYY-MM-DD": {status:'conge'|'rtt'|'', note:'...', flag:true|false}
+      days: {} // "YYYY-MM-DD": {status:'conge'|'rtt'|'', flag:true|false, events:[{id,title,allDay,start,end}]}
     };
+  }
+  function makeEventId(){
+    return 'e' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+  }
+  // Convertit les anciennes notes libres (un texte par jour) en évènement
+  // "journée entière", pour ne rien perdre lors du passage aux évènements.
+  function migrateLegacyNotes(daysObj){
+    Object.keys(daysObj || {}).forEach(ds=>{
+      const d = daysObj[ds];
+      if(d && d.note && !(d.events && d.events.length)){
+        d.events = [{ id: makeEventId(), title: d.note, allDay: true }];
+      }
+      if(d) delete d.note;
+    });
+    return daysObj;
   }
   function load(){
     try{
@@ -350,7 +441,7 @@
       const d = defaultData();
       d.settings = Object.assign(d.settings, parsed.settings||{});
       d.lastViewedYear = parsed.lastViewedYear || d.lastViewedYear;
-      d.days = parsed.days || {};
+      d.days = migrateLegacyNotes(parsed.days || {});
       return d;
     }catch(e){
       console.error('Erreur chargement', e);
@@ -432,7 +523,7 @@
     // doit jamais être écrasée par une valeur venue du Sheet (sinon chaque
     // rafraîchissement automatique ramène tout le monde sur la même année).
     merged.lastViewedYear = currentYear || merged.lastViewedYear;
-    merged.days = remote.days || {};
+    merged.days = migrateLegacyNotes(remote.days || {});
     data = merged;
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
     renderSettings();
@@ -547,18 +638,42 @@
   }
   let currentBrush = 'conge'; // 'conge' | 'rtt' | '' (effacer)
   let pendingStart = null; // dateStr of the first click, awaiting a second click
+  function cleanupDay(ds){
+    const d = data.days[ds];
+    if(d && !d.status && !d.flag && (!d.events || !d.events.length)) delete data.days[ds];
+  }
   function setStatus(ds, value){
     if(!data.days[ds]) data.days[ds] = {};
     data.days[ds].status = value;
-    if(!data.days[ds].status && !data.days[ds].note && !data.days[ds].flag) delete data.days[ds];
+    cleanupDay(ds);
     save();
   }
   function toggleFlag(ds){
     if(!data.days[ds]) data.days[ds] = {};
     data.days[ds].flag = !data.days[ds].flag;
-    if(!data.days[ds].status && !data.days[ds].note && !data.days[ds].flag) delete data.days[ds];
+    cleanupDay(ds);
     save();
     renderYear();
+  }
+  function getDayEvents(ds){
+    const evs = (data.days[ds] && data.days[ds].events) || [];
+    return evs.slice().sort((a, b)=>{
+      if(!!a.allDay !== !!b.allDay) return a.allDay ? -1 : 1;
+      return (a.start || '').localeCompare(b.start || '');
+    });
+  }
+  function addOrUpdateEvent(ds, ev){
+    if(!data.days[ds]) data.days[ds] = {};
+    if(!data.days[ds].events) data.days[ds].events = [];
+    const idx = data.days[ds].events.findIndex(e=>e.id === ev.id);
+    if(idx >= 0) data.days[ds].events[idx] = ev; else data.days[ds].events.push(ev);
+    save();
+  }
+  function deleteEvent(ds, id){
+    if(!data.days[ds] || !data.days[ds].events) return;
+    data.days[ds].events = data.days[ds].events.filter(e=>e.id !== id);
+    cleanupDay(ds);
+    save();
   }
   function closeStatusMenu(){
     const menu = document.getElementById('statusMenu');
@@ -672,14 +787,26 @@
       renderYear();
     }
   }
-  function updateNote(ds, text){
-    text = text.trim();
-    if(!data.days[ds]) data.days[ds] = {};
-    data.days[ds].note = text;
-    if(!data.days[ds].status && !data.days[ds].note && !data.days[ds].flag) delete data.days[ds];
-    save();
+  // Bascule vers la vue "Jour" pour la date donnée (déclenchée en cliquant
+  // n'importe où dans une case des vues semaine/mois/année, hors numéro,
+  // point de flag et chips d'évènement — qui ont leur propre action).
+  function goToDayView(ds){
+    viewDate = new Date(ds + 'T00:00:00');
+    viewMode = 'day';
+    document.querySelectorAll('.view-btn').forEach(b=>b.classList.toggle('active', b.dataset.view === 'day'));
+    renderYear();
   }
-  // Construit une case-jour complète (utilisée par les 4 vues : jour, semaine, mois, année).
+  // Petit badge cliquable représentant un évènement (utilisé dans les cases
+  // mois/année et dans le bandeau "journée entière" de la grille horaire).
+  function buildEventChip(ds, ev){
+    const chip = document.createElement('div');
+    chip.className = 'event-chip';
+    chip.textContent = (ev.allDay ? '' : (ev.start ? ev.start + ' ' : '')) + ev.title;
+    chip.title = ev.title;
+    chip.addEventListener('click', (e)=>{ e.stopPropagation(); openEventModal(ds, ev.id); });
+    return chip;
+  }
+  // Construit une case-jour complète (utilisée par les vues mois et année).
   function buildDayCell(ds, big){
     const dow = new Date(ds + 'T00:00:00').getDay();
     const isWeekend = (dow === 0 || dow === 6);
@@ -727,13 +854,25 @@
       hl.textContent = holidayLabel;
       cell.appendChild(hl);
     }
-    const note = document.createElement('div');
-    note.className = 'note';
-    note.contentEditable = 'true';
-    note.textContent = dayData.note || '';
-    note.addEventListener('blur', ()=>updateNote(ds, note.textContent));
-    note.addEventListener('keydown', (e)=>{ if(e.key === 'Enter'){ e.preventDefault(); note.blur(); } });
-    cell.appendChild(note);
+    const evList = document.createElement('div');
+    evList.className = 'day-events';
+    const events = getDayEvents(ds);
+    const maxShow = big ? 4 : 2;
+    events.slice(0, maxShow).forEach(ev=>{
+      evList.appendChild(buildEventChip(ds, ev));
+    });
+    if(events.length > maxShow){
+      const more = document.createElement('div');
+      more.className = 'event-more';
+      const rest = events.length - maxShow;
+      more.textContent = '+' + rest + ' autre' + (rest > 1 ? 's' : '');
+      more.addEventListener('click', (e)=>{ e.stopPropagation(); goToDayView(ds); });
+      evList.appendChild(more);
+    }
+    cell.appendChild(evList);
+    // Clic sur une zone vide de la case (pas le numéro, pas le point de
+    // flag, pas une chip) : ouvre la vue Jour de cette date.
+    cell.addEventListener('click', ()=>goToDayView(ds));
     return cell;
   }
 
@@ -764,32 +903,125 @@
     return wrap;
   }
 
+  const HOUR_H = 48; // hauteur en px d'une heure dans la grille horaire
+  function timeToMinutes(t){
+    if(!t) return 0;
+    const parts = String(t).split(':');
+    return (Number(parts[0])||0) * 60 + (Number(parts[1])||0);
+  }
+  // Bloc positionné (top/height) représentant un évènement avec horaire,
+  // affiché dans la colonne du jour concerné.
+  function buildEventBlock(ds, ev){
+    const startMin = timeToMinutes(ev.start || '00:00');
+    let endMin = timeToMinutes(ev.end || ev.start || '00:00');
+    if(endMin <= startMin) endMin = startMin + 30;
+    const block = document.createElement('div');
+    block.className = 'event-block';
+    block.style.top = ((startMin/60) * HOUR_H) + 'px';
+    block.style.height = Math.max(((endMin-startMin)/60) * HOUR_H, 18) + 'px';
+    block.textContent = (ev.start ? ev.start + ' ' : '') + ev.title;
+    block.title = ev.title + (ev.start ? ' (' + ev.start + (ev.end ? '–' + ev.end : '') + ')' : '');
+    block.addEventListener('click', (e)=>{ e.stopPropagation(); openEventModal(ds, ev.id); });
+    return block;
+  }
+  // Grille horaire générique (00h-23h), utilisée pour la vue Jour (1 colonne)
+  // et la vue Semaine (7 colonnes) : bandeau "journée entière" en haut, puis
+  // corps défilable avec les évènements positionnés selon leur horaire.
+  function renderTimeGrid(container, dates){
+    const todayStr = dateStr(new Date().getFullYear(), new Date().getMonth(), new Date().getDate());
+    const cols = `60px repeat(${dates.length}, 1fr)`;
+    const wrap = document.createElement('div');
+    wrap.className = 'timegrid-wrap';
+
+    if(dates.length > 1){
+      const header = document.createElement('div');
+      header.className = 'timegrid-header';
+      header.style.gridTemplateColumns = cols;
+      const corner = document.createElement('div');
+      corner.className = 'timegrid-corner';
+      header.appendChild(corner);
+      dates.forEach(d=>{
+        const ds = dateStr(d.getFullYear(), d.getMonth(), d.getDate());
+        const lbl = document.createElement('div');
+        lbl.className = 'timegrid-daylabel' + (ds === todayStr ? ' today' : '');
+        lbl.textContent = JOURS[(d.getDay()+6)%7] + ' ' + d.getDate();
+        header.appendChild(lbl);
+      });
+      wrap.appendChild(header);
+    }
+
+    const allDayRow = document.createElement('div');
+    allDayRow.className = 'timegrid-allday';
+    allDayRow.style.gridTemplateColumns = cols;
+    const adLabel = document.createElement('div');
+    adLabel.className = 'timegrid-corner-label';
+    adLabel.textContent = 'Journée';
+    allDayRow.appendChild(adLabel);
+    dates.forEach(d=>{
+      const ds = dateStr(d.getFullYear(), d.getMonth(), d.getDate());
+      const cell = document.createElement('div');
+      cell.className = 'timegrid-allday-cell';
+      getDayEvents(ds).filter(e=>e.allDay).forEach(ev=>{
+        cell.appendChild(buildEventChip(ds, ev));
+      });
+      cell.addEventListener('click', (e)=>{ if(e.target === cell) openEventModal(ds, null, {allDay:true}); });
+      allDayRow.appendChild(cell);
+    });
+    wrap.appendChild(allDayRow);
+
+    const body = document.createElement('div');
+    body.className = 'timegrid-body';
+    const inner = document.createElement('div');
+    inner.className = 'timegrid-inner';
+    inner.style.gridTemplateColumns = cols;
+    inner.style.height = (24 * HOUR_H) + 'px';
+
+    const hourCol = document.createElement('div');
+    hourCol.className = 'timegrid-hourcol';
+    for(let h=0; h<24; h++){
+      const lbl = document.createElement('div');
+      lbl.className = 'timegrid-hourlabel';
+      lbl.style.height = HOUR_H + 'px';
+      lbl.textContent = String(h).padStart(2,'0') + ':00';
+      hourCol.appendChild(lbl);
+    }
+    inner.appendChild(hourCol);
+
+    dates.forEach(d=>{
+      const ds = dateStr(d.getFullYear(), d.getMonth(), d.getDate());
+      const col = document.createElement('div');
+      col.className = 'timegrid-col';
+      col.style.height = (24 * HOUR_H) + 'px';
+      for(let h=0; h<24; h++){
+        const line = document.createElement('div');
+        line.className = 'timegrid-hourline';
+        line.style.top = (h * HOUR_H) + 'px';
+        line.style.height = HOUR_H + 'px';
+        line.addEventListener('click', ()=>{
+          openEventModal(ds, null, { allDay:false, start: String(h).padStart(2,'0') + ':00' });
+        });
+        col.appendChild(line);
+      }
+      getDayEvents(ds).filter(e=>!e.allDay).forEach(ev=>{
+        col.appendChild(buildEventBlock(ds, ev));
+      });
+      inner.appendChild(col);
+    });
+    body.appendChild(inner);
+    wrap.appendChild(body);
+    container.appendChild(wrap);
+    body.scrollTop = 7 * HOUR_H; // ouvre la grille autour de 7h par défaut
+  }
+
   function renderWeekBody(container){
     const start = startOfWeek(viewDate);
-    const wh = document.createElement('div');
-    wh.className = 'week-header';
-    for(let i=0;i<7;i++){
-      const d = new Date(start); d.setDate(d.getDate()+i);
-      const c = document.createElement('div');
-      c.textContent = JOURS[i] + ' ' + d.getDate();
-      wh.appendChild(c);
-    }
-    container.appendChild(wh);
-    const grid = document.createElement('div');
-    grid.className = 'days-grid';
-    for(let i=0;i<7;i++){
-      const d = new Date(start); d.setDate(d.getDate()+i);
-      grid.appendChild(buildDayCell(dateStr(d.getFullYear(), d.getMonth(), d.getDate()), true));
-    }
-    container.appendChild(grid);
+    const dates = [];
+    for(let i=0;i<7;i++){ const d = new Date(start); d.setDate(d.getDate()+i); dates.push(d); }
+    renderTimeGrid(container, dates);
   }
 
   function renderDayBody(container){
-    const wrap = document.createElement('div');
-    wrap.className = 'day-view-wrap';
-    const ds = dateStr(viewDate.getFullYear(), viewDate.getMonth(), viewDate.getDate());
-    wrap.appendChild(buildDayCell(ds, true));
-    container.appendChild(wrap);
+    renderTimeGrid(container, [viewDate]);
   }
 
   function formatPeriodLabel(){
@@ -812,7 +1044,9 @@
     document.getElementById('periodLabel').textContent = formatPeriodLabel();
     const gridWrap = document.getElementById('calendarGrid');
     gridWrap.innerHTML = '';
-    gridWrap.className = 'months-grid' + (viewMode === 'year' ? '' : ' single-view');
+    const viewClass = { year:'', month:' single-view', day:' single-view', week:' wide-view' }[viewMode] || '';
+    gridWrap.className = 'months-grid' + viewClass;
+    document.getElementById('addEventBtn').classList.toggle('hidden', !(viewMode === 'day' || viewMode === 'week'));
     if(viewMode === 'year'){
       for(let m=0;m<12;m++){
         gridWrap.appendChild(renderMonth(currentYear, m, false));
@@ -972,6 +1206,65 @@
       renderYear();
     });
   });
+
+  // ---- Modale de création / édition d'évènement ----
+  let eventModalCtx = null; // { ds, id } — id est null pour une création
+  function openEventModal(ds, eventId, defaults){
+    defaults = defaults || {};
+    eventModalCtx = { ds, id: eventId || null };
+    const isEdit = !!eventId;
+    const ev = isEdit ? (getDayEvents(ds).find(e=>e.id === eventId) || {}) : null;
+    document.getElementById('eventModalTitle').textContent = isEdit ? "Modifier l'évènement" : 'Nouvel évènement';
+    document.getElementById('evTitle').value = ev ? (ev.title || '') : '';
+    const allDay = ev ? !!ev.allDay : !!defaults.allDay;
+    document.getElementById('evAllDay').checked = allDay;
+    document.getElementById('evStart').value = ev ? (ev.start || '') : (defaults.start || '09:00');
+    document.getElementById('evEnd').value = ev ? (ev.end || '') : (defaults.end || '');
+    document.getElementById('evTimeRow').style.display = allDay ? 'none' : 'flex';
+    document.getElementById('evDelete').style.display = isEdit ? 'inline-block' : 'none';
+    document.getElementById('eventModal').classList.remove('hidden');
+    document.getElementById('evTitle').focus();
+  }
+  function closeEventModal(){
+    document.getElementById('eventModal').classList.add('hidden');
+    eventModalCtx = null;
+  }
+  document.getElementById('evAllDay').addEventListener('change', (e)=>{
+    document.getElementById('evTimeRow').style.display = e.target.checked ? 'none' : 'flex';
+  });
+  document.getElementById('evCancel').addEventListener('click', closeEventModal);
+  document.getElementById('eventModal').addEventListener('click', (e)=>{
+    if(e.target.id === 'eventModal') closeEventModal();
+  });
+  document.getElementById('evSave').addEventListener('click', ()=>{
+    if(!eventModalCtx) return;
+    const title = document.getElementById('evTitle').value.trim();
+    if(!title){ alert('Merci de renseigner un titre.'); return; }
+    const allDay = document.getElementById('evAllDay').checked;
+    const ev = { id: eventModalCtx.id || makeEventId(), title, allDay };
+    if(!allDay){
+      ev.start = document.getElementById('evStart').value || '00:00';
+      ev.end = document.getElementById('evEnd').value || '';
+    }
+    addOrUpdateEvent(eventModalCtx.ds, ev);
+    closeEventModal();
+    renderYear();
+  });
+  document.getElementById('evDelete').addEventListener('click', ()=>{
+    if(!eventModalCtx || !eventModalCtx.id) return;
+    if(confirm('Supprimer cet évènement ?')){
+      deleteEvent(eventModalCtx.ds, eventModalCtx.id);
+      closeEventModal();
+      renderYear();
+    }
+  });
+  document.getElementById('addEventBtn').addEventListener('click', ()=>{
+    const ds = viewMode === 'week'
+      ? dateStr(startOfWeek(viewDate).getFullYear(), startOfWeek(viewDate).getMonth(), startOfWeek(viewDate).getDate())
+      : dateStr(viewDate.getFullYear(), viewDate.getMonth(), viewDate.getDate());
+    openEventModal(ds, null, { allDay:false, start:'09:00' });
+  });
+
   document.getElementById('resetData').addEventListener('click', ()=>{
     if(confirm('Réinitialiser toutes les données (congés posés, notes, paramètres) ? Cette action est irréversible.')){
       localStorage.removeItem(STORAGE_KEY);
@@ -1002,7 +1295,7 @@
         const d = defaultData();
         d.settings = Object.assign(d.settings, parsed.settings||{});
         d.lastViewedYear = parsed.lastViewedYear || d.lastViewedYear;
-        d.days = parsed.days || {};
+        d.days = migrateLegacyNotes(parsed.days || {});
         data = d;
         save();
         renderSettings();
