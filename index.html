@@ -346,7 +346,8 @@
 
   // ---- Synchronisation Google Sheet (optionnelle) ----
   const SYNC_URL_KEY = 'congesCalendarSyncUrl_v1';
-  let syncUrl = localStorage.getItem(SYNC_URL_KEY) || '';
+  const DEFAULT_SYNC_URL = 'https://script.google.com/macros/s/AKfycbwieiIn14uwHYRoxO9wemckpwsqcMR3U_gjdFOzK92A6ZC8yIlTvtqMm5bCkuMzHwLk/exec';
+  let syncUrl = localStorage.getItem(SYNC_URL_KEY) || DEFAULT_SYNC_URL;
   let syncTimer = null;
 
   function setSyncStatus(state){
