@@ -857,10 +857,13 @@
   }
   // Petit badge cliquable représentant un évènement (utilisé dans les cases
   // mois/année et dans le bandeau "journée entière" de la grille horaire).
+  // Volontairement sans horaire : en vues semaine/mois/année on affiche
+  // uniquement le nom de l'évènement (l'horaire précis reste visible en vue
+  // Jour, sur le bloc positionné dans la grille horaire).
   function buildEventChip(ds, ev){
     const chip = document.createElement('div');
     chip.className = 'event-chip';
-    chip.textContent = (ev.allDay ? '' : (ev.start ? ev.start + ' ' : '')) + ev.title;
+    chip.textContent = ev.title;
     chip.title = ev.title;
     chip.addEventListener('click', (e)=>{ e.stopPropagation(); openEventModal(ds, ev.id); });
     return chip;
@@ -1072,8 +1075,10 @@
     return (Number(parts[0])||0) * 60 + (Number(parts[1])||0);
   }
   // Bloc positionné (top/height) représentant un évènement avec horaire,
-  // affiché dans la colonne du jour concerné.
-  function buildEventBlock(ds, ev){
+  // affiché dans la colonne du jour concerné. showTime : n'affiche l'horaire
+  // en toutes lettres sur le bloc qu'en vue Jour (la position verticale sur
+  // la grille horaire suffit en vue Semaine, sans le répéter en texte).
+  function buildEventBlock(ds, ev, showTime){
     const startMin = timeToMinutes(ev.start || '00:00');
     let endMin = timeToMinutes(ev.end || ev.start || '00:00');
     if(endMin <= startMin) endMin = startMin + 30;
@@ -1081,16 +1086,47 @@
     block.className = 'event-block';
     block.style.top = ((startMin/60) * HOUR_H) + 'px';
     block.style.height = Math.max(((endMin-startMin)/60) * HOUR_H, 18) + 'px';
-    block.textContent = (ev.start ? ev.start + ' ' : '') + ev.title;
+    block.textContent = (showTime && ev.start ? ev.start + ' ' : '') + ev.title;
     block.title = ev.title + (ev.start ? ' (' + ev.start + (ev.end ? '–' + ev.end : '') + ')' : '');
     block.addEventListener('click', (e)=>{ e.stopPropagation(); openEventModal(ds, ev.id); });
     return block;
+  }
+  // Regroupe, pour une liste de jours consécutifs (vue Jour = 1 jour, vue
+  // Semaine = 7 jours), les évènements "journée entière" identiques (même id,
+  // ou même titre pour d'anciennes données) en un seul bandeau qui s'étire —
+  // même logique que computeAllDaySpans, mais sur une liste de dates plutôt
+  // que sur toute une grille de mois (pas de saut de ligne à gérer ici).
+  function computeAllDaySpansForDates(dsList){
+    const dayMeta = dsList.map((ds, idx)=>({ ds, idx, mainEvent: getDayEvents(ds).find(e=>e.allDay) || null }));
+    const spans = [];
+    let i = 0;
+    while(i < dayMeta.length){
+      if(!dayMeta[i].mainEvent){ i++; continue; }
+      const id = dayMeta[i].mainEvent.id;
+      const key = dayMeta[i].mainEvent.title.trim().toLowerCase();
+      const members = [dayMeta[i]];
+      let j = i + 1;
+      while(j < dayMeta.length){
+        const nextEv = dayMeta[j].mainEvent;
+        if(!nextEv || (nextEv.id !== id && nextEv.title.trim().toLowerCase() !== key)) break;
+        members.push(dayMeta[j]);
+        j++;
+      }
+      spans.push({
+        colStart: i, colEnd: i + members.length - 1,
+        title: dayMeta[i].mainEvent.title, ds: dayMeta[i].ds, id,
+        hiddenIds: members.map(m=>({ ds: m.ds, id: m.mainEvent.id }))
+      });
+      i = j;
+    }
+    return spans;
   }
   // Grille horaire générique (00h-23h), utilisée pour la vue Jour (1 colonne)
   // et la vue Semaine (7 colonnes) : bandeau "journée entière" en haut, puis
   // corps défilable avec les évènements positionnés selon leur horaire.
   function renderTimeGrid(container, dates){
     const todayStr = dateStr(new Date().getFullYear(), new Date().getMonth(), new Date().getDate());
+    const showTime = dates.length === 1; // horaire en texte réservé à la vue Jour
     const cols = `60px repeat(${dates.length}, 1fr)`;
     const wrap = document.createElement('div');
     wrap.className = 'timegrid-wrap';
@@ -1112,24 +1148,70 @@
       wrap.appendChild(header);
     }
 
+    const dsList = dates.map(d=>dateStr(d.getFullYear(), d.getMonth(), d.getDate()));
+    const spans = computeAllDaySpansForDates(dsList);
+    const hiddenByDs = {};
+    spans.forEach(sp=>{
+      sp.hiddenIds.forEach(h=>{
+        if(!hiddenByDs[h.ds]) hiddenByDs[h.ds] = new Set();
+        hiddenByDs[h.ds].add(h.id);
+      });
+    });
+
     const allDayRow = document.createElement('div');
     allDayRow.className = 'timegrid-allday';
     allDayRow.style.gridTemplateColumns = cols;
+    allDayRow.style.position = 'relative';
     const adLabel = document.createElement('div');
     adLabel.className = 'timegrid-corner-label';
     adLabel.textContent = 'Journée';
     allDayRow.appendChild(adLabel);
-    dates.forEach(d=>{
-      const ds = dateStr(d.getFullYear(), d.getMonth(), d.getDate());
+    const allDayCellEls = [];
+    dsList.forEach(ds=>{
       const cell = document.createElement('div');
       cell.className = 'timegrid-allday-cell';
-      getDayEvents(ds).filter(e=>e.allDay).forEach(ev=>{
+      const hidden = hiddenByDs[ds];
+      if(hidden && hidden.size){
+        const spacer = document.createElement('div');
+        spacer.style.height = '19px';
+        spacer.style.flexShrink = '0';
+        cell.appendChild(spacer);
+      }
+      getDayEvents(ds).filter(e=>e.allDay && !(hidden && hidden.has(e.id))).forEach(ev=>{
         cell.appendChild(buildEventChip(ds, ev));
       });
       cell.addEventListener('click', (e)=>{ if(e.target === cell) openEventModal(ds, null, {allDay:true}); });
       allDayRow.appendChild(cell);
+      allDayCellEls.push(cell);
     });
     wrap.appendChild(allDayRow);
+
+    if(spans.length){
+      // Même technique que pour la vue Mois : positionnement en pixels après
+      // rendu réel, pour ne pas perturber le placement automatique des
+      // cellules de la grille CSS (voir renderMonth pour le détail du bug
+      // que ça évite).
+      requestAnimationFrame(()=>{
+        if(!allDayRow.isConnected) return;
+        const rowRect = allDayRow.getBoundingClientRect();
+        spans.forEach(sp=>{
+          const startEl = allDayCellEls[sp.colStart];
+          const endEl = allDayCellEls[sp.colEnd];
+          if(!startEl || !endEl) return;
+          const r1 = startEl.getBoundingClientRect();
+          const r2 = endEl.getBoundingClientRect();
+          const bar = document.createElement('div');
+          bar.className = 'day-allday-bar';
+          bar.textContent = sp.title;
+          bar.title = sp.title;
+          bar.style.left = (r1.left - rowRect.left) + 'px';
+          bar.style.top = '5px';
+          bar.style.width = (r2.right - r1.left) + 'px';
+          bar.addEventListener('click', (e)=>{ e.stopPropagation(); openEventModal(sp.ds, sp.id); });
+          allDayRow.appendChild(bar);
+        });
+      });
+    }
 
     const body = document.createElement('div');
     body.className = 'timegrid-body';
@@ -1165,7 +1247,7 @@
         col.appendChild(line);
       }
       getDayEvents(ds).filter(e=>!e.allDay).forEach(ev=>{
-        col.appendChild(buildEventBlock(ds, ev));
+        col.appendChild(buildEventBlock(ds, ev, showTime));
       });
       inner.appendChild(col);
     });
@@ -1620,12 +1702,15 @@
   // Rafraîchissement automatique depuis le Sheet : à l'ouverture (plus bas)
   // puis toutes les ~10 minutes. Uniquement ces deux moments, pas davantage.
   // Redessine (juste la vue courante) si la fenêtre est redimensionnée en
-  // vue Mois : les bandeaux d'évènements multi-jours sont positionnés en
-  // pixels, il faut donc les recalculer si les cases changent de largeur.
+  // vue Mois/Semaine/Jour : les bandeaux d'évènements multi-jours sont
+  // positionnés en pixels, il faut donc les recalculer si les cases
+  // changent de largeur.
   let resizeTimer = null;
   window.addEventListener('resize', ()=>{
     clearTimeout(resizeTimer);
-    resizeTimer = setTimeout(()=>{ if(viewMode === 'month') renderYear(); }, 200);
+    resizeTimer = setTimeout(()=>{
+      if(viewMode === 'month' || viewMode === 'week' || viewMode === 'day') renderYear();
+    }, 200);
   });
   setInterval(autoPull, 10 * 60 * 1000);
   renderSettings();
