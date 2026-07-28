@@ -24,6 +24,7 @@
     --text: #2b2f36;
   }
   * { box-sizing: border-box; }
+  button { border-radius:10px; font-family:inherit; }
   body {
     margin:0; padding:24px; background:var(--bg); color:var(--text);
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
@@ -36,19 +37,19 @@
   h1 { font-size:22px; margin:0; }
   .year-nav { display:flex; align-items:center; gap:10px; font-size:20px; font-weight:600; }
   .year-nav button {
-    width:34px; height:34px; border-radius:8px; border:1px solid var(--border); background:#fff; cursor:pointer; font-size:16px;
+    width:34px; height:34px; border-radius:10px; border:1px solid var(--border); background:#fff; cursor:pointer; font-size:16px;
   }
   .year-nav button:hover { background:#eee; }
-  .view-switch { display:flex; gap:4px; background:#eee; border-radius:8px; padding:3px; }
+  .view-switch { display:flex; gap:4px; background:#eee; border-radius:10px; padding:3px; }
   .view-btn {
-    border:none; background:transparent; padding:6px 14px; border-radius:6px; cursor:pointer;
+    border:none; background:transparent; padding:6px 14px; border-radius:8px; cursor:pointer;
     font-size:13px; font-weight:600; color:#666;
   }
   .view-btn.active { background:#fff; color:var(--text); box-shadow:0 1px 3px rgba(0,0,0,0.15); }
-  #toggleSettings, #exportBtn, #importBtn, #resetData, #todayBtn, #addEventBtn {
-    border:1px solid var(--border); background:#fff; padding:8px 14px; border-radius:8px; cursor:pointer; font-size:14px;
+  #toggleSettings, #exportBtn, #importBtn, #resetData, #todayBtn, #addEventBtn, #testSync, #pullNow, #pushNow {
+    border:1px solid var(--border); background:#fff; padding:8px 14px; border-radius:10px; cursor:pointer; font-size:14px;
   }
-  #toggleSettings:hover, #exportBtn:hover, #importBtn:hover, #todayBtn:hover, #addEventBtn:hover { background:#eee; }
+  #toggleSettings:hover, #exportBtn:hover, #importBtn:hover, #todayBtn:hover, #addEventBtn:hover, #testSync:hover, #pullNow:hover, #pushNow:hover { background:#eee; }
   #addEventBtn.hidden { display:none; }
   #resetData { color:#c0392b; border-color:#e6b3ac; }
   #resetData:hover { background:#fdecea; }
@@ -91,16 +92,16 @@
   }
   .pending-hint.hidden { display:none; }
   #cancelPending {
-    border:1px solid var(--border); background:#fff; border-radius:6px; padding:3px 10px; cursor:pointer; font-size:12px;
+    border:1px solid var(--border); background:#fff; border-radius:10px; padding:3px 10px; cursor:pointer; font-size:12px;
   }
   .day.pending { outline:2px dashed #555; outline-offset:-2px; }
   #settingsPanel h3 { margin:18px 0 8px; font-size:15px; }
   #settingsPanel h3:first-child { margin-top:0; }
   .settings-row { display:flex; align-items:center; gap:10px; margin-bottom:10px; flex-wrap:wrap; }
   .settings-row label { font-size:13px; min-width:220px; }
-  .settings-row input[type=number] { width:90px; padding:5px 8px; border:1px solid var(--border); border-radius:6px; }
+  .settings-row input[type=number] { width:90px; padding:5px 8px; border:1px solid var(--border); border-radius:8px; }
   .settings-row input[type=checkbox] { width:16px; height:16px; }
-  .settings-row input[type=text] { padding:5px 8px; border:1px solid var(--border); border-radius:6px; }
+  .settings-row input[type=text] { padding:5px 8px; border:1px solid var(--border); border-radius:8px; }
   .sync-status { font-size:12px; padding:4px 10px; border-radius:12px; background:#eee; color:#666; }
   .sync-status.pending { background:#fff3cd; color:#8a6d3b; }
   .sync-status.syncing { background:#cfe2ff; color:#084298; }
@@ -112,8 +113,8 @@
   table#holidayTable input[type=text] { width:100%; padding:4px 6px; border:1px solid var(--border); border-radius:5px; }
   table#holidayTable input[type=number] { width:60px; padding:4px 6px; border:1px solid var(--border); border-radius:5px; }
   table#holidayTable select { padding:4px 6px; border:1px solid var(--border); border-radius:5px; }
-  .del-btn { background:none; border:none; color:#c0392b; cursor:pointer; font-size:15px; }
-  #addHoliday { margin-top:4px; border:1px dashed #aaa; background:#fff; padding:6px 12px; border-radius:6px; cursor:pointer; font-size:13px; }
+  .del-btn { background:none; border:none; border-radius:0; color:#c0392b; cursor:pointer; font-size:15px; }
+  #addHoliday { margin-top:4px; border:1px dashed #aaa; background:#fff; padding:6px 12px; border-radius:10px; cursor:pointer; font-size:13px; }
   .settings-actions { display:flex; gap:10px; margin-top:16px; flex-wrap:wrap; }
   .months-grid {
     display:grid; grid-template-columns: repeat(3, 1fr); gap:16px;
@@ -135,7 +136,6 @@
   .day.big { min-height:110px; cursor:pointer; }
   .day.big .daynum { font-size:16px; padding:5px 8px; }
   .day.big .holiday-label { font-size:11px; padding:0 8px 3px; }
-  .day.big .flag-dot { width:12px; height:12px; }
   .day.empty { background:transparent; border:none; }
   .day.off { background:var(--gris-off); }
   .day.conge { background:var(--bleu-conge); }
@@ -147,20 +147,6 @@
   .day.rtt-pm { background:linear-gradient(to bottom, #fff 50%, var(--orange-rtt) 50%); }
   .day.teletravail-am { background:linear-gradient(to bottom, var(--vert-tt) 50%, #fff 50%); }
   .day.teletravail-pm { background:linear-gradient(to bottom, #fff 50%, var(--vert-tt) 50%); }
-  .day.flagged::after {
-    content:'';
-    position:absolute;
-    inset:0;
-    background: rgba(229, 57, 83, 0.22);
-    pointer-events:none;
-    border-radius:5px;
-  }
-  .flag-dot {
-    position:absolute; top:2px; right:3px; width:8px; height:8px; border-radius:50%;
-    background:rgba(0,0,0,0.10); cursor:pointer; z-index:2;
-  }
-  .flag-dot:hover { background:rgba(229,57,83,0.6); }
-  .flag-dot.active { background:#e5395a; box-shadow:0 0 0 2px rgba(229,57,83,0.28); }
   .daynum {
     font-size:11px; font-weight:600; padding:2px 4px; cursor:pointer; user-select:none;
   }
@@ -181,10 +167,10 @@
   .day.today .daynum { color:#e53935; font-weight:800; }
   footer { margin-top:20px; font-size:11px; color:#999; text-align:center; }
 
-  /* Évènements : chips compactes (mois/année/bandeau journée entière) */
+  /* Évènements : chips compactes (mois/année) */
   .day-events { flex:1; display:flex; flex-direction:column; gap:2px; padding:0 4px 4px; overflow:hidden; }
   .event-chip {
-    background:#e3f2fd; color:#0d47a1; border-radius:4px; padding:1px 5px; font-size:9px;
+    background:#e3f2fd; color:#0d47a1; border-radius:6px; padding:1px 5px; font-size:9px;
     overflow:hidden; text-overflow:ellipsis; white-space:nowrap; cursor:pointer;
   }
   .day.big .event-chip { font-size:11px; padding:2px 6px; }
@@ -192,53 +178,92 @@
   .event-more { font-size:9px; color:#888; cursor:pointer; padding:1px 5px; }
   .event-more:hover { text-decoration:underline; }
 
-  /* Grille horaire (vues Jour / Semaine) */
-  .timegrid-wrap { background:var(--card-bg); border:1px solid var(--border); border-radius:10px; overflow:hidden; }
-  .timegrid-header, .timegrid-allday { display:grid; border-bottom:1px solid var(--border); }
+  /* Bandeau "évènement du jour" en vue Mois : un grand rectangle arrondi qui
+     s'étire sur tous les jours consécutifs portant le même évènement, avec
+     le titre écrit une seule fois à gauche (plutôt qu'une chip coupée par jour). */
+  .day-allday-bar {
+    position:absolute; height:19px; line-height:19px; box-sizing:border-box;
+    background:#e3f2fd; color:#0d47a1; border-radius:7px; padding:0 8px; font-size:11px; font-weight:600;
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap; cursor:pointer; z-index:2;
+    box-shadow:0 1px 3px rgba(0,0,0,0.12);
+  }
+  .day-allday-bar:hover { filter:brightness(0.95); }
+
+  /* Vues Jour / Semaine : pas de grille façon tableur — des rectangles à
+     coins arrondis pour chaque colonne-jour (même esprit que les cases de la
+     vue Mois), et les évènements dessus sous forme de cartes arrondies. */
+  .timegrid-wrap { background:transparent; }
+  .timegrid-header, .timegrid-allday { display:grid; gap:6px; margin-bottom:6px; }
   .timegrid-corner, .timegrid-corner-label {
-    border-right:1px solid var(--border); font-size:10px; color:#999; padding:6px;
+    font-size:10px; color:#999; padding:6px;
     display:flex; align-items:center; justify-content:center; text-align:center;
   }
   .timegrid-daylabel {
     padding:8px 4px; text-align:center; font-size:13px; font-weight:600;
-    border-right:1px solid var(--border); text-transform:capitalize;
+    border-radius:8px; background:var(--card-bg); text-transform:capitalize;
   }
-  .timegrid-daylabel:last-child { border-right:none; }
-  .timegrid-daylabel.today { color:#e53935; }
+  .timegrid-daylabel.today { color:#e53935; background:#fdecea; }
   .timegrid-allday-cell {
-    border-right:1px solid var(--border); min-height:30px; padding:3px 4px; cursor:pointer;
-    display:flex; flex-direction:column; gap:2px;
+    border-radius:8px; background:var(--card-bg); min-height:30px; padding:4px 6px; cursor:pointer;
+    display:flex; flex-direction:column; gap:3px;
   }
-  .timegrid-allday-cell:last-child { border-right:none; }
-  .timegrid-allday-cell .event-chip { font-size:11px; padding:2px 6px; }
-  .timegrid-body { max-height:600px; overflow-y:auto; position:relative; }
-  .timegrid-inner { display:grid; position:relative; }
-  .timegrid-hourcol { border-right:1px solid var(--border); }
+  .timegrid-allday-cell .event-chip { font-size:11px; padding:3px 7px; border-radius:6px; }
+  .timegrid-body { max-height:600px; overflow-y:auto; overflow-x:hidden; position:relative; padding:1px; }
+  .timegrid-inner { display:grid; position:relative; gap:6px; }
+  .timegrid-hourcol {}
   .timegrid-hourlabel {
-    font-size:10px; color:#999; text-align:right; padding-right:6px; box-sizing:border-box;
-    border-bottom:1px solid #f2f2f2;
+    font-size:10px; color:#bbb; text-align:right; padding-right:8px; box-sizing:border-box;
   }
-  .timegrid-col { position:relative; border-right:1px solid var(--border); box-sizing:border-box; }
-  .timegrid-col:last-child { border-right:none; }
+  .timegrid-col {
+    position:relative; box-sizing:border-box; background:var(--card-bg); border-radius:12px; overflow:hidden;
+    box-shadow: inset 0 0 0 1px #eee;
+  }
   .timegrid-hourline {
-    position:absolute; left:0; right:0; border-bottom:1px solid #f2f2f2; cursor:pointer; box-sizing:border-box;
+    position:absolute; left:0; right:0; cursor:pointer; box-sizing:border-box;
   }
-  .timegrid-hourline:hover { background:#f8f9fb; }
+  .timegrid-hourline:hover { background:rgba(25,118,210,0.05); }
   .event-block {
-    position:absolute; left:2px; right:2px; background:var(--bleu-conge); color:#0d3c61;
-    border-radius:4px; padding:2px 5px; font-size:11px; overflow:hidden; cursor:pointer;
-    box-shadow:0 1px 2px rgba(0,0,0,0.15); z-index:1;
+    position:absolute; left:3px; right:3px; background:var(--bleu-conge); color:#0d3c61;
+    border-radius:9px; padding:3px 7px; font-size:11px; overflow:hidden; cursor:pointer;
+    box-shadow:0 2px 5px rgba(0,0,0,0.15); z-index:1;
   }
   .event-block:hover { filter:brightness(0.96); }
 
   /* Modale évènement */
-  .modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.45); display:flex; align-items:center; justify-content:center; z-index:2000; }
+  .modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.45); display:flex; align-items:center; justify-content:center; z-index:2000; padding:16px; }
   .modal-overlay.hidden { display:none; }
-  .modal-box { background:#fff; border-radius:12px; padding:20px 22px; width:320px; max-width:90vw; box-shadow:0 10px 40px rgba(0,0,0,0.3); }
-  .modal-box h3 { margin:0 0 14px; font-size:16px; }
-  .modal-box .settings-row label { min-width:90px; }
-  .modal-box input[type=text], .modal-box input[type=time] { flex:1; padding:6px 8px; border:1px solid var(--border); border-radius:6px; }
-  #evDelete { color:#c0392b; border-color:#e6b3ac; }
+  .modal-box { background:#fff; border-radius:18px; padding:20px; width:360px; max-width:100%; box-shadow:0 10px 40px rgba(0,0,0,0.3); }
+  .modal-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; }
+  .modal-head h3 { margin:0; font-size:17px; }
+  .modal-close {
+    border:none; background:#f0f1f3; color:#666; width:30px; height:30px; border-radius:50%;
+    font-size:15px; cursor:pointer; display:flex; align-items:center; justify-content:center; flex-shrink:0;
+  }
+  .modal-close:hover { background:#e2e3e6; }
+  .ev-title-input {
+    width:100%; padding:12px 14px; border:1px solid var(--border); border-radius:12px;
+    font-size:16px; margin-bottom:14px;
+  }
+  .modal-toggle-row {
+    display:flex; align-items:center; justify-content:space-between; gap:10px;
+    padding:10px 4px; font-size:14px; font-weight:600; color:#444; cursor:pointer;
+  }
+  .modal-toggle-row input[type=checkbox] { width:22px; height:22px; accent-color:var(--bleu-conge-dark); cursor:pointer; }
+  .ev-time-row { display:flex; gap:10px; margin:4px 0 6px; }
+  .ev-time-group { flex:1; display:flex; flex-direction:column; gap:4px; }
+  .ev-time-group label { font-size:12px; color:#888; }
+  .ev-time-group input[type=time], .ev-time-group input[type=date] {
+    width:100%; padding:10px 10px; border:1px solid var(--border); border-radius:12px; font-size:15px;
+  }
+  .modal-actions { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-top:18px; }
+  .modal-actions-right { display:flex; gap:8px; }
+  .btn { border:none; border-radius:12px; padding:11px 18px; font-size:14px; font-weight:600; cursor:pointer; min-height:42px; }
+  .btn-primary { background:var(--bleu-conge-dark); color:#fff; }
+  .btn-primary:hover { background:#1565c0; }
+  .btn-ghost { background:transparent; color:#666; }
+  .btn-ghost:hover { background:#f0f1f3; }
+  .btn-danger-ghost { background:transparent; color:#c0392b; }
+  .btn-danger-ghost:hover { background:#fdecea; }
 </style>
 </head>
 <body>
@@ -304,8 +329,7 @@
     <div class="item"><span class="box" style="background:var(--vert-tt)"></span> Télétravail</div>
     <div class="item"><span class="box" style="background:var(--gris-off)"></span> Week-end / jour férié</div>
     <div class="item"><span class="box" style="background:#fff;border:1px solid #ccc"></span> Jour travaillé</div>
-    <div class="item"><span class="box" style="background:rgba(229,57,83,0.35)"></span> Jour flagué (événement)</div>
-    <div class="item" style="color:#999">Choisissez le type ci-dessus, cliquez un 1er jour puis un 2nd jour pour poser une période, re-cliquez le même jour (demi-journée pour les congés uniquement). Petit point en haut à droite de chaque case = flaguer un événement.</div>
+    <div class="item" style="color:#999">Choisissez le type ci-dessus, cliquez un 1er jour puis un 2nd jour pour poser une période, re-cliquez le même jour (demi-journée pour les congés uniquement).</div>
   </div>
   <div id="settingsPanel" class="hidden">
     <h3>Paramètres généraux</h3>
@@ -359,25 +383,41 @@
 
 <div id="eventModal" class="modal-overlay hidden">
   <div class="modal-box">
-    <h3 id="eventModalTitle">Nouvel évènement</h3>
-    <div class="settings-row">
-      <label for="evTitle">Titre</label>
-      <input type="text" id="evTitle" placeholder="Réunion, anniversaire...">
+    <div class="modal-head">
+      <h3 id="eventModalTitle">Nouvel évènement</h3>
+      <button id="evClose" class="modal-close" aria-label="Fermer">✕</button>
     </div>
-    <div class="settings-row">
-      <label for="evAllDay">Journée entière</label>
+    <input type="text" id="evTitle" class="ev-title-input" placeholder="Réunion, anniversaire...">
+    <label class="modal-toggle-row" for="evAllDay">
+      <span>Journée entière</span>
       <input type="checkbox" id="evAllDay">
+    </label>
+    <div class="ev-time-row" id="evDateRow">
+      <div class="ev-time-group">
+        <label for="evDateStart">Du</label>
+        <input type="date" id="evDateStart">
+      </div>
+      <div class="ev-time-group">
+        <label for="evDateEnd">Au</label>
+        <input type="date" id="evDateEnd">
+      </div>
     </div>
-    <div class="settings-row" id="evTimeRow">
-      <label for="evStart">De</label>
-      <input type="time" id="evStart">
-      <label for="evEnd">à</label>
-      <input type="time" id="evEnd">
+    <div class="ev-time-row" id="evTimeRow">
+      <div class="ev-time-group">
+        <label for="evStart">Début</label>
+        <input type="time" id="evStart">
+      </div>
+      <div class="ev-time-group">
+        <label for="evEnd">Fin</label>
+        <input type="time" id="evEnd">
+      </div>
     </div>
-    <div class="settings-actions">
-      <button id="evSave">Enregistrer</button>
-      <button id="evDelete">🗑 Supprimer</button>
-      <button id="evCancel">Annuler</button>
+    <div class="modal-actions">
+      <button id="evDelete" class="btn btn-danger-ghost">Supprimer</button>
+      <div class="modal-actions-right">
+        <button id="evCancel" class="btn btn-ghost">Annuler</button>
+        <button id="evSave" class="btn btn-primary">Enregistrer</button>
+      </div>
     </div>
   </div>
 </div>
@@ -414,7 +454,7 @@
         holidayRules: defaultHolidayRules()
       },
       lastViewedYear: y,
-      days: {} // "YYYY-MM-DD": {status:'conge'|'rtt'|'', flag:true|false, events:[{id,title,allDay,start,end}]}
+      days: {} // "YYYY-MM-DD": {status:'conge'|'rtt'|'', events:[{id,title,allDay,start,end}]}
     };
   }
   function makeEventId(){
@@ -640,20 +680,13 @@
   let pendingStart = null; // dateStr of the first click, awaiting a second click
   function cleanupDay(ds){
     const d = data.days[ds];
-    if(d && !d.status && !d.flag && (!d.events || !d.events.length)) delete data.days[ds];
+    if(d && !d.status && (!d.events || !d.events.length)) delete data.days[ds];
   }
   function setStatus(ds, value){
     if(!data.days[ds]) data.days[ds] = {};
     data.days[ds].status = value;
     cleanupDay(ds);
     save();
-  }
-  function toggleFlag(ds){
-    if(!data.days[ds]) data.days[ds] = {};
-    data.days[ds].flag = !data.days[ds].flag;
-    cleanupDay(ds);
-    save();
-    renderYear();
   }
   function getDayEvents(ds){
     const evs = (data.days[ds] && data.days[ds].events) || [];
@@ -662,17 +695,43 @@
       return (a.start || '').localeCompare(b.start || '');
     });
   }
-  function addOrUpdateEvent(ds, ev){
-    if(!data.days[ds]) data.days[ds] = {};
-    if(!data.days[ds].events) data.days[ds].events = [];
-    const idx = data.days[ds].events.findIndex(e=>e.id === ev.id);
-    if(idx >= 0) data.days[ds].events[idx] = ev; else data.days[ds].events.push(ev);
-    save();
+  // Retire un évènement (par id) de TOUS les jours où il apparaît. Utilisé
+  // avant de ré-enregistrer un évènement (pour repartir d'un état propre,
+  // qu'il ait changé de plage de dates ou non) et pour une suppression.
+  function deleteEventEverywhere(id){
+    Object.keys(data.days).forEach(ds=>{
+      const d = data.days[ds];
+      if(d && d.events && d.events.length){
+        d.events = d.events.filter(e=>e.id !== id);
+      }
+      cleanupDay(ds);
+    });
   }
-  function deleteEvent(ds, id){
-    if(!data.days[ds] || !data.days[ds].events) return;
-    data.days[ds].events = data.days[ds].events.filter(e=>e.id !== id);
-    cleanupDay(ds);
+  // Enregistre un évènement. Pour un évènement "journée entière", ev.dateStart
+  // / ev.dateEnd définissent une plage (un seul jour si identiques) : le même
+  // évènement (même id) est dupliqué sur chaque jour de la plage, ce qui
+  // permet ensuite de le fusionner en un seul bandeau en vue Mois. Pour un
+  // évènement horaire, il n'existe que sur son unique jour (ev.ds).
+  function saveEvent(ev){
+    deleteEventEverywhere(ev.id);
+    if(ev.allDay){
+      const dateStart = ev.dateStart;
+      const dateEnd = ev.dateEnd && ev.dateEnd >= dateStart ? ev.dateEnd : dateStart;
+      const d = new Date(dateStart + 'T00:00:00');
+      const end = new Date(dateEnd + 'T00:00:00');
+      while(d <= end){
+        const ds2 = dateStr(d.getFullYear(), d.getMonth(), d.getDate());
+        if(!data.days[ds2]) data.days[ds2] = {};
+        if(!data.days[ds2].events) data.days[ds2].events = [];
+        data.days[ds2].events.push({ id: ev.id, title: ev.title, allDay: true, dateStart, dateEnd });
+        d.setDate(d.getDate() + 1);
+      }
+    } else {
+      const ds2 = ev.ds;
+      if(!data.days[ds2]) data.days[ds2] = {};
+      if(!data.days[ds2].events) data.days[ds2].events = [];
+      data.days[ds2].events.push({ id: ev.id, title: ev.title, allDay: false, start: ev.start, end: ev.end });
+    }
     save();
   }
   function closeStatusMenu(){
@@ -788,8 +847,8 @@
     }
   }
   // Bascule vers la vue "Jour" pour la date donnée (déclenchée en cliquant
-  // n'importe où dans une case des vues semaine/mois/année, hors numéro,
-  // point de flag et chips d'évènement — qui ont leur propre action).
+  // n'importe où dans une case des vues semaine/mois/année, hors numéro
+  // et chips d'évènement — qui ont leur propre action).
   function goToDayView(ds){
     viewDate = new Date(ds + 'T00:00:00');
     viewMode = 'day';
@@ -807,7 +866,10 @@
     return chip;
   }
   // Construit une case-jour complète (utilisée par les vues mois et année).
-  function buildDayCell(ds, big){
+  // hiddenIds : Set optionnel d'ids d'évènements à ne pas afficher en chip
+  // dans cette case car ils sont déjà représentés par un bandeau qui s'étire
+  // au-dessus de plusieurs jours (voir computeAllDaySpans / renderMonth).
+  function buildDayCell(ds, big, hiddenIds){
     const dow = new Date(ds + 'T00:00:00').getDay();
     const isWeekend = (dow === 0 || dow === 6);
     const holidayLabel = getHolidayLabel(ds);
@@ -819,7 +881,6 @@
     if(ds === todayStr) cell.classList.add('today');
     if(ds === pendingStart) cell.classList.add('pending');
     if(isWeekend || holidayLabel) cell.classList.add('off');
-    if(dayData.flag) cell.classList.add('flagged');
     const statusClassMap = {
       conge:'conge', conge_am:'conge-am', conge_pm:'conge-pm',
       rtt:'rtt', rtt_am:'rtt-am', rtt_pm:'rtt-pm',
@@ -834,7 +895,6 @@
     const titleParts = [];
     if(holidayLabel) titleParts.push(holidayLabel);
     if(statusLabels[status]) titleParts.push(statusLabels[status]);
-    if(dayData.flag) titleParts.push('Événement flagué');
     if(titleParts.length) cell.title = titleParts.join(' · ');
     const num = document.createElement('div');
     num.className = 'daynum';
@@ -843,11 +903,6 @@
       num.addEventListener('click', (e)=>{ e.stopPropagation(); handleDayClick(ds, num); });
     }
     cell.appendChild(num);
-    const flagDot = document.createElement('div');
-    flagDot.className = 'flag-dot' + (dayData.flag ? ' active' : '');
-    flagDot.title = dayData.flag ? 'Retirer le flag événement' : 'Flaguer un événement ce jour';
-    flagDot.addEventListener('click', (e)=>{ e.stopPropagation(); toggleFlag(ds); });
-    cell.appendChild(flagDot);
     if(holidayLabel){
       const hl = document.createElement('div');
       hl.className = 'holiday-label';
@@ -856,7 +911,15 @@
     }
     const evList = document.createElement('div');
     evList.className = 'day-events';
-    const events = getDayEvents(ds);
+    if(hiddenIds && hiddenIds.size){
+      // Réserve la place occupée visuellement par le bandeau qui recouvre
+      // cette case, pour que les autres chips ne passent pas dessous.
+      const spacer = document.createElement('div');
+      spacer.style.height = '19px';
+      spacer.style.flexShrink = '0';
+      evList.appendChild(spacer);
+    }
+    const events = getDayEvents(ds).filter(ev=> !(hiddenIds && hiddenIds.has(ev.id)));
     const maxShow = big ? 4 : 2;
     events.slice(0, maxShow).forEach(ev=>{
       evList.appendChild(buildEventChip(ds, ev));
@@ -870,10 +933,58 @@
       evList.appendChild(more);
     }
     cell.appendChild(evList);
-    // Clic sur une zone vide de la case (pas le numéro, pas le point de
-    // flag, pas une chip) : ouvre la vue Jour de cette date.
+    // Clic sur une zone vide de la case (pas le numéro, pas une chip) :
+    // ouvre la vue Jour de cette date.
     cell.addEventListener('click', ()=>goToDayView(ds));
     return cell;
+  }
+
+  // Regroupe, pour un mois donné, les évènements "journée entière" identiques
+  // (même titre) portés par des jours consécutifs d'une même ligne de la
+  // grille, pour les afficher sous forme d'un seul bandeau qui s'étire sur
+  // tous ces jours plutôt qu'une chip répétée et coupée dans chaque case.
+  // Ne considère que le 1er évènement journée entière de chaque jour (le cas
+  // très large majoritaire) ; les suivants restent affichés en chip normale.
+  function computeAllDaySpans(year, month){
+    const firstDow = (new Date(year, month, 1).getDay() + 6) % 7; // Monday=0
+    const daysInMonth = new Date(year, month+1, 0).getDate();
+    const dayMeta = [];
+    for(let d=1; d<=daysInMonth; d++){
+      const ds = dateStr(year, month, d);
+      const mainEvent = getDayEvents(ds).find(e=>e.allDay) || null;
+      dayMeta.push({ ds, gridIndex: firstDow + d - 1, mainEvent });
+    }
+    const spans = [];
+    let i = 0;
+    while(i < dayMeta.length){
+      if(!dayMeta[i].mainEvent){ i++; continue; }
+      const row = Math.floor(dayMeta[i].gridIndex / 7);
+      const startCol = dayMeta[i].gridIndex % 7;
+      const id = dayMeta[i].mainEvent.id;
+      const key = dayMeta[i].mainEvent.title.trim().toLowerCase();
+      const members = [dayMeta[i]];
+      let j = i + 1;
+      while(j < dayMeta.length){
+        const gi = dayMeta[j].gridIndex;
+        if(Math.floor(gi / 7) !== row) break; // ne franchit pas une ligne de semaine
+        if(gi % 7 !== startCol + members.length) break; // doit être la colonne suivante
+        const nextEv = dayMeta[j].mainEvent;
+        // Un même évènement multi-jours (même id) se regroupe toujours ;
+        // deux évènements distincts mais avec le même titre (ancien usage,
+        // un par jour) se regroupent aussi, par confort visuel.
+        if(!nextEv || (nextEv.id !== id && nextEv.title.trim().toLowerCase() !== key)) break;
+        members.push(dayMeta[j]);
+        j++;
+      }
+      spans.push({
+        row, colStart: startCol, colEnd: startCol + members.length - 1,
+        title: dayMeta[i].mainEvent.title,
+        ds: dayMeta[i].ds, id: dayMeta[i].mainEvent.id,
+        hiddenIds: members.map(m=>({ ds: m.ds, id: m.mainEvent.id }))
+      });
+      i = j;
+    }
+    return spans;
   }
 
   function renderMonth(year, month, big){
@@ -891,15 +1002,66 @@
     grid.className = 'days-grid';
     const firstDow = (new Date(year, month, 1).getDay() + 6) % 7; // Monday=0
     const daysInMonth = new Date(year, month+1, 0).getDate();
+    // En vue Mois (big), un évènement journée entière identique sur des jours
+    // consécutifs devient un seul bandeau qui s'étire sur ces jours (voir
+    // computeAllDaySpans) : on calcule d'abord quels évènements masquer dans
+    // les cases concernées, avant de construire les cases elles-mêmes.
+    let spans = [];
+    let hiddenByDs = {};
+    if(big){
+      spans = computeAllDaySpans(year, month);
+      spans.forEach(sp=>{
+        sp.hiddenIds.forEach(h=>{
+          if(!hiddenByDs[h.ds]) hiddenByDs[h.ds] = new Set();
+          hiddenByDs[h.ds].add(h.id);
+        });
+      });
+    }
+    const cellByIndex = [];
     for(let i=0;i<firstDow;i++){
       const e = document.createElement('div');
       e.className = 'day empty';
       grid.appendChild(e);
+      cellByIndex.push(e);
     }
     for(let d=1; d<=daysInMonth; d++){
-      grid.appendChild(buildDayCell(dateStr(year, month, d), big));
+      const ds = dateStr(year, month, d);
+      const cellEl = buildDayCell(ds, big, hiddenByDs[ds]);
+      grid.appendChild(cellEl);
+      cellByIndex.push(cellEl);
     }
     wrap.appendChild(grid);
+    if(big && spans.length){
+      // Les bandeaux sont positionnés en pixels (position:absolute), une fois
+      // la grille réellement posée dans le document, plutôt que via des
+      // lignes de grille CSS explicites : une position de grille explicite
+      // (grid-column/grid-row) est réservée par le navigateur AVANT le
+      // placement automatique des cases-jours, ce qui décalait toutes les
+      // cases suivantes vers la mauvaise colonne. L'absolute positioning
+      // sort complètement les bandeaux du flux de la grille et évite ce
+      // conflit.
+      grid.style.position = 'relative';
+      requestAnimationFrame(()=>{
+        if(!grid.isConnected) return;
+        const gridRect = grid.getBoundingClientRect();
+        spans.forEach(sp=>{
+          const startEl = cellByIndex[sp.row*7 + sp.colStart];
+          const endEl = cellByIndex[sp.row*7 + sp.colEnd];
+          if(!startEl || !endEl) return;
+          const r1 = startEl.getBoundingClientRect();
+          const r2 = endEl.getBoundingClientRect();
+          const bar = document.createElement('div');
+          bar.className = 'day-allday-bar';
+          bar.textContent = sp.title;
+          bar.title = sp.title;
+          bar.style.left = (r1.left - gridRect.left) + 'px';
+          bar.style.top = (r1.top - gridRect.top + 27) + 'px';
+          bar.style.width = (r2.right - r1.left) + 'px';
+          bar.addEventListener('click', (e)=>{ e.stopPropagation(); openEventModal(sp.ds, sp.id); });
+          grid.appendChild(bar);
+        });
+      });
+    }
     return wrap;
   }
 
@@ -1070,7 +1232,7 @@
     document.getElementById('ttTotal').textContent = sumDays(currentYear, 'teletravail');
     // Persistance locale uniquement (mémorise l'année affichée) : ne déclenche
     // jamais d'envoi vers le Sheet, contrairement à save(). L'envoi ne doit se
-    // produire que suite à une vraie modification (statut, note, paramètre, flag).
+    // produire que suite à une vraie modification (statut, évènement, paramètre).
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
   }
   function renderSettings(){
@@ -1220,7 +1382,13 @@
     document.getElementById('evAllDay').checked = allDay;
     document.getElementById('evStart').value = ev ? (ev.start || '') : (defaults.start || '09:00');
     document.getElementById('evEnd').value = ev ? (ev.end || '') : (defaults.end || '');
+    // Plage de dates (évènement journée entière) : par défaut le jour sur
+    // lequel on a cliqué ; si on édite un évènement existant, sa plage réelle
+    // (dateStart/dateEnd), disponible sur chacune de ses copies quotidiennes.
+    document.getElementById('evDateStart').value = ev ? (ev.dateStart || ds) : (defaults.dateStart || ds);
+    document.getElementById('evDateEnd').value = ev ? (ev.dateEnd || ev.dateStart || ds) : (defaults.dateEnd || defaults.dateStart || ds);
     document.getElementById('evTimeRow').style.display = allDay ? 'none' : 'flex';
+    document.getElementById('evDateRow').style.display = allDay ? 'flex' : 'none';
     document.getElementById('evDelete').style.display = isEdit ? 'inline-block' : 'none';
     document.getElementById('eventModal').classList.remove('hidden');
     document.getElementById('evTitle').focus();
@@ -1230,9 +1398,12 @@
     eventModalCtx = null;
   }
   document.getElementById('evAllDay').addEventListener('change', (e)=>{
-    document.getElementById('evTimeRow').style.display = e.target.checked ? 'none' : 'flex';
+    const allDay = e.target.checked;
+    document.getElementById('evTimeRow').style.display = allDay ? 'none' : 'flex';
+    document.getElementById('evDateRow').style.display = allDay ? 'flex' : 'none';
   });
   document.getElementById('evCancel').addEventListener('click', closeEventModal);
+  document.getElementById('evClose').addEventListener('click', closeEventModal);
   document.getElementById('eventModal').addEventListener('click', (e)=>{
     if(e.target.id === 'eventModal') closeEventModal();
   });
@@ -1241,19 +1412,27 @@
     const title = document.getElementById('evTitle').value.trim();
     if(!title){ alert('Merci de renseigner un titre.'); return; }
     const allDay = document.getElementById('evAllDay').checked;
-    const ev = { id: eventModalCtx.id || makeEventId(), title, allDay };
-    if(!allDay){
-      ev.start = document.getElementById('evStart').value || '00:00';
-      ev.end = document.getElementById('evEnd').value || '';
+    const id = eventModalCtx.id || makeEventId();
+    if(allDay){
+      let dateStart = document.getElementById('evDateStart').value || eventModalCtx.ds;
+      let dateEnd = document.getElementById('evDateEnd').value || dateStart;
+      if(dateEnd < dateStart){ const tmp = dateStart; dateStart = dateEnd; dateEnd = tmp; }
+      const spanDays = Math.round((new Date(dateEnd) - new Date(dateStart)) / 86400000) + 1;
+      if(spanDays > 366){ alert('Cette période est trop longue (plus d\'un an).'); return; }
+      saveEvent({ id, title, allDay: true, dateStart, dateEnd });
+    } else {
+      const start = document.getElementById('evStart').value || '00:00';
+      const end = document.getElementById('evEnd').value || '';
+      saveEvent({ id, title, allDay: false, ds: eventModalCtx.ds, start, end });
     }
-    addOrUpdateEvent(eventModalCtx.ds, ev);
     closeEventModal();
     renderYear();
   });
   document.getElementById('evDelete').addEventListener('click', ()=>{
     if(!eventModalCtx || !eventModalCtx.id) return;
     if(confirm('Supprimer cet évènement ?')){
-      deleteEvent(eventModalCtx.ds, eventModalCtx.id);
+      deleteEventEverywhere(eventModalCtx.id);
+      save();
       closeEventModal();
       renderYear();
     }
@@ -1440,6 +1619,14 @@
 
   // Rafraîchissement automatique depuis le Sheet : à l'ouverture (plus bas)
   // puis toutes les ~10 minutes. Uniquement ces deux moments, pas davantage.
+  // Redessine (juste la vue courante) si la fenêtre est redimensionnée en
+  // vue Mois : les bandeaux d'évènements multi-jours sont positionnés en
+  // pixels, il faut donc les recalculer si les cases changent de largeur.
+  let resizeTimer = null;
+  window.addEventListener('resize', ()=>{
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(()=>{ if(viewMode === 'month') renderYear(); }, 200);
+  });
   setInterval(autoPull, 10 * 60 * 1000);
   renderSettings();
   renderYear();
