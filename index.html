@@ -386,10 +386,12 @@
     if(!(remote.settings && remote.settings.holidayRules && remote.settings.holidayRules.length)){
       merged.settings.holidayRules = data.settings.holidayRules || merged.settings.holidayRules;
     }
-    merged.lastViewedYear = remote.lastViewedYear || currentYear || merged.lastViewedYear;
+    // L'année affichée est une préférence locale à ce navigateur : elle ne
+    // doit jamais être écrasée par une valeur venue du Sheet (sinon chaque
+    // rafraîchissement automatique ramène tout le monde sur la même année).
+    merged.lastViewedYear = currentYear || merged.lastViewedYear;
     merged.days = remote.days || {};
     data = merged;
-    currentYear = data.lastViewedYear;
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
     renderSettings();
     renderYear();
@@ -925,13 +927,9 @@
     if(!syncUrl){ alert('Renseigne d\'abord une URL de script.'); return; }
     pushToRemote().then(()=>alert('Données envoyées vers le Sheet.'));
   });
-  document.addEventListener('visibilitychange', ()=>{
-    if(document.visibilityState === 'visible'){
-      autoPull();
-    }
-  });
-  // Rafraîchissement automatique depuis le Sheet toutes les ~5 secondes.
-  setInterval(autoPull, 5000);
+  // Rafraîchissement automatique depuis le Sheet : à l'ouverture (plus bas)
+  // puis toutes les ~10 minutes. Uniquement ces deux moments, pas davantage.
+  setInterval(autoPull, 10 * 60 * 1000);
   renderSettings();
   renderYear();
   setSyncStatus(syncUrl ? 'ok' : 'none');
