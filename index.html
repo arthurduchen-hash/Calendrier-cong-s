@@ -1042,24 +1042,27 @@
     if(!syncUrl){ alert('Renseigne d\'abord une URL de script.'); return; }
     pushToRemote().then(()=>alert('Données envoyées vers le Sheet.'));
   });
-  // Navigation par glissement (souris) / balayage (tactile) : swipe vers la
-  // gauche = période suivante, vers la droite = période précédente. Utilise
-  // les Pointer Events (couvrent souris, doigt et stylet en un seul code).
+  // Navigation par glissement (souris) / balayage (tactile / trackpad) : swipe
+  // vers la gauche = période suivante, vers la droite = période précédente.
   (function setupSwipeNav(){
     const zone = document.getElementById('calendarGrid');
-    let startX = null, startY = null, startTarget = null;
     const SWIPE_THRESHOLD = 60; // px minimum pour compter comme un balayage volontaire
 
+    // --- Souris / stylet (Pointer Events). Le doigt est volontairement
+    // ignoré ici : sur iPhone/iPad, les Touch Events ci-dessous sont bien
+    // plus fiables (notamment en "web app" ajoutée à l'écran d'accueil, où
+    // les Pointer Events se sont révélés peu fiables sur certaines versions
+    // d'iOS Safari).
+    let startX = null, startY = null, startTarget = null;
     zone.addEventListener('pointerdown', (e)=>{
+      if(e.pointerType === 'touch') return;
       startX = e.clientX;
       startY = e.clientY;
       startTarget = e.target;
     });
-
     zone.addEventListener('pointerup', (e)=>{
+      if(e.pointerType === 'touch') return;
       if(startX === null) return;
-      // Ne pas interpréter comme un balayage si le geste commence dans une
-      // note (pour laisser la sélection de texte fonctionner normalement).
       const startedInNote = startTarget && startTarget.closest && startTarget.closest('.note');
       const dx = e.clientX - startX;
       const dy = e.clientY - startY;
@@ -1069,8 +1072,53 @@
         navigatePeriod(dx < 0 ? 1 : -1);
       }
     });
+    zone.addEventListener('pointercancel', (e)=>{
+      if(e.pointerType === 'touch') return;
+      startX = null; startY = null; startTarget = null;
+    });
 
-    zone.addEventListener('pointercancel', ()=>{ startX = null; startY = null; startTarget = null; });
+    // --- Doigt (Touch Events natifs, la méthode la plus fiable sur iOS,
+    // y compris en mode "web app" plein écran). On attend de savoir si le
+    // geste est plutôt horizontal ou vertical avant de bloquer le défilement
+    // de la page : dès qu'on détecte un balayage horizontal, on appelle
+    // preventDefault() pour empêcher iOS d'annuler le geste en le traitant
+    // comme un défilement (ce qui empêchait "touchend" de se déclencher).
+    let tStartX = null, tStartY = null, tStartTarget = null, tDeciding = false, tHorizontal = false;
+    zone.addEventListener('touchstart', (e)=>{
+      if(e.touches.length !== 1) return;
+      const t = e.touches[0];
+      tStartX = t.clientX;
+      tStartY = t.clientY;
+      tStartTarget = e.target;
+      tDeciding = true;
+      tHorizontal = false;
+    }, { passive:true });
+    zone.addEventListener('touchmove', (e)=>{
+      if(tStartX === null || !e.touches.length) return;
+      const t = e.touches[0];
+      const dx = t.clientX - tStartX;
+      const dy = t.clientY - tStartY;
+      if(tDeciding && (Math.abs(dx) > 10 || Math.abs(dy) > 10)){
+        tHorizontal = Math.abs(dx) > Math.abs(dy) * 1.5;
+        tDeciding = false;
+      }
+      if(tHorizontal) e.preventDefault();
+    }, { passive:false });
+    zone.addEventListener('touchend', (e)=>{
+      if(tStartX === null) return;
+      const startedInNote = tStartTarget && tStartTarget.closest && tStartTarget.closest('.note');
+      const t = e.changedTouches[0];
+      const dx = t.clientX - tStartX;
+      const dy = t.clientY - tStartY;
+      tStartX = null; tStartY = null; tStartTarget = null;
+      if(startedInNote) return;
+      if(Math.abs(dx) > SWIPE_THRESHOLD && Math.abs(dx) > Math.abs(dy) * 1.5){
+        navigatePeriod(dx < 0 ? 1 : -1);
+      }
+    });
+    zone.addEventListener('touchcancel', ()=>{
+      tStartX = null; tStartY = null; tStartTarget = null;
+    });
 
     // Balayage à deux doigts sur pavé tactile (Mac) : un trackpad n'émet pas
     // d'événements tactiles dans le navigateur, mais un événement "wheel" avec
