@@ -1071,6 +1071,30 @@
     });
 
     zone.addEventListener('pointercancel', ()=>{ startX = null; startY = null; startTarget = null; });
+
+    // Balayage à deux doigts sur pavé tactile (Mac) : un trackpad n'émet pas
+    // d'événements tactiles dans le navigateur, mais un événement "wheel" avec
+    // une composante horizontale (deltaX). On accumule les petits deltas d'un
+    // même geste, on ignore le défilement vertical classique, et on empêche le
+    // navigateur d'interpréter le geste comme "reculer/avancer" dans l'historique.
+    let wheelAccumX = 0;
+    let wheelResetTimer = null;
+    let wheelCooldown = false;
+    zone.addEventListener('wheel', (e)=>{
+      if(Math.abs(e.deltaX) <= Math.abs(e.deltaY)) return; // défilement vertical normal
+      e.preventDefault();
+      if(wheelCooldown) return;
+      wheelAccumX += e.deltaX;
+      clearTimeout(wheelResetTimer);
+      wheelResetTimer = setTimeout(()=>{ wheelAccumX = 0; }, 150);
+      if(Math.abs(wheelAccumX) > SWIPE_THRESHOLD){
+        // deltaX > 0 = geste vers la gauche (défilement "naturel") = période suivante
+        navigatePeriod(wheelAccumX > 0 ? 1 : -1);
+        wheelAccumX = 0;
+        wheelCooldown = true;
+        setTimeout(()=>{ wheelCooldown = false; }, 500);
+      }
+    }, { passive:false });
   })();
 
   // Rafraîchissement automatique depuis le Sheet : à l'ouverture (plus bas)
