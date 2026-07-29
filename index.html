@@ -53,11 +53,10 @@
     font-size:13px; font-weight:600; color:#666;
   }
   .view-btn.active { background:#fff; color:var(--text); box-shadow:0 1px 3px rgba(0,0,0,0.15); }
-  #toggleSettings, #exportBtn, #importBtn, #resetData, #todayBtn, #testSync, #pullNow, #pushNow, #toggleRecap {
+  #toggleSettings, #exportBtn, #importBtn, #resetData, #todayBtn, #testSync, #pullNow, #pushNow {
     border:1px solid var(--border); background:#fff; padding:8px 14px; border-radius:10px; cursor:pointer; font-size:14px;
   }
-  #toggleSettings:hover, #exportBtn:hover, #importBtn:hover, #todayBtn:hover, #testSync:hover, #pullNow:hover, #pushNow:hover, #toggleRecap:hover { background:#eee; }
-  #toggleRecap.active { background:var(--bleu-conge); border-color:var(--bleu-conge-dark); }
+  #toggleSettings:hover, #exportBtn:hover, #importBtn:hover, #todayBtn:hover, #testSync:hover, #pullNow:hover, #pushNow:hover { background:#eee; }
   #resetData { color:#c0392b; border-color:#e6b3ac; }
   #resetData:hover { background:#fdecea; }
   .summary { display:flex; gap:16px; flex-wrap:wrap; margin-bottom:16px; }
@@ -80,7 +79,7 @@
     background:var(--card-bg); border:1px solid var(--border); border-radius:10px; padding:18px 20px; margin-bottom:20px;
   }
   #settingsPanel.hidden { display:none; }
-  #recapPanel.hidden { display:none; }
+  .hidden { display:none !important; }
   .brush-bar {
     display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:16px;
     background:var(--card-bg); border:1px solid var(--border); border-radius:10px; padding:10px 14px;
@@ -115,11 +114,12 @@
   .sync-status.ok { background:#d1e7dd; color:#0f5132; }
   .sync-status.error { background:#f8d7da; color:#842029; }
   .hint { font-size:12px; color:#888; margin:-4px 0 12px; }
-  table#holidayTable { width:100%; border-collapse:collapse; font-size:13px; margin-bottom:10px; }
-  table#holidayTable th, table#holidayTable td { border-bottom:1px solid var(--border); padding:6px 6px; text-align:left; }
-  table#holidayTable input[type=text] { width:100%; padding:4px 6px; border:1px solid var(--border); border-radius:5px; }
-  table#holidayTable input[type=number] { width:60px; padding:4px 6px; border:1px solid var(--border); border-radius:5px; }
+  table#holidayTable, table#categoriesTable { width:100%; border-collapse:collapse; font-size:13px; margin-bottom:10px; }
+  table#holidayTable th, table#holidayTable td, table#categoriesTable th, table#categoriesTable td { border-bottom:1px solid var(--border); padding:6px 6px; text-align:left; }
+  table#holidayTable input[type=text], table#categoriesTable input[type=text] { width:100%; padding:4px 6px; border:1px solid var(--border); border-radius:5px; }
+  table#holidayTable input[type=number], table#categoriesTable input[type=number] { width:60px; padding:4px 6px; border:1px solid var(--border); border-radius:5px; }
   table#holidayTable select { padding:4px 6px; border:1px solid var(--border); border-radius:5px; }
+  table#categoriesTable input[type=checkbox] { width:16px; height:16px; }
   .del-btn { background:none; border:none; border-radius:0; color:#c0392b; cursor:pointer; font-size:15px; }
   #addHoliday { margin-top:4px; border:1px dashed #aaa; background:#fff; padding:6px 12px; border-radius:10px; cursor:pointer; font-size:13px; }
   .settings-actions { display:flex; gap:10px; margin-top:16px; flex-wrap:wrap; }
@@ -148,6 +148,8 @@
   .day.big .daynum { font-size:16px; padding:5px 8px; }
   .day.big .holiday-label { font-size:11px; padding:0 8px 3px; }
   .day.empty { background:transparent; border:none; }
+  .day.adjacent { background:#fafafa; border-color:#f0f0f0; }
+  .day.adjacent .daynum { color:#ccc; }
   .day.off { background:var(--gris-off); }
   .day.conge { background:var(--bleu-conge); }
   .day.rtt { background:var(--orange-rtt); }
@@ -215,6 +217,10 @@
     border-radius:8px; background:var(--card-bg); text-transform:capitalize;
   }
   .timegrid-daylabel.today { color:#e53935; background:#fdecea; }
+  .timegrid-daylabel .daylabel-badge {
+    display:inline-block; margin-left:5px; padding:1px 7px; border-radius:8px;
+    font-size:10px; font-weight:700; text-transform:none; color:#333; vertical-align:middle;
+  }
   .timegrid-allday-cell {
     border-radius:8px; background:var(--card-bg); min-height:30px; padding:4px 6px; cursor:pointer;
     display:flex; flex-direction:column; gap:3px;
@@ -300,13 +306,12 @@
         <button class="view-btn" data-view="year">Année</button>
       </div>
       <button id="todayBtn">Aujourd'hui</button>
-      <button id="toggleRecap" title="Récap">📊</button>
       <button id="toggleSettings" title="Paramètres">⚙</button>
     </header>
     <div class="brush-bar">
-      <button class="brush-btn conge active" data-brush="conge">Congé</button>
-      <button class="brush-btn rtt" data-brush="rtt">RTT</button>
-      <button class="brush-btn teletravail" data-brush="teletravail">Télétravail</button>
+      <button class="brush-btn conge active" data-brush="conge"><span id="brushLabelConge">Congé</span></button>
+      <button class="brush-btn rtt" data-brush="rtt"><span id="brushLabelRtt">RTT</span></button>
+      <button class="brush-btn teletravail" data-brush="teletravail"><span id="brushLabelTeletravail">Télétravail</span></button>
       <button class="brush-btn erase" data-brush="">Effacer</button>
       <span id="pendingHint" class="pending-hint hidden">
         Depuis <b id="pendingDateLabel"></b>
@@ -315,62 +320,72 @@
     </div>
     <div id="stickyExtra"></div>
   </div>
-  <div id="recapPanel" class="hidden">
+  <div id="settingsPanel" class="hidden">
+    <h3>Catégories</h3>
+    <table id="categoriesTable">
+      <thead><tr><th>Activée</th><th>Nom</th><th>Quota/an (j)</th><th>Report</th><th>Plafond report</th><th>Demi-journée</th></tr></thead>
+      <tbody id="categoriesTableBody"></tbody>
+    </table>
+    <div class="hint">3 catégories maximum, déjà toutes présentes ci-dessus : renommez-les et désactivez celles que vous n'utilisez pas. Quota à 0 = simple compteur sans suivi de solde. Le report permet de garder les jours non pris pour l'année suivante (avec un plafond optionnel).</div>
+    <div class="settings-row">
+      <label for="startYear">Année de départ (pas de report avant)</label>
+      <input type="number" id="startYear" min="2000" max="2100">
+    </div>
+    <h3>Récapitulatif des jours</h3>
     <div class="summary">
-      <div class="card conge-card">
-        <div class="card-title"><span class="swatch"></span> Congés payés</div>
+      <div class="card conge-card" id="cardConge">
+        <div class="card-title"><span class="swatch"></span> <span id="cardLabelConge">Congé</span></div>
         <div class="card-body">
-          <span>Disponible sur l'année : <b id="congeDispo">0</b> j</span>
-          <span>Pris : <b id="congePris">0</b> j</span>
-          <span>Restant : <b id="congeRestant">0</b> j</span>
-          <span class="sub">dont report de l'année précédente : <span id="congeReport">0</span> j</span>
+          <div id="congeQuotaMode">
+            <span>Disponible sur l'année : <b id="congeDispo">0</b> j</span>
+            <span>Pris : <b id="congePris">0</b> j</span>
+            <span>Restant : <b id="congeRestant">0</b> j</span>
+            <span class="sub" id="congeReportLine">dont report de l'année précédente : <span id="congeReport">0</span> j</span>
+          </div>
+          <div id="congeSimpleMode" class="hidden">
+            <span>Jours cette année : <b id="congeSimplePris">0</b> j</span>
+            <span class="sub">aucun quota défini pour cette catégorie</span>
+          </div>
         </div>
       </div>
-      <div class="card rtt-card">
-        <div class="card-title"><span class="swatch"></span> RTT</div>
+      <div class="card rtt-card" id="cardRtt">
+        <div class="card-title"><span class="swatch"></span> <span id="cardLabelRtt">RTT</span></div>
         <div class="card-body">
-          <span>Disponible sur l'année : <b id="rttDispo">0</b> j</span>
-          <span>Pris : <b id="rttPris">0</b> j</span>
-          <span>Restant : <b id="rttRestant">0</b> j</span>
-          <span class="sub">non reportables (perdus au 31/12)</span>
+          <div id="rttQuotaMode">
+            <span>Disponible sur l'année : <b id="rttDispo">0</b> j</span>
+            <span>Pris : <b id="rttPris">0</b> j</span>
+            <span>Restant : <b id="rttRestant">0</b> j</span>
+            <span class="sub" id="rttReportLine">dont report de l'année précédente : <span id="rttReport">0</span> j</span>
+          </div>
+          <div id="rttSimpleMode" class="hidden">
+            <span>Jours cette année : <b id="rttSimplePris">0</b> j</span>
+            <span class="sub">aucun quota défini pour cette catégorie</span>
+          </div>
         </div>
       </div>
-      <div class="card tt-card">
-        <div class="card-title"><span class="swatch"></span> Télétravail</div>
+      <div class="card tt-card" id="cardTeletravail">
+        <div class="card-title"><span class="swatch"></span> <span id="cardLabelTeletravail">Télétravail</span></div>
         <div class="card-body">
-          <span>Jours cette année : <b id="ttTotal">0</b> j</span>
-          <span class="sub">simple repère, sans quota</span>
+          <div id="teletravailQuotaMode" class="hidden">
+            <span>Disponible sur l'année : <b id="teletravailDispo">0</b> j</span>
+            <span>Pris : <b id="teletravailPris">0</b> j</span>
+            <span>Restant : <b id="teletravailRestant">0</b> j</span>
+            <span class="sub" id="teletravailReportLine">dont report de l'année précédente : <span id="teletravailReport">0</span> j</span>
+          </div>
+          <div id="teletravailSimpleMode">
+            <span>Jours cette année : <b id="teletravailSimplePris">0</b> j</span>
+            <span class="sub">aucun quota défini pour cette catégorie</span>
+          </div>
         </div>
       </div>
     </div>
     <div class="legend">
-      <div class="item"><span class="box" style="background:var(--bleu-conge)"></span> Congé posé</div>
-      <div class="item"><span class="box" style="background:var(--orange-rtt)"></span> RTT posé</div>
-      <div class="item"><span class="box" style="background:var(--vert-tt)"></span> Télétravail</div>
+      <div class="item" id="legendConge"><span class="box" style="background:var(--bleu-conge)"></span> <span id="legendLabelConge">Congé</span> posé</div>
+      <div class="item" id="legendRtt"><span class="box" style="background:var(--orange-rtt)"></span> <span id="legendLabelRtt">RTT</span> posé</div>
+      <div class="item" id="legendTeletravail"><span class="box" style="background:var(--vert-tt)"></span> <span id="legendLabelTeletravail">Télétravail</span></div>
       <div class="item"><span class="box" style="background:var(--gris-off)"></span> Week-end / jour férié</div>
       <div class="item"><span class="box" style="background:#fff;border:1px solid #ccc"></span> Jour travaillé</div>
-      <div class="item" style="color:#999">Choisissez le type ci-dessus, cliquez un 1er jour puis un 2nd jour pour poser une période, re-cliquez le même jour (demi-journée pour les congés uniquement).</div>
-    </div>
-  </div>
-  <div id="settingsPanel" class="hidden">
-    <h3>Paramètres généraux</h3>
-    <div class="settings-row">
-      <label for="congesParAn">Congés payés par an (jours)</label>
-      <input type="number" id="congesParAn" min="0" step="0.5">
-    </div>
-    <div class="settings-row">
-      <label for="rttParAn">RTT par an (jours)</label>
-      <input type="number" id="rttParAn" min="0" step="0.5">
-    </div>
-    <div class="settings-row">
-      <label for="capReport">Plafond de report des congés non pris</label>
-      <input type="checkbox" id="capReportEnabled">
-      <input type="number" id="capReport" min="0" step="0.5" placeholder="nb de jours max">
-    </div>
-    <div class="hint">Si décoché : report illimité. Les RTT ne se reportent jamais (perdus en fin d'année).</div>
-    <div class="settings-row">
-      <label for="startYear">Année de départ (pas de report avant)</label>
-      <input type="number" id="startYear" min="2000" max="2100">
+      <div class="item" style="color:#999">Choisissez le type ci-dessus, cliquez un 1er jour puis un 2nd jour pour poser une période, re-cliquez le même jour (demi-journée si autorisée pour la catégorie).</div>
     </div>
     <h3>Jours fériés (paramétrables)</h3>
     <table id="holidayTable">
@@ -448,6 +463,7 @@
   const MOIS = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
   const JOURS = ['Lun','Mar','Mer','Jeu','Ven','Sam','Dim'];
   const JOURS_LONG = ['Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi','Dimanche'];
+  const JOURS_LETTRE = ['L','M','M','J','V','S','D'];
   function defaultHolidayRules(){
     return [
       {type:'fixed', month:1, day:1, label:"Jour de l'an"},
@@ -463,19 +479,67 @@
       {type:'fixed', month:12, day:25, label:"Noël"}
     ];
   }
+  // Les 3 "catégories" (jadis Congé / RTT / Télétravail figés en dur) sont
+  // maintenant des cases paramétrables : nom, activée ou non, quota annuel,
+  // report (avec plafond optionnel) et autorisation de demi-journée. Les
+  // clés internes (conge/rtt/teletravail) restent fixes pour la compatibilité
+  // des données déjà enregistrées (Sheet, exports JSON) ; seuls le libellé
+  // et le comportement sont éditables. Maximum 3 catégories : on ne peut pas
+  // en ajouter, seulement renommer / désactiver ("supprimer") les 3 cases.
+  function defaultCategories(){
+    return {
+      conge: { label:'Congé', enabled:true, quotaParAn:25, carryoverEnabled:true, carryoverCapEnabled:true, carryoverCap:5, halfDayAllowed:true },
+      rtt: { label:'RTT', enabled:true, quotaParAn:10, carryoverEnabled:false, carryoverCapEnabled:false, carryoverCap:0, halfDayAllowed:false },
+      teletravail: { label:'Télétravail', enabled:true, quotaParAn:0, carryoverEnabled:false, carryoverCapEnabled:false, carryoverCap:0, halfDayAllowed:false }
+    };
+  }
+  const CATEGORY_KEYS = ['conge', 'rtt', 'teletravail'];
+  // Couleur d'affichage associée à chaque clé de catégorie (fixe, ne dépend
+  // pas du libellé personnalisable) : utilisée pour le pinceau, le menu
+  // demi-journée et le petit badge de statut en vue Jour/Semaine.
+  const CATEGORY_COLORS = { conge: 'var(--bleu-conge)', rtt: 'var(--orange-rtt)', teletravail: 'var(--vert-tt)' };
+  // Retourne {key, half, label, color} pour un statut de jour donné
+  // ("conge" | "rtt_am" | "teletravail_pm" | ...), ou null si vide/inconnu.
+  function describeStatus(status){
+    if(!status) return null;
+    let key = status, half = null;
+    if(status.endsWith('_am')){ key = status.slice(0, -3); half = 'am'; }
+    else if(status.endsWith('_pm')){ key = status.slice(0, -3); half = 'pm'; }
+    const cat = data.settings.categories[key];
+    if(!cat) return null;
+    return { key, half, label: cat.label, color: CATEGORY_COLORS[key] || '#ccc' };
+  }
+  // Détermine settings.categories à partir de paramètres "bruts" reçus
+  // (localStorage, Sheet, import JSON) : reprend la nouvelle structure si
+  // elle existe déjà (en complétant les champs manquants pour survivre aux
+  // évolutions du schéma), sinon la reconstruit à partir des anciens champs
+  // congesParAn/rttParAn/capReport... pour ne perdre aucun réglage existant.
+  function resolveCategories(incoming){
+    const def = defaultCategories();
+    if(incoming && incoming.categories){
+      CATEGORY_KEYS.forEach(k=>{
+        def[k] = Object.assign({}, def[k], incoming.categories[k] || {});
+      });
+      return def;
+    }
+    if(incoming){
+      if(incoming.congesParAn !== undefined) def.conge.quotaParAn = Number(incoming.congesParAn) || 0;
+      if(incoming.rttParAn !== undefined) def.rtt.quotaParAn = Number(incoming.rttParAn) || 0;
+      if(incoming.capReportEnabled !== undefined) def.conge.carryoverCapEnabled = !!incoming.capReportEnabled;
+      if(incoming.capReport !== undefined) def.conge.carryoverCap = Number(incoming.capReport) || 0;
+    }
+    return def;
+  }
   function defaultData(){
     const y = new Date().getFullYear();
     return {
       settings: {
-        congesParAn: 25,
-        rttParAn: 10,
-        capReportEnabled: true,
-        capReport: 5,
+        categories: defaultCategories(),
         startYear: y,
         holidayRules: defaultHolidayRules()
       },
       lastViewedYear: y,
-      days: {} // "YYYY-MM-DD": {status:'conge'|'rtt'|'', events:[{id,title,allDay,start,end}]}
+      days: {} // "YYYY-MM-DD": {status:'conge'|'rtt'|'teletravail'|'', events:[{id,title,allDay,start,end}]}
     };
   }
   function makeEventId(){
@@ -500,7 +564,11 @@
       const parsed = JSON.parse(raw);
       // merge with defaults to survive schema additions
       const d = defaultData();
-      d.settings = Object.assign(d.settings, parsed.settings||{});
+      const incoming = parsed.settings || {};
+      d.settings = Object.assign(d.settings, incoming);
+      d.settings.categories = resolveCategories(incoming);
+      delete d.settings.congesParAn; delete d.settings.rttParAn;
+      delete d.settings.capReportEnabled; delete d.settings.capReport;
       d.lastViewedYear = parsed.lastViewedYear || d.lastViewedYear;
       d.days = migrateLegacyNotes(parsed.days || {});
       return d;
@@ -581,7 +649,11 @@
   }
   function adoptRemote(remote){
     const merged = defaultData();
-    merged.settings = Object.assign(merged.settings, remote.settings||{});
+    const incoming = remote.settings || {};
+    merged.settings = Object.assign(merged.settings, incoming);
+    merged.settings.categories = resolveCategories(incoming);
+    delete merged.settings.congesParAn; delete merged.settings.rttParAn;
+    delete merged.settings.capReportEnabled; delete merged.settings.capReport;
     if(!(remote.settings && remote.settings.holidayRules && remote.settings.holidayRules.length)){
       merged.settings.holidayRules = data.settings.holidayRules || merged.settings.holidayRules;
     }
@@ -676,19 +748,29 @@
     });
     return total;
   }
-  function computeCongeBalance(year){
+  // Calcul générique du solde d'une catégorie (jadis deux fonctions
+  // séparées, une pour les congés avec report/plafond, une pour les RTT
+  // sans report) : le comportement (quota, report, plafond) vient
+  // maintenant des réglages de la catégorie elle-même, donc n'importe
+  // laquelle des 3 catégories peut avoir n'importe lequel de ces comportements.
+  function computeCategoryBalance(catKey, year){
+    const cat = data.settings.categories[catKey];
+    const quotaParAn = Number(cat.quotaParAn) || 0;
+    if(!cat.carryoverEnabled){
+      const pris = sumDays(year, catKey);
+      return { disponible: quotaParAn, pris, report: 0, restant: quotaParAn - pris };
+    }
     const startYear = Number(data.settings.startYear) || year;
-    const congesParAn = Number(data.settings.congesParAn) || 0;
-    const cap = data.settings.capReportEnabled ? Number(data.settings.capReport)||0 : null;
+    const cap = cat.carryoverCapEnabled ? (Number(cat.carryoverCap) || 0) : null;
     if(year < startYear){
-      const pris = sumDays(year, 'conge');
-      return { disponible: congesParAn, pris, report: 0, restant: congesParAn - pris };
+      const pris = sumDays(year, catKey);
+      return { disponible: quotaParAn, pris, report: 0, restant: quotaParAn - pris };
     }
     let report = 0;
     let result = null;
     for(let y = startYear; y <= year; y++){
-      const disponible = report + congesParAn;
-      const pris = sumDays(y, 'conge');
+      const disponible = report + quotaParAn;
+      const pris = sumDays(y, catKey);
       let carry = disponible - pris;
       if(carry < 0) carry = 0;
       if(cap !== null) carry = Math.min(carry, cap);
@@ -697,12 +779,52 @@
     }
     return result;
   }
-  function computeRttBalance(year){
-    const rttParAn = Number(data.settings.rttParAn) || 0;
-    const pris = sumDays(year, 'rtt');
-    return { disponible: rttParAn, pris, restant: rttParAn - pris };
+  // Met à jour tout ce qui dépend des réglages de catégories : libellés des
+  // boutons de la barre de brosse, des cartes du récap et de la légende,
+  // visibilité si une catégorie est désactivée, et mode d'affichage de
+  // chaque carte (quota complet si un quota est défini, simple compteur
+  // sinon, comme le faisait Télétravail par défaut).
+  function updateCategoryUI(year){
+    CATEGORY_KEYS.forEach(catKey=>{
+      const cat = data.settings.categories[catKey];
+      const cap = catKey.charAt(0).toUpperCase() + catKey.slice(1);
+      const brushBtn = document.querySelector('.brush-btn.' + catKey);
+      const brushLabelEl = document.getElementById('brushLabel' + cap);
+      const cardEl = document.getElementById('card' + cap);
+      const cardLabelEl = document.getElementById('cardLabel' + cap);
+      const legendEl = document.getElementById('legend' + cap);
+      const legendLabelEl = document.getElementById('legendLabel' + cap);
+      if(brushLabelEl) brushLabelEl.textContent = cat.label;
+      if(cardLabelEl) cardLabelEl.textContent = cat.label;
+      if(legendLabelEl) legendLabelEl.textContent = cat.label;
+      if(brushBtn) brushBtn.classList.toggle('hidden', !cat.enabled);
+      if(cardEl) cardEl.classList.toggle('hidden', !cat.enabled);
+      if(legendEl) legendEl.classList.toggle('hidden', !cat.enabled);
+      if(!cat.enabled) return;
+      const quotaMode = document.getElementById(catKey + 'QuotaMode');
+      const simpleMode = document.getElementById(catKey + 'SimpleMode');
+      const hasQuota = Number(cat.quotaParAn) > 0;
+      if(quotaMode) quotaMode.classList.toggle('hidden', !hasQuota);
+      if(simpleMode) simpleMode.classList.toggle('hidden', hasQuota);
+      if(hasQuota){
+        const b = computeCategoryBalance(catKey, year);
+        const elDispo = document.getElementById(catKey + 'Dispo');
+        const elPris = document.getElementById(catKey + 'Pris');
+        const elRestant = document.getElementById(catKey + 'Restant');
+        const elReport = document.getElementById(catKey + 'Report');
+        const reportLine = document.getElementById(catKey + 'ReportLine');
+        if(elDispo) elDispo.textContent = b.disponible;
+        if(elPris) elPris.textContent = b.pris;
+        if(elRestant) elRestant.textContent = b.restant;
+        if(elReport) elReport.textContent = b.report;
+        if(reportLine) reportLine.classList.toggle('hidden', !cat.carryoverEnabled);
+      } else {
+        const elSimplePris = document.getElementById(catKey + 'SimplePris');
+        if(elSimplePris) elSimplePris.textContent = sumDays(year, catKey);
+      }
+    });
   }
-  let currentBrush = 'conge'; // 'conge' | 'rtt' | '' (effacer)
+  let currentBrush = 'conge'; // clé de catégorie ('conge'|'rtt'|'teletravail') | '' (effacer)
   let pendingStart = null; // dateStr of the first click, awaiting a second click
   function cleanupDay(ds){
     const d = data.days[ds];
@@ -770,13 +892,9 @@
   function openHalfDayMenu(ds, rect){
     const menu = document.getElementById('statusMenu');
     menu.innerHTML = '';
-    const brushMeta = {
-      conge: {label:'Congé', color:'var(--bleu-conge)'},
-      rtt: {label:'RTT', color:'var(--orange-rtt)'},
-      teletravail: {label:'Télétravail', color:'var(--vert-tt)'}
-    }[currentBrush] || {label:currentBrush, color:'#ccc'};
-    const brushLabel = brushMeta.label;
-    const brushColor = brushMeta.color;
+    const catForBrush = data.settings.categories[currentBrush];
+    const brushLabel = (catForBrush && catForBrush.label) || currentBrush;
+    const brushColor = CATEGORY_COLORS[currentBrush] || '#ccc';
     const options = [
       {value: currentBrush, label: brushLabel + ' — journée entière', color: brushColor},
       {value: currentBrush + '_am', label: brushLabel + ' — matin', color: brushColor},
@@ -851,15 +969,16 @@
       updatePendingHint();
       renderYear();
     } else if(pendingStart === ds){
-      if(currentBrush === 'conge'){
-        // Seuls les congés peuvent être posés en demi-journée.
+      const catNow = data.settings.categories[currentBrush];
+      if(catNow && catNow.halfDayAllowed){
+        // Seules les catégories autorisant la demi-journée proposent ce menu.
         const rect = numEl.getBoundingClientRect();
         pendingStart = null;
         updatePendingHint();
         renderYear();
         openHalfDayMenu(ds, rect);
       } else {
-        // RTT, Télétravail, Effacer : re-cliquer applique/efface directement la journée entière.
+        // Catégories sans demi-journée (ou "Effacer") : re-cliquer applique/efface directement la journée entière.
         setStatus(ds, currentBrush);
         pendingStart = null;
         updatePendingHint();
@@ -899,7 +1018,7 @@
   // hiddenIds : Set optionnel d'ids d'évènements à ne pas afficher en chip
   // dans cette case car ils sont déjà représentés par un bandeau qui s'étire
   // au-dessus de plusieurs jours (voir computeAllDaySpans / renderMonth).
-  function buildDayCell(ds, big, hiddenIds){
+  function buildDayCell(ds, big, hiddenIds, laneCount){
     const dow = new Date(ds + 'T00:00:00').getDay();
     const isWeekend = (dow === 0 || dow === 6);
     const holidayLabel = getHolidayLabel(ds);
@@ -941,11 +1060,13 @@
     }
     const evList = document.createElement('div');
     evList.className = 'day-events';
-    if(hiddenIds && hiddenIds.size){
-      // Réserve la place occupée visuellement par le bandeau qui recouvre
-      // cette case, pour que les autres chips ne passent pas dessous.
+    if(laneCount && laneCount > 0){
+      // Réserve la place occupée visuellement par le(s) bandeau(x) qui
+      // recouvre(nt) cette case (un par lane empilé), pour que les autres
+      // chips ne passent pas dessous.
+      const barH = big ? 21 : 14;
       const spacer = document.createElement('div');
-      spacer.style.height = big ? '19px' : '12px';
+      spacer.style.height = (laneCount * barH) + 'px';
       spacer.style.flexShrink = '0';
       evList.appendChild(spacer);
     }
@@ -975,46 +1096,97 @@
   // tous ces jours plutôt qu'une chip répétée et coupée dans chaque case.
   // Ne considère que le 1er évènement journée entière de chaque jour (le cas
   // très large majoritaire) ; les suivants restent affichés en chip normale.
+  // Regroupe, pour UNE ligne de colonnes-jours consécutives (une ligne de
+  // semaine de la vue Mois/Année, ou l'ensemble des colonnes de la vue
+  // Jour/Semaine), TOUS les évènements journée entière de chaque jour (pas
+  // seulement le premier) en bandeaux qui s'étirent sur leurs jours
+  // consécutifs, puis assigne à chaque bandeau un "lane" (étage
+  // d'empilement) quand plusieurs bandeaux se chevauchent sur les mêmes
+  // jours : règle demandée — le bandeau qui commence le plus tard est
+  // placé au-dessus (lane la plus basse = tout en haut).
+  // rowCells : [{ds, events}] où events = liste des évènements allDay de ce
+  // jour (peut être vide pour une case vide/hors-mois).
+  function computeAllDaySpansForRow(rowCells){
+    const openSpans = new Map(); // clé -> span en cours de construction
+    const finished = [];
+    rowCells.forEach((cell, col)=>{
+      const evs = cell.events || [];
+      const activeKeys = new Set();
+      evs.forEach(ev=>{
+        // Un même id se regroupe toujours ; à défaut d'id (anciennes
+        // données), le titre sert de clé de regroupement de secours.
+        const key = ev.id ? ('id:' + ev.id) : ('title:' + ev.title.trim().toLowerCase());
+        activeKeys.add(key);
+        if(openSpans.has(key)){
+          const sp = openSpans.get(key);
+          sp.colEnd = col;
+          sp.hiddenIds.push({ ds: cell.ds, id: ev.id });
+        } else {
+          openSpans.set(key, {
+            colStart: col, colEnd: col, title: ev.title, ds: cell.ds, id: ev.id,
+            hiddenIds: [{ ds: cell.ds, id: ev.id }]
+          });
+        }
+      });
+      Array.from(openSpans.entries()).forEach(([key, sp])=>{
+        if(!activeKeys.has(key)){
+          finished.push(sp);
+          openSpans.delete(key);
+        }
+      });
+    });
+    openSpans.forEach(sp=>finished.push(sp));
+    // Tri par colonne de départ décroissante : les bandeaux qui commencent
+    // le plus tard sont traités en premier et obtiennent donc préférentiellement
+    // le lane le plus bas (le plus haut visuellement).
+    const sorted = finished.slice().sort((a, b)=> b.colStart - a.colStart || a.colEnd - b.colEnd);
+    const laneLists = [];
+    sorted.forEach(sp=>{
+      let lane = 0;
+      while(true){
+        const list = laneLists[lane] || (laneLists[lane] = []);
+        const overlaps = list.some(other => !(sp.colEnd < other.colStart || sp.colStart > other.colEnd));
+        if(!overlaps){ list.push(sp); sp.lane = lane; break; }
+        lane++;
+      }
+    });
+    return finished;
+  }
+  // Nombre max de lanes occupés par au moins un bandeau touchant la colonne
+  // "col" (utilisé pour réserver la bonne hauteur d'espace dans chaque case).
+  function maxLaneAt(spans, col){
+    let max = -1;
+    spans.forEach(sp=>{
+      if(col >= sp.colStart && col <= sp.colEnd && sp.lane > max) max = sp.lane;
+    });
+    return max;
+  }
   function computeAllDaySpans(year, month){
     const firstDow = (new Date(year, month, 1).getDay() + 6) % 7; // Monday=0
     const daysInMonth = new Date(year, month+1, 0).getDate();
-    const dayMeta = [];
-    for(let d=1; d<=daysInMonth; d++){
-      const ds = dateStr(year, month, d);
-      const mainEvent = getDayEvents(ds).find(e=>e.allDay) || null;
-      dayMeta.push({ ds, gridIndex: firstDow + d - 1, mainEvent });
-    }
-    const spans = [];
-    let i = 0;
-    while(i < dayMeta.length){
-      if(!dayMeta[i].mainEvent){ i++; continue; }
-      const row = Math.floor(dayMeta[i].gridIndex / 7);
-      const startCol = dayMeta[i].gridIndex % 7;
-      const id = dayMeta[i].mainEvent.id;
-      const key = dayMeta[i].mainEvent.title.trim().toLowerCase();
-      const members = [dayMeta[i]];
-      let j = i + 1;
-      while(j < dayMeta.length){
-        const gi = dayMeta[j].gridIndex;
-        if(Math.floor(gi / 7) !== row) break; // ne franchit pas une ligne de semaine
-        if(gi % 7 !== startCol + members.length) break; // doit être la colonne suivante
-        const nextEv = dayMeta[j].mainEvent;
-        // Un même évènement multi-jours (même id) se regroupe toujours ;
-        // deux évènements distincts mais avec le même titre (ancien usage,
-        // un par jour) se regroupent aussi, par confort visuel.
-        if(!nextEv || (nextEv.id !== id && nextEv.title.trim().toLowerCase() !== key)) break;
-        members.push(dayMeta[j]);
-        j++;
+    // Construit une grille de lignes de 7 colonnes (comme l'affichage), avec
+    // des cases vides (sans évènements) avant le 1er et après le dernier jour.
+    const totalCells = firstDow + daysInMonth;
+    const totalRows = Math.ceil(totalCells / 7);
+    const allSpans = [];
+    for(let row=0; row<totalRows; row++){
+      const rowCells = [];
+      for(let col=0; col<7; col++){
+        const gridIndex = row*7 + col;
+        const dayNum = gridIndex - firstDow + 1;
+        if(dayNum >= 1 && dayNum <= daysInMonth){
+          const ds = dateStr(year, month, dayNum);
+          rowCells.push({ ds, events: getDayEvents(ds).filter(e=>e.allDay) });
+        } else {
+          rowCells.push({ ds: null, events: [] });
+        }
       }
-      spans.push({
-        row, colStart: startCol, colEnd: startCol + members.length - 1,
-        title: dayMeta[i].mainEvent.title,
-        ds: dayMeta[i].ds, id: dayMeta[i].mainEvent.id,
-        hiddenIds: members.map(m=>({ ds: m.ds, id: m.mainEvent.id }))
+      computeAllDaySpansForRow(rowCells).forEach(sp=>{
+        sp.row = row;
+        allSpans.push(sp);
       });
-      i = j;
     }
-    return spans;
+    return allSpans;
   }
 
   // Construit juste la ligne "Lun Mar Mer..." (utilisée telle quelle dans
@@ -1023,7 +1195,7 @@
   function buildWeekHeaderRow(){
     const wh = document.createElement('div');
     wh.className = 'week-header';
-    JOURS.forEach(j=>{ const c = document.createElement('div'); c.textContent = j; wh.appendChild(c); });
+    JOURS_LETTRE.forEach(j=>{ const c = document.createElement('div'); c.textContent = j; wh.appendChild(c); });
     return wh;
   }
   // skipWeekHeader : en vue Mois (big), la ligne des jours de la semaine est
@@ -1031,6 +1203,20 @@
   // renderYear) plutôt qu'ici, pour qu'elle ne fasse plus qu'un avec l'en-tête
   // et la barre congé/RTT/télétravail (un seul bloc immobile, sans étage
   // intermédiaire qui pourrait se décaler indépendamment).
+  // Case grisée pour un jour du mois précédent/suivant affiché en bordure de
+  // grille (juste pour le repère visuel et la navigation, comme dans la
+  // plupart des calendriers) : pas de statut/évènements affichés dessus, un
+  // clic ouvre sa vraie vue Jour où on peut poser un statut ou un évènement.
+  function buildAdjacentDayCell(ds, big){
+    const cell = document.createElement('div');
+    cell.className = 'day adjacent' + (big ? ' big' : '');
+    const num = document.createElement('div');
+    num.className = 'daynum';
+    num.textContent = Number(ds.slice(8, 10));
+    cell.appendChild(num);
+    cell.addEventListener('click', ()=>goToDayView(ds));
+    return cell;
+  }
   function renderMonth(year, month, big, skipWeekHeader){
     const wrap = document.createElement('div');
     wrap.className = 'month-block' + (big ? ' large' : '');
@@ -1045,11 +1231,15 @@
     grid.className = 'days-grid';
     const firstDow = (new Date(year, month, 1).getDay() + 6) % 7; // Monday=0
     const daysInMonth = new Date(year, month+1, 0).getDate();
+    const totalCells = Math.ceil((firstDow + daysInMonth) / 7) * 7;
     // Un évènement journée entière identique sur des jours consécutifs
     // devient un seul bandeau qui s'étire sur ces jours (voir
     // computeAllDaySpans), en vue Mois comme en vue Année : on calcule
     // d'abord quels évènements masquer dans les cases concernées, avant de
-    // construire les cases elles-mêmes.
+    // construire les cases elles-mêmes. Quand plusieurs bandeaux se
+    // chevauchent sur les mêmes jours, ils sont empilés sur des "lanes"
+    // distincts (voir computeAllDaySpansForRow) : celui qui commence le
+    // plus tard est au-dessus.
     const spans = computeAllDaySpans(year, month);
     const hiddenByDs = {};
     spans.forEach(sp=>{
@@ -1058,16 +1248,29 @@
         hiddenByDs[h.ds].add(h.id);
       });
     });
+    const laneCountByDs = {};
+    spans.forEach(sp=>{
+      for(let col=sp.colStart; col<=sp.colEnd; col++){
+        const gridIndex = sp.row*7 + col;
+        const dayNum = gridIndex - firstDow + 1;
+        if(dayNum >= 1 && dayNum <= daysInMonth){
+          const ds = dateStr(year, month, dayNum);
+          laneCountByDs[ds] = Math.max(laneCountByDs[ds]||0, sp.lane+1);
+        }
+      }
+    });
     const cellByIndex = [];
-    for(let i=0;i<firstDow;i++){
-      const e = document.createElement('div');
-      e.className = 'day empty';
-      grid.appendChild(e);
-      cellByIndex.push(e);
-    }
-    for(let d=1; d<=daysInMonth; d++){
-      const ds = dateStr(year, month, d);
-      const cellEl = buildDayCell(ds, big, hiddenByDs[ds]);
+    for(let gridIndex=0; gridIndex<totalCells; gridIndex++){
+      const dayNum = gridIndex - firstDow + 1;
+      let cellEl;
+      if(dayNum < 1 || dayNum > daysInMonth){
+        const adjDate = new Date(year, month, dayNum);
+        const adjDs = dateStr(adjDate.getFullYear(), adjDate.getMonth(), adjDate.getDate());
+        cellEl = buildAdjacentDayCell(adjDs, big);
+      } else {
+        const ds = dateStr(year, month, dayNum);
+        cellEl = buildDayCell(ds, big, hiddenByDs[ds], laneCountByDs[ds] || 0);
+      }
       grid.appendChild(cellEl);
       cellByIndex.push(cellEl);
     }
@@ -1083,6 +1286,7 @@
       // conflit. Le décalage vertical et la taille du bandeau s'adaptent
       // à la taille des cases (grande case en vue Mois, mini-case en Année).
       const topOffset = big ? 27 : 16;
+      const barH = big ? 21 : 14;
       grid.style.position = 'relative';
       requestAnimationFrame(()=>{
         if(!grid.isConnected) return;
@@ -1098,7 +1302,7 @@
           bar.textContent = sp.title;
           bar.title = sp.title;
           bar.style.left = (r1.left - gridRect.left) + 'px';
-          bar.style.top = (r1.top - gridRect.top + topOffset) + 'px';
+          bar.style.top = (r1.top - gridRect.top + topOffset + sp.lane*barH) + 'px';
           bar.style.width = (r2.right - r1.left) + 'px';
           bar.addEventListener('click', (e)=>{ e.stopPropagation(); openEventModal(sp.ds, sp.id); });
           grid.appendChild(bar);
@@ -1143,29 +1347,8 @@
   // même logique que computeAllDaySpans, mais sur une liste de dates plutôt
   // que sur toute une grille de mois (pas de saut de ligne à gérer ici).
   function computeAllDaySpansForDates(dsList){
-    const dayMeta = dsList.map((ds, idx)=>({ ds, idx, mainEvent: getDayEvents(ds).find(e=>e.allDay) || null }));
-    const spans = [];
-    let i = 0;
-    while(i < dayMeta.length){
-      if(!dayMeta[i].mainEvent){ i++; continue; }
-      const id = dayMeta[i].mainEvent.id;
-      const key = dayMeta[i].mainEvent.title.trim().toLowerCase();
-      const members = [dayMeta[i]];
-      let j = i + 1;
-      while(j < dayMeta.length){
-        const nextEv = dayMeta[j].mainEvent;
-        if(!nextEv || (nextEv.id !== id && nextEv.title.trim().toLowerCase() !== key)) break;
-        members.push(dayMeta[j]);
-        j++;
-      }
-      spans.push({
-        colStart: i, colEnd: i + members.length - 1,
-        title: dayMeta[i].mainEvent.title, ds: dayMeta[i].ds, id,
-        hiddenIds: members.map(m=>({ ds: m.ds, id: m.mainEvent.id }))
-      });
-      i = j;
-    }
-    return spans;
+    const rowCells = dsList.map(ds=>({ ds, events: getDayEvents(ds).filter(e=>e.allDay) }));
+    return computeAllDaySpansForRow(rowCells);
   }
   // Grille horaire générique (00h-23h), utilisée pour la vue Jour (1 colonne)
   // et la vue Semaine (7 colonnes) : bandeau "journée entière" en haut, puis
@@ -1184,7 +1367,11 @@
     const stickyWrap = document.createElement('div');
     stickyWrap.className = 'timegrid-wrap';
 
-    if(dates.length > 1){
+    {
+      // Ligne d'en-tête avec la date de chaque colonne ("Lun 27" etc.) —
+      // affichée aussi bien en vue Semaine qu'en vue Jour (une seule
+      // colonne), avec un petit badge de couleur si un statut (congé/RTT/
+      // télétravail/autre catégorie) est posé sur ce jour.
       const header = document.createElement('div');
       header.className = 'timegrid-header';
       header.style.gridTemplateColumns = cols;
@@ -1195,7 +1382,15 @@
         const ds = dateStr(d.getFullYear(), d.getMonth(), d.getDate());
         const lbl = document.createElement('div');
         lbl.className = 'timegrid-daylabel' + (ds === todayStr ? ' today' : '');
-        lbl.textContent = JOURS[(d.getDay()+6)%7] + ' ' + d.getDate();
+        lbl.appendChild(document.createTextNode(JOURS[(d.getDay()+6)%7] + ' ' + d.getDate()));
+        const info = describeStatus(data.days[ds] && data.days[ds].status);
+        if(info){
+          const badge = document.createElement('span');
+          badge.className = 'daylabel-badge';
+          badge.style.background = info.color;
+          badge.textContent = info.label + (info.half ? (info.half === 'am' ? ' (matin)' : ' (après-midi)') : '');
+          lbl.appendChild(badge);
+        }
         header.appendChild(lbl);
       });
       stickyWrap.appendChild(header);
@@ -1204,11 +1399,16 @@
     const dsList = dates.map(d=>dateStr(d.getFullYear(), d.getMonth(), d.getDate()));
     const spans = computeAllDaySpansForDates(dsList);
     const hiddenByDs = {};
+    const laneCountByDs = {};
     spans.forEach(sp=>{
       sp.hiddenIds.forEach(h=>{
         if(!hiddenByDs[h.ds]) hiddenByDs[h.ds] = new Set();
         hiddenByDs[h.ds].add(h.id);
       });
+      for(let col=sp.colStart; col<=sp.colEnd; col++){
+        const ds = dsList[col];
+        laneCountByDs[ds] = Math.max(laneCountByDs[ds]||0, sp.lane+1);
+      }
     });
 
     const allDayRow = document.createElement('div');
@@ -1226,9 +1426,13 @@
       const cell = document.createElement('div');
       cell.className = 'timegrid-allday-cell';
       const hidden = hiddenByDs[ds];
-      if(hidden && hidden.size){
+      const laneCount = laneCountByDs[ds] || 0;
+      if(laneCount > 0){
+        // Réserve la place occupée par le(s) bandeau(x) empilé(s) sur ce
+        // jour (voir computeAllDaySpansForRow — plusieurs évènements
+        // journée entière peuvent se chevaucher, chacun sur son lane).
         const spacer = document.createElement('div');
-        spacer.style.height = '19px';
+        spacer.style.height = (laneCount * 21) + 'px';
         spacer.style.flexShrink = '0';
         cell.appendChild(spacer);
       }
@@ -1247,7 +1451,8 @@
       // Même technique que pour la vue Mois : positionnement en pixels après
       // rendu réel, pour ne pas perturber le placement automatique des
       // cellules de la grille CSS (voir renderMonth pour le détail du bug
-      // que ça évite).
+      // que ça évite). Empilement (lane) identique : le bandeau qui commence
+      // le plus tard est au-dessus.
       requestAnimationFrame(()=>{
         if(!allDayRow.isConnected) return;
         const rowRect = allDayRow.getBoundingClientRect();
@@ -1262,7 +1467,7 @@
           bar.textContent = sp.title;
           bar.title = sp.title;
           bar.style.left = (r1.left - rowRect.left) + 'px';
-          bar.style.top = '5px';
+          bar.style.top = (5 + sp.lane * 21) + 'px';
           bar.style.width = (r2.right - r1.left) + 'px';
           bar.addEventListener('click', (e)=>{ e.stopPropagation(); openEventModal(sp.ds, sp.id); });
           allDayRow.appendChild(bar);
@@ -1369,16 +1574,7 @@
     } else {
       renderDayBody(gridWrap, stickyExtra);
     }
-    const cb = computeCongeBalance(currentYear);
-    document.getElementById('congeDispo').textContent = cb.disponible;
-    document.getElementById('congePris').textContent = cb.pris;
-    document.getElementById('congeRestant').textContent = cb.restant;
-    document.getElementById('congeReport').textContent = cb.report;
-    const rb = computeRttBalance(currentYear);
-    document.getElementById('rttDispo').textContent = rb.disponible;
-    document.getElementById('rttPris').textContent = rb.pris;
-    document.getElementById('rttRestant').textContent = rb.restant;
-    document.getElementById('ttTotal').textContent = sumDays(currentYear, 'teletravail');
+    updateCategoryUI(currentYear);
     // Persistance locale uniquement (mémorise l'année affichée) : ne déclenche
     // jamais d'envoi vers le Sheet, contrairement à save(). L'envoi ne doit se
     // produire que suite à une vraie modification (statut, évènement, paramètre).
@@ -1395,12 +1591,102 @@
       });
     }
   }
+  // Construit dynamiquement les 3 lignes (fixes : conge/rtt/teletravail,
+  // aucun ajout/suppression possible, seulement activer/désactiver et
+  // renommer) de la table de réglages des catégories.
+  function renderCategoriesTable(){
+    const tbody = document.getElementById('categoriesTableBody');
+    tbody.innerHTML = '';
+    CATEGORY_KEYS.forEach(catKey=>{
+      const cat = data.settings.categories[catKey];
+      const tr = document.createElement('tr');
+
+      const tdEnabled = document.createElement('td');
+      const inEnabled = document.createElement('input');
+      inEnabled.type = 'checkbox';
+      inEnabled.checked = !!cat.enabled;
+      inEnabled.title = 'Activer/désactiver cette catégorie';
+      inEnabled.addEventListener('change', ()=>{
+        cat.enabled = inEnabled.checked;
+        save(); renderSettings(); renderYear();
+      });
+      tdEnabled.appendChild(inEnabled);
+      tr.appendChild(tdEnabled);
+
+      const tdLabel = document.createElement('td');
+      const inLabel = document.createElement('input');
+      inLabel.type = 'text';
+      inLabel.value = cat.label || '';
+      inLabel.addEventListener('input', ()=>{
+        cat.label = inLabel.value;
+        save(); renderYear();
+      });
+      tdLabel.appendChild(inLabel);
+      tr.appendChild(tdLabel);
+
+      const tdQuota = document.createElement('td');
+      const inQuota = document.createElement('input');
+      inQuota.type = 'number'; inQuota.min = 0; inQuota.step = 0.5;
+      inQuota.value = cat.quotaParAn;
+      inQuota.addEventListener('input', ()=>{
+        cat.quotaParAn = Number(inQuota.value)||0;
+        save(); renderYear();
+      });
+      tdQuota.appendChild(inQuota);
+      tr.appendChild(tdQuota);
+
+      const tdCarry = document.createElement('td');
+      const inCarry = document.createElement('input');
+      inCarry.type = 'checkbox';
+      inCarry.checked = !!cat.carryoverEnabled;
+      inCarry.title = 'Reporter les jours non pris sur l\'année suivante';
+      inCarry.addEventListener('change', ()=>{
+        cat.carryoverEnabled = inCarry.checked;
+        save(); renderSettings(); renderYear();
+      });
+      tdCarry.appendChild(inCarry);
+      tr.appendChild(tdCarry);
+
+      const tdCap = document.createElement('td');
+      const inCapEnabled = document.createElement('input');
+      inCapEnabled.type = 'checkbox';
+      inCapEnabled.checked = !!cat.carryoverCapEnabled;
+      inCapEnabled.disabled = !cat.carryoverEnabled;
+      inCapEnabled.title = 'Plafonner le report';
+      inCapEnabled.addEventListener('change', ()=>{
+        cat.carryoverCapEnabled = inCapEnabled.checked;
+        save(); renderSettings(); renderYear();
+      });
+      const inCap = document.createElement('input');
+      inCap.type = 'number'; inCap.min = 0; inCap.step = 0.5;
+      inCap.value = cat.carryoverCap;
+      inCap.placeholder = 'nb de jours max';
+      inCap.disabled = !cat.carryoverEnabled || !cat.carryoverCapEnabled;
+      inCap.addEventListener('input', ()=>{
+        cat.carryoverCap = Number(inCap.value)||0;
+        save(); renderYear();
+      });
+      tdCap.appendChild(inCapEnabled);
+      tdCap.appendChild(inCap);
+      tr.appendChild(tdCap);
+
+      const tdHalf = document.createElement('td');
+      const inHalf = document.createElement('input');
+      inHalf.type = 'checkbox';
+      inHalf.checked = !!cat.halfDayAllowed;
+      inHalf.title = 'Autoriser la pose en demi-journée (matin/après-midi)';
+      inHalf.addEventListener('change', ()=>{
+        cat.halfDayAllowed = inHalf.checked;
+        save();
+      });
+      tdHalf.appendChild(inHalf);
+      tr.appendChild(tdHalf);
+
+      tbody.appendChild(tr);
+    });
+  }
   function renderSettings(){
-    document.getElementById('congesParAn').value = data.settings.congesParAn;
-    document.getElementById('rttParAn').value = data.settings.rttParAn;
-    document.getElementById('capReportEnabled').checked = !!data.settings.capReportEnabled;
-    document.getElementById('capReport').value = data.settings.capReport;
-    document.getElementById('capReport').disabled = !data.settings.capReportEnabled;
+    renderCategoriesTable();
     document.getElementById('startYear').value = data.settings.startYear;
     document.getElementById('syncUrlInput').value = syncUrl;
     const tbody = document.getElementById('holidayTableBody');
@@ -1463,21 +1749,8 @@
       tbody.appendChild(tr);
     });
   }
-  // wire settings inputs
-  document.getElementById('congesParAn').addEventListener('input', (e)=>{
-    data.settings.congesParAn = Number(e.target.value)||0; save(); renderYear();
-  });
-  document.getElementById('rttParAn').addEventListener('input', (e)=>{
-    data.settings.rttParAn = Number(e.target.value)||0; save(); renderYear();
-  });
-  document.getElementById('capReportEnabled').addEventListener('change', (e)=>{
-    data.settings.capReportEnabled = e.target.checked;
-    document.getElementById('capReport').disabled = !e.target.checked;
-    save(); renderYear();
-  });
-  document.getElementById('capReport').addEventListener('input', (e)=>{
-    data.settings.capReport = Number(e.target.value)||0; save(); renderYear();
-  });
+  // wire settings inputs (les lignes de catégories sont câblées dans
+  // renderCategoriesTable, recréées à chaque renderSettings())
   document.getElementById('startYear').addEventListener('input', (e)=>{
     data.settings.startYear = Number(e.target.value)||currentYear; save(); renderYear();
   });
@@ -1487,11 +1760,6 @@
   });
   document.getElementById('toggleSettings').addEventListener('click', ()=>{
     document.getElementById('settingsPanel').classList.toggle('hidden');
-  });
-  document.getElementById('toggleRecap').addEventListener('click', ()=>{
-    const panel = document.getElementById('recapPanel');
-    panel.classList.toggle('hidden');
-    document.getElementById('toggleRecap').classList.toggle('active', !panel.classList.contains('hidden'));
   });
   document.querySelectorAll('.brush-btn').forEach(btn=>{
     btn.addEventListener('click', ()=>{
@@ -1638,7 +1906,11 @@
       try{
         const parsed = JSON.parse(reader.result);
         const d = defaultData();
-        d.settings = Object.assign(d.settings, parsed.settings||{});
+        const incoming = parsed.settings || {};
+        d.settings = Object.assign(d.settings, incoming);
+        d.settings.categories = resolveCategories(incoming);
+        delete d.settings.congesParAn; delete d.settings.rttParAn;
+        delete d.settings.capReportEnabled; delete d.settings.capReport;
         d.lastViewedYear = parsed.lastViewedYear || d.lastViewedYear;
         d.days = migrateLegacyNotes(parsed.days || {});
         data = d;
