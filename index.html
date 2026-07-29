@@ -25,11 +25,18 @@
   }
   * { box-sizing: border-box; }
   button { border-radius:10px; font-family:inherit; }
+  html { overflow-x:hidden; }
   body {
     margin:0; padding:24px; background:var(--bg); color:var(--text);
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    overflow-x:hidden; max-width:100vw;
   }
   #app { max-width:1400px; margin:0 auto; }
+  /* Tables de Paramètres (calendriers/catégories/jours fériés) : plus de
+     colonnes que ce qui tient sur un écran de téléphone — on les fait
+     défiler horizontalement DANS leur propre cadre plutôt que de laisser
+     toute la page déborder sur la droite. */
+  .table-scroll { width:100%; overflow-x:auto; -webkit-overflow-scrolling:touch; }
   /* Bandeau figé (en-tête + sélecteur congé/RTT/télétravail) : reste visible
      en haut de l'écran quel que soit le défilement, comme des volets figés. */
   #stickyTop {
@@ -134,20 +141,9 @@
   }
   .user-bar .user-edit-select { display:flex; align-items:center; gap:8px; }
   .user-bar select { padding:5px 8px; border:1px solid var(--border); border-radius:8px; font-size:13px; font-weight:600; }
-  .user-bar .user-visibility { display:flex; align-items:center; gap:14px; }
+  .user-bar .user-visibility { display:flex; align-items:center; gap:14px; flex-wrap:wrap; }
   .user-bar label { display:flex; align-items:center; gap:5px; cursor:pointer; }
   .user-settings-block + .user-settings-block { margin-top:22px; padding-top:18px; border-top:1px dashed var(--border); }
-  /* Case coupée en 2 (gauche/droite) quand les statuts des 2 utilisateurs
-     sont visibles et posés le même jour : voir renderSplitStatusBackground. */
-  // Coupée en 2 verticalement (haut/bas), même principe que le dégradé
-  // matin/après-midi des demi-journées, mais une couleur pleine par moitié
-  // (haut = Utilisateur 1, bas = Utilisateur 2) plutôt qu'un dégradé.
-  .day-status-half { position:absolute; left:0; right:0; height:50%; z-index:-1; pointer-events:none; }
-  .day-status-half.top { top:0; }
-  .day-status-half.bottom { bottom:0; }
-  .timegrid-daylabel-half { position:absolute; left:0; right:0; height:50%; z-index:-1; pointer-events:none; }
-  .timegrid-daylabel-half.top { top:0; }
-  .timegrid-daylabel-half.bottom { bottom:0; }
   .del-btn { background:none; border:none; border-radius:0; color:#c0392b; cursor:pointer; font-size:15px; }
   #addHoliday, .add-calendar-btn { margin-top:4px; border:1px dashed #aaa; background:#fff; padding:6px 12px; border-radius:10px; cursor:pointer; font-size:13px; }
   .settings-actions { display:flex; gap:10px; margin-top:16px; flex-wrap:wrap; }
@@ -155,7 +151,26 @@
     display:grid; grid-template-columns: repeat(3, 1fr); gap:16px;
   }
   @media (max-width:1000px){ .months-grid { grid-template-columns: repeat(2,1fr); } }
-  @media (max-width:640px){ .months-grid { grid-template-columns: 1fr; } body{padding:10px;} }
+  @media (max-width:640px){
+    .months-grid { grid-template-columns: 1fr; }
+    body{padding:10px;}
+    /* #stickyTop compense le padding du body avec une marge négative égale
+       (-24px, pour "s'étaler" jusqu'aux bords) : sur petit écran le padding
+       du body passe à 10px mais cette marge négative restait à -24px, donc
+       le bandeau du haut (avec tous ses boutons/menus) débordait de 14px de
+       chaque côté de l'écran. On aligne les deux valeurs ici. */
+    #stickyTop { margin:-10px -10px 16px; padding:10px 10px 12px; }
+  }
+  /* iPhone / petits écrans : les libellés larges (min-width:220px) de
+     Paramètres passaient au-dessus du contenu utile et poussaient tout à
+     droite — ici le libellé prend toute la largeur et l'input suit dessous. */
+  @media (max-width:480px){
+    .settings-row label { min-width:0; width:100%; }
+    .settings-row input[type=text], .settings-row input[type=number] { flex:1; min-width:0; }
+    #settingsPanel { padding:14px 12px; }
+    .user-bar { padding:8px 10px; gap:10px; }
+    .modal-box { padding:16px; }
+  }
   .months-grid.single-view { display:block; max-width:900px; margin:0 auto; }
   .months-grid.wide-view { display:block; max-width:1200px; margin:0 auto; }
   .month-block { background:var(--card-bg); border:1px solid var(--border); border-radius:10px; padding:10px; }
@@ -417,18 +432,22 @@
 
     <div class="user-settings-block" id="userSettingsBlock_user1">
       <h3 id="userSectionCal_user1">Calendriers — Utilisateur 1</h3>
+      <div class="table-scroll">
       <table class="calendars-table" id="calendarsTable_user1">
         <thead><tr><th>Nom</th><th>Couleur</th><th></th></tr></thead>
         <tbody id="calendarsTableBody_user1"></tbody>
       </table>
+      </div>
       <button class="add-calendar-btn" id="addCalendar_user1">+ Ajouter un calendrier</button>
       <div class="hint">Chaque évènement de cet utilisateur appartient à un de ses calendriers et prend sa couleur (voir la modale de création). Supprimer un calendrier reporte ses évènements sur le calendrier restant le plus ancien.</div>
 
       <h3 id="userSectionCat_user1">Catégories — Utilisateur 1</h3>
+      <div class="table-scroll">
       <table class="categories-table" id="categoriesTable_user1">
         <thead><tr><th>Activée</th><th>Nom</th><th>Couleur</th><th>Quota/an (j)</th><th>Report</th><th>Plafond report</th><th>Demi-journée</th></tr></thead>
         <tbody id="categoriesTableBody_user1"></tbody>
       </table>
+      </div>
       <div class="hint">3 catégories maximum, déjà toutes présentes ci-dessus : renommez-les et désactivez celles que vous n'utilisez pas. Quota à 0 = simple compteur sans suivi de solde. Le report permet de garder les jours non pris pour l'année suivante (avec un plafond optionnel).</div>
 
       <h3 id="userSectionRec_user1">Récapitulatif des jours — Utilisateur 1</h3>
@@ -488,18 +507,22 @@
 
     <div class="user-settings-block" id="userSettingsBlock_user2">
       <h3 id="userSectionCal_user2">Calendriers — Utilisateur 2</h3>
+      <div class="table-scroll">
       <table class="calendars-table" id="calendarsTable_user2">
         <thead><tr><th>Nom</th><th>Couleur</th><th></th></tr></thead>
         <tbody id="calendarsTableBody_user2"></tbody>
       </table>
+      </div>
       <button class="add-calendar-btn" id="addCalendar_user2">+ Ajouter un calendrier</button>
       <div class="hint">Chaque évènement de cet utilisateur appartient à un de ses calendriers et prend sa couleur (voir la modale de création). Supprimer un calendrier reporte ses évènements sur le calendrier restant le plus ancien.</div>
 
       <h3 id="userSectionCat_user2">Catégories — Utilisateur 2</h3>
+      <div class="table-scroll">
       <table class="categories-table" id="categoriesTable_user2">
         <thead><tr><th>Activée</th><th>Nom</th><th>Couleur</th><th>Quota/an (j)</th><th>Report</th><th>Plafond report</th><th>Demi-journée</th></tr></thead>
         <tbody id="categoriesTableBody_user2"></tbody>
       </table>
+      </div>
       <div class="hint">3 catégories maximum, déjà toutes présentes ci-dessus : renommez-les et désactivez celles que vous n'utilisez pas. Quota à 0 = simple compteur sans suivi de solde. Le report permet de garder les jours non pris pour l'année suivante (avec un plafond optionnel).</div>
 
       <h3 id="userSectionRec_user2">Récapitulatif des jours — Utilisateur 2</h3>
@@ -563,10 +586,12 @@
       <div class="item" style="color:#999">Choisissez le type ci-dessus (utilisateur actif), cliquez un 1er jour puis un 2nd jour pour poser une période, re-cliquez le même jour (demi-journée si autorisée pour la catégorie).</div>
     </div>
     <h3>Jours fériés (paramétrables)</h3>
+    <div class="table-scroll">
     <table id="holidayTable">
       <thead><tr><th>Libellé</th><th>Type</th><th>Détail</th><th></th></tr></thead>
       <tbody id="holidayTableBody"></tbody>
     </table>
+    </div>
     <button id="addHoliday">+ Ajouter un jour férié</button>
     <h3>Notifications</h3>
     <div class="settings-row">
@@ -788,6 +813,17 @@
     refresh();
     return wrap;
   }
+  // Libellé effectif d'une catégorie : le nom choisi, ou son nom par défaut
+  // (Congé/RTT/Télétravail) si le champ a été laissé vide — permet d'utiliser
+  // un placeholder grisé dans le champ de saisie (voir renderCategoriesTable)
+  // plutôt que de forcer une valeur réelle qui gênerait pour la vider/réécrire.
+  function categoryLabel(userId, catKey){
+    const cats = data.settings.categories[userId];
+    const cat = cats && cats[catKey];
+    if(cat && cat.label) return cat.label;
+    const def = defaultCategories();
+    return (def[catKey] && def[catKey].label) || catKey;
+  }
   // Retourne {key, half, label, color} pour le statut d'un jour donné, pour
   // l'utilisateur userId ("conge" | "rtt_am" | "teletravail_pm" | ...), ou
   // null si vide/inconnu.
@@ -799,7 +835,7 @@
     const cats = data.settings.categories[userId];
     const cat = cats && cats[key];
     if(!cat) return null;
-    return { key, half, label: cat.label, color: categoryColor(userId, key) };
+    return { key, half, label: categoryLabel(userId, key), color: categoryColor(userId, key) };
   }
   // Détermine les 3 catégories d'UN utilisateur à partir de paramètres "bruts"
   // déjà isolés pour cet utilisateur (reprend la structure existante en
@@ -1262,7 +1298,7 @@
       const cap = catKey.charAt(0).toUpperCase() + catKey.slice(1);
       const brushBtn = document.querySelector('.brush-btn.' + catKey);
       const brushLabelEl = document.getElementById('brushLabel' + cap);
-      if(brushLabelEl) brushLabelEl.textContent = cat.label;
+      if(brushLabelEl) brushLabelEl.textContent = categoryLabel(userId, catKey);
       const color = categoryColor(userId, catKey);
       if(brushBtn){
         brushBtn.classList.toggle('hidden', !cat.enabled);
@@ -1285,8 +1321,8 @@
       const cardLabelEl = document.getElementById('cardLabel' + cap + suffix);
       const legendEl = document.getElementById('legend' + cap + suffix);
       const legendLabelEl = document.getElementById('legendLabel' + cap + suffix);
-      if(cardLabelEl) cardLabelEl.textContent = cat.label;
-      if(legendLabelEl) legendLabelEl.textContent = cat.label;
+      if(cardLabelEl) cardLabelEl.textContent = categoryLabel(userId, catKey);
+      if(legendLabelEl) legendLabelEl.textContent = categoryLabel(userId, catKey);
       const color = categoryColor(userId, catKey);
       if(cardEl){
         cardEl.classList.toggle('hidden', !cat.enabled);
@@ -1623,20 +1659,16 @@
       el.style.background = 'linear-gradient(to bottom, #fff 50%, ' + pastel + ' 50%)';
     }
   }
-  // Une moitié (haut = Utilisateur 1, bas = Utilisateur 2) de case-jour
-  // coupée en 2 verticalement — même sens que le dégradé matin/après-midi
-  // des demi-journées — quand les 2 utilisateurs sont visibles et ont
-  // chacun un statut posé le même jour (voir buildDayCell). Technique : div
-  // en position:absolute, z-index négatif, insérée dans une case qui a déjà
-  // position:relative + z-index:0 + overflow:hidden (voir CSS .day — le
-  // z-index:0 est nécessaire pour que la case forme son PROPRE contexte
-  // d'empilement, sinon le fond blanc de la case elle-même se peint
-  // par-dessus ces moitiés et on ne voit plus rien).
-  function buildStatusHalf(side, statusInfo){
-    const half = document.createElement('div');
-    half.className = 'day-status-half ' + side;
-    applyStatusBackground(half, statusInfo);
-    return half;
+  // Fond coupé en 2 verticalement (haut = 1er statut, bas = 2e) quand les 2
+  // utilisateurs sont visibles et ont chacun un statut posé le même jour —
+  // même mécanisme que le dégradé matin/après-midi des demi-journées (un
+  // seul linear-gradient posé sur la case elle-même), plutôt que des
+  // éléments enfants positionnés en absolu : plus simple et surtout fiable
+  // (les enfants absolus avec une hauteur en % dans une case dont la
+  // hauteur dépend du contenu ne s'affichaient pas de façon garantie selon
+  // les navigateurs — un gradient sur la case n'a pas ce problème).
+  function twoUserSplitBackground(infoTop, infoBottom){
+    return 'linear-gradient(to bottom, ' + pastelOf(infoTop.color) + ' 50%, ' + pastelOf(infoBottom.color) + ' 50%)';
   }
   // Construit une case-jour complète (utilisée par les vues mois et année).
   // hiddenIds : Set optionnel d'ids d'évènements à ne pas afficher en chip
@@ -1662,8 +1694,7 @@
     if(activeStatuses.length === 1){
       applyStatusBackground(cell, activeStatuses[0]);
     } else if(activeStatuses.length === 2){
-      cell.appendChild(buildStatusHalf('top', statusByUser[0]));
-      cell.appendChild(buildStatusHalf('bottom', statusByUser[1]));
+      cell.style.background = twoUserSplitBackground(statusByUser[0], statusByUser[1]);
     }
     const titleParts = [];
     if(holidayLabel) titleParts.push(holidayLabel);
@@ -2021,14 +2052,7 @@
         if(activeStatuses.length === 1){
           applyStatusBackground(lbl, activeStatuses[0]);
         } else if(activeStatuses.length === 2){
-          const half1 = document.createElement('div');
-          half1.className = 'timegrid-daylabel-half top';
-          applyStatusBackground(half1, statusByUser[0]);
-          const half2 = document.createElement('div');
-          half2.className = 'timegrid-daylabel-half bottom';
-          applyStatusBackground(half2, statusByUser[1]);
-          lbl.appendChild(half1);
-          lbl.appendChild(half2);
+          lbl.style.background = twoUserSplitBackground(statusByUser[0], statusByUser[1]);
         }
         const titleParts = [];
         USER_KEYS.forEach((u, idx)=>{
@@ -2269,7 +2293,11 @@
       const tdLabel = document.createElement('td');
       const inLabel = document.createElement('input');
       inLabel.type = 'text';
+      // Valeur réelle (peut être vide) + placeholder grisé montrant le nom
+      // par défaut : vider le champ ne remet pas de force "Congé"/"RTT"/
+      // "Télétravail" dedans, on peut retaper directement par-dessus.
       inLabel.value = cat.label || '';
+      inLabel.placeholder = defaultCategories()[catKey].label;
       inLabel.addEventListener('input', ()=>{
         cat.label = inLabel.value;
         save(); renderYear();
@@ -2409,8 +2437,15 @@
   }
   function renderSettings(){
     updateMultiUserUI();
-    document.getElementById('userName1').value = userName('user1');
-    document.getElementById('userName2').value = userName('user2');
+    // Valeur réelle (peut être vide) + placeholder grisé montrant le nom par
+    // défaut : vider le champ pour retaper un nom ne le remet pas de force à
+    // "Utilisateur 1"/"Utilisateur 2" pendant la frappe.
+    const un1 = document.getElementById('userName1');
+    un1.value = (data.settings.users.user1 && data.settings.users.user1.name) || '';
+    un1.placeholder = 'Utilisateur 1';
+    const un2 = document.getElementById('userName2');
+    un2.value = (data.settings.users.user2 && data.settings.users.user2.name) || '';
+    un2.placeholder = 'Utilisateur 2';
     USER_KEYS.forEach(u=>{
       const name = userName(u);
       const calTitle = document.getElementById('userSectionCal_' + u);
