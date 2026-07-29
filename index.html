@@ -465,8 +465,7 @@
       <div class="view-switch">
         <button class="view-btn" data-view="day">Jour</button>
         <button class="view-btn" data-view="week">Semaine</button>
-        <button class="view-btn active" data-view="month">Mois</button>
-        <button class="view-btn" data-view="year">Année</button>
+        <button class="view-btn active" data-view="year">Année</button>
       </div>
       <button id="toggleSettings" title="Paramètres">⚙</button>
     </header>
@@ -1216,7 +1215,7 @@
   function visibleUserKeys(){ return USER_KEYS.filter(isUserVisible); }
   // Vue : toujours ouverte sur le mois en cours, jamais restaurée depuis une
   // session précédente ni depuis le Sheet (demande explicite de l'utilisateur).
-  let viewMode = 'month'; // 'day' | 'week' | 'month' | 'year'
+  let viewMode = 'year'; // 'day' | 'week' | 'year' (vue Mois supprimée)
   let viewDate = new Date();
   viewDate.setHours(0, 0, 0, 0);
   let currentYear = viewDate.getFullYear();
@@ -2030,6 +2029,9 @@
   function renderMonth(year, month, big, skipWeekHeader){
     const wrap = document.createElement('div');
     wrap.className = 'month-block' + (big ? ' large' : '');
+    // Permet de retrouver le bloc du mois en cours (vue Année) pour y faire
+    // défiler la page au clic sur "Aujourd'hui" — voir plus bas.
+    wrap.dataset.month = String(month);
     const title = document.createElement('div');
     title.className = 'month-title';
     title.textContent = MOIS[month] + ' ' + year;
@@ -2357,7 +2359,6 @@
 
   function formatPeriodLabel(){
     if(viewMode === 'year') return String(currentYear);
-    if(viewMode === 'month') return MOIS[viewDate.getMonth()] + ' ' + viewDate.getFullYear();
     if(viewMode === 'week'){
       const start = startOfWeek(viewDate);
       const end = new Date(start); end.setDate(end.getDate()+6);
@@ -2382,19 +2383,13 @@
     // seul bloc immobile, rien ne bouge avant lui.
     const stickyExtra = document.getElementById('stickyExtra');
     stickyExtra.innerHTML = '';
-    const viewClass = { year:'', month:' single-view', day:' single-view', week:' wide-view' }[viewMode] || '';
+    const viewClass = { year:'', day:' single-view', week:' wide-view' }[viewMode] || '';
     gridWrap.className = 'months-grid' + viewClass;
     stickyExtra.className = 'months-grid' + viewClass;
     if(viewMode === 'year'){
       for(let m=0;m<12;m++){
         gridWrap.appendChild(renderMonth(currentYear, m, false));
       }
-    } else if(viewMode === 'month'){
-      const stickyBlock = document.createElement('div');
-      stickyBlock.className = 'month-block large sticky-week-header';
-      stickyBlock.appendChild(buildWeekHeaderRow());
-      stickyExtra.appendChild(stickyBlock);
-      gridWrap.appendChild(renderMonth(viewDate.getFullYear(), viewDate.getMonth(), true, true));
     } else if(viewMode === 'week'){
       renderWeekBody(gridWrap, stickyExtra);
     } else {
@@ -2814,7 +2809,6 @@
   function navigatePeriod(dir){
     if(viewMode === 'day') viewDate.setDate(viewDate.getDate() + dir);
     else if(viewMode === 'week') viewDate.setDate(viewDate.getDate() + dir*7);
-    else if(viewMode === 'month') viewDate.setMonth(viewDate.getMonth() + dir);
     else viewDate.setFullYear(viewDate.getFullYear() + dir);
     renderYear();
   }
@@ -2824,6 +2818,18 @@
     viewDate = new Date();
     viewDate.setHours(0, 0, 0, 0);
     renderYear();
+    // Vue Année : fait défiler jusqu'au bloc du mois en cours pour qu'il soit
+    // bien visible — un seul mois par ligne sur téléphone (défilement
+    // direct), plusieurs colonnes sur ordinateur (on centre la ligne du bon
+    // mois, ce qui revient à "descendre assez" pour qu'il ne soit pas juste
+    // à peine visible en haut de l'écran).
+    if(viewMode === 'year'){
+      const targetMonth = viewDate.getMonth();
+      requestAnimationFrame(()=>{
+        const el = document.querySelector('#calendarGrid .month-block[data-month="' + targetMonth + '"]');
+        if(el) el.scrollIntoView({ behavior:'smooth', block:'center' });
+      });
+    }
   });
   document.querySelectorAll('.view-btn').forEach(btn=>{
     btn.addEventListener('click', ()=>{
@@ -3253,15 +3259,15 @@
 
   // Rafraîchissement automatique depuis le Sheet : à l'ouverture (plus bas)
   // puis toutes les ~10 minutes. Uniquement ces deux moments, pas davantage.
-  // Redessine (juste la vue courante) si la fenêtre est redimensionnée en
-  // vue Mois/Semaine/Jour : les bandeaux d'évènements multi-jours sont
-  // positionnés en pixels, il faut donc les recalculer si les cases
-  // changent de largeur.
+  // Redessine (juste la vue courante) si la fenêtre est redimensionnée,
+  // quelle que soit la vue (Année/Semaine/Jour) : les bandeaux d'évènements
+  // multi-jours sont positionnés en pixels, il faut donc les recalculer si
+  // les cases changent de largeur.
   let resizeTimer = null;
   window.addEventListener('resize', ()=>{
     clearTimeout(resizeTimer);
     resizeTimer = setTimeout(()=>{
-      if(viewMode === 'month' || viewMode === 'week' || viewMode === 'day') renderYear();
+      renderYear();
     }, 200);
   });
   setInterval(autoPull, 10 * 60 * 1000);
