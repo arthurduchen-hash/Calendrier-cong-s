@@ -88,9 +88,12 @@
     border:2px solid var(--border); background:#fff; padding:6px 16px; border-radius:20px; cursor:pointer;
     font-size:13px; font-weight:600; color:#555;
   }
-  .brush-btn.conge.active { background:var(--bleu-conge); border-color:var(--bleu-conge-dark); color:#0d3c61; }
-  .brush-btn.rtt.active { background:var(--orange-rtt); border-color:var(--orange-rtt-dark); color:#7a3c00; }
-  .brush-btn.teletravail.active { background:var(--vert-tt); border-color:var(--vert-tt-dark); color:#1b4d1e; }
+  /* Couleur de chaque catégorie (congé/RTT/télétravail) désormais
+     personnalisable : --cat-bg/--cat-border/--cat-text sont posées en
+     inline-style par updateCategoryUI() à partir de la couleur choisie. */
+  .brush-btn.conge.active, .brush-btn.rtt.active, .brush-btn.teletravail.active {
+    background:var(--cat-bg); border-color:var(--cat-border); color:var(--cat-text);
+  }
   .brush-btn.erase.active { background:#e0e0e0; border-color:#999; color:#333; }
   .pending-hint {
     font-size:12px; color:#555; background:#fff8e1; border:1px solid #ffe082; border-radius:8px; padding:6px 10px;
@@ -151,15 +154,10 @@
   .day.adjacent { background:#fafafa; border-color:#f0f0f0; }
   .day.adjacent .daynum { color:#ccc; }
   .day.off { background:var(--gris-off); }
-  .day.conge { background:var(--bleu-conge); }
-  .day.rtt { background:var(--orange-rtt); }
-  .day.teletravail { background:var(--vert-tt); }
-  .day.conge-am { background:linear-gradient(to bottom, var(--bleu-conge) 50%, #fff 50%); }
-  .day.conge-pm { background:linear-gradient(to bottom, #fff 50%, var(--bleu-conge) 50%); }
-  .day.rtt-am { background:linear-gradient(to bottom, var(--orange-rtt) 50%, #fff 50%); }
-  .day.rtt-pm { background:linear-gradient(to bottom, #fff 50%, var(--orange-rtt) 50%); }
-  .day.teletravail-am { background:linear-gradient(to bottom, var(--vert-tt) 50%, #fff 50%); }
-  .day.teletravail-pm { background:linear-gradient(to bottom, #fff 50%, var(--vert-tt) 50%); }
+  /* Le fond des jours congé/RTT/télétravail (plein ou demi-journée) est
+     désormais posé en inline-style par buildDayCell(), à partir de la
+     couleur configurable de la catégorie (voir pastelOf()/categoryColor()),
+     plutôt que via ces classes fixes. */
   .daynum {
     font-size:11px; font-weight:600; padding:2px 4px; cursor:pointer; user-select:none;
   }
@@ -287,6 +285,48 @@
   .btn-ghost:hover { background:#f0f1f3; }
   .btn-danger-ghost { background:transparent; color:#c0392b; }
   .btn-danger-ghost:hover { background:#fdecea; }
+
+  /* Sélecteur de couleur (8 pastilles + mode avancé) — évènements et
+     catégories congé/RTT/télétravail. */
+  .color-picker { margin:6px 0 14px; }
+  .color-picker-swatches { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:6px; }
+  .color-swatch-btn {
+    width:26px; height:26px; border-radius:50%; border:2px solid transparent; cursor:pointer; padding:0;
+    box-shadow:0 0 0 1px rgba(0,0,0,0.08);
+  }
+  .color-swatch-btn.selected { border-color:#333; box-shadow:0 0 0 2px #fff inset, 0 0 0 1px #333; }
+  .color-picker-advanced { display:flex; align-items:center; gap:8px; }
+  .color-picker-advanced-toggle {
+    background:none; border:none; color:var(--bleu-conge-dark); font-size:12px; cursor:pointer;
+    padding:2px 0; text-decoration:underline;
+  }
+  .color-picker-custom { width:36px; height:26px; border:1px solid var(--border); border-radius:6px; padding:0; cursor:pointer; }
+  /* Table des catégories (Paramètres) : cellule couleur compacte. */
+  table#categoriesTable .color-picker { margin:0; }
+  table#categoriesTable .color-picker-swatches { gap:4px; }
+  table#categoriesTable .color-swatch-btn { width:18px; height:18px; }
+  table#categoriesTable .color-picker-advanced-toggle { font-size:10px; }
+  table#categoriesTable .color-picker-custom { width:26px; height:18px; }
+  /* Modale évènement : champs lieu/notes/rappel */
+  .ev-field-label { font-size:12px; color:#888; margin:8px 0 4px; }
+  .ev-text-input, .ev-select {
+    width:100%; padding:10px 12px; border:1px solid var(--border); border-radius:12px; font-size:14px; box-sizing:border-box;
+  }
+  .ev-notes-input { min-height:60px; resize:vertical; font-family:inherit; }
+  .ev-location-row { display:flex; gap:8px; align-items:center; }
+  .ev-location-row .ev-text-input { flex:1; }
+  .ev-location-open-btn {
+    border:1px solid var(--border); background:#fff; border-radius:10px; padding:0 12px; height:42px; cursor:pointer; flex-shrink:0;
+  }
+  .ev-location-open-btn:hover { background:#f0f1f3; }
+  .maps-choice-menu {
+    position:fixed; background:#fff; border-radius:12px; box-shadow:0 8px 30px rgba(0,0,0,0.2);
+    padding:6px; z-index:3000; display:flex; flex-direction:column; min-width:200px;
+  }
+  .maps-choice-menu button {
+    border:none; background:none; text-align:left; padding:10px 12px; border-radius:8px; cursor:pointer; font-size:14px;
+  }
+  .maps-choice-menu button:hover { background:#f0f1f3; }
 </style>
 </head>
 <body>
@@ -323,7 +363,7 @@
   <div id="settingsPanel" class="hidden">
     <h3>Catégories</h3>
     <table id="categoriesTable">
-      <thead><tr><th>Activée</th><th>Nom</th><th>Quota/an (j)</th><th>Report</th><th>Plafond report</th><th>Demi-journée</th></tr></thead>
+      <thead><tr><th>Activée</th><th>Nom</th><th>Couleur</th><th>Quota/an (j)</th><th>Report</th><th>Plafond report</th><th>Demi-journée</th></tr></thead>
       <tbody id="categoriesTableBody"></tbody>
     </table>
     <div class="hint">3 catégories maximum, déjà toutes présentes ci-dessus : renommez-les et désactivez celles que vous n'utilisez pas. Quota à 0 = simple compteur sans suivi de solde. Le report permet de garder les jours non pris pour l'année suivante (avec un plafond optionnel).</div>
@@ -393,6 +433,12 @@
       <tbody id="holidayTableBody"></tbody>
     </table>
     <button id="addHoliday">+ Ajouter un jour férié</button>
+    <h3>Notifications</h3>
+    <div class="settings-row">
+      <button id="enableNotifs">🔔 Activer les notifications</button>
+      <span id="notifsStatus" class="sync-status none"></span>
+    </div>
+    <div class="hint">Déclenche une notification du navigateur au moment de l'alerte choisie sur un évènement (voir la modale de création). Ne fonctionne que si cet onglet reste ouvert dans le navigateur — pas de notification si le calendrier est fermé.</div>
     <h3>Synchronisation Google Sheet</h3>
     <div class="settings-row">
       <label for="syncUrlInput">URL du script (Apps Script Web App)</label>
@@ -448,6 +494,24 @@
         <input type="time" id="evEnd">
       </div>
     </div>
+    <div class="ev-field-label">Lieu</div>
+    <div class="ev-location-row">
+      <input type="text" id="evLocation" class="ev-text-input" placeholder="Adresse, salle, visio...">
+      <button type="button" id="evLocationOpen" class="ev-location-open-btn" title="Ouvrir dans un plan">📍</button>
+    </div>
+    <div class="ev-field-label">Notes</div>
+    <textarea id="evNotes" class="ev-text-input ev-notes-input" placeholder="Détails, ordre du jour..."></textarea>
+    <div class="ev-field-label" id="evReminderLabel">Alerte</div>
+    <select id="evReminder" class="ev-select">
+      <option value="">Aucune</option>
+      <option value="5">5 min avant</option>
+      <option value="10">10 min avant</option>
+      <option value="15">15 min avant</option>
+      <option value="60">1 h avant</option>
+      <option value="120">2 h avant</option>
+    </select>
+    <div class="ev-field-label">Couleur</div>
+    <div id="evColorPicker"></div>
     <div class="modal-actions">
       <button id="evDelete" class="btn btn-danger-ghost">Supprimer</button>
       <div class="modal-actions-right">
@@ -488,16 +552,83 @@
   // en ajouter, seulement renommer / désactiver ("supprimer") les 3 cases.
   function defaultCategories(){
     return {
-      conge: { label:'Congé', enabled:true, quotaParAn:25, carryoverEnabled:true, carryoverCapEnabled:true, carryoverCap:5, halfDayAllowed:true },
-      rtt: { label:'RTT', enabled:true, quotaParAn:10, carryoverEnabled:false, carryoverCapEnabled:false, carryoverCap:0, halfDayAllowed:false },
-      teletravail: { label:'Télétravail', enabled:true, quotaParAn:0, carryoverEnabled:false, carryoverCapEnabled:false, carryoverCap:0, halfDayAllowed:false }
+      conge: { label:'Congé', enabled:true, quotaParAn:25, carryoverEnabled:true, carryoverCapEnabled:true, carryoverCap:5, halfDayAllowed:true, color:'#1976d2' },
+      rtt: { label:'RTT', enabled:true, quotaParAn:10, carryoverEnabled:false, carryoverCapEnabled:false, carryoverCap:0, halfDayAllowed:false, color:'#ef6c00' },
+      teletravail: { label:'Télétravail', enabled:true, quotaParAn:0, carryoverEnabled:false, carryoverCapEnabled:false, carryoverCap:0, halfDayAllowed:false, color:'#2e7d32' }
     };
   }
   const CATEGORY_KEYS = ['conge', 'rtt', 'teletravail'];
-  // Couleur d'affichage associée à chaque clé de catégorie (fixe, ne dépend
-  // pas du libellé personnalisable) : utilisée pour le pinceau, le menu
-  // demi-journée et le petit badge de statut en vue Jour/Semaine.
-  const CATEGORY_COLORS = { conge: 'var(--bleu-conge)', rtt: 'var(--orange-rtt)', teletravail: 'var(--vert-tt)' };
+  // 8 couleurs présélectionnées proposées dans le sélecteur de couleur
+  // (évènements et catégories), plus un mode avancé (couleur libre) — voir
+  // buildColorPicker.
+  const PRESET_COLORS = ['#1976d2', '#fb8c00', '#43a047', '#8e24aa', '#e53935', '#00897b', '#ffb300', '#607d8b'];
+  const DEFAULT_EVENT_COLOR = '#1976d2';
+  // À partir d'une couleur "de base" (choisie par l'utilisateur, plutôt
+  // saturée), dérive une teinte pastel pour les fonds (cases, chips,
+  // bandeaux) et une teinte plus foncée pour un éventuel accent — via
+  // color-mix(), pour ne pas avoir à réimplémenter de conversion de
+  // couleurs en JS.
+  function pastelOf(hex){ return 'color-mix(in srgb, ' + hex + ' 35%, white)'; }
+  function darkOf(hex){ return 'color-mix(in srgb, ' + hex + ' 75%, black)'; }
+  function categoryColor(catKey){
+    const cat = data.settings.categories[catKey];
+    return (cat && cat.color) || '#1976d2';
+  }
+  // Sélecteur de couleur réutilisable : 8 pastilles présélectionnées (voir
+  // PRESET_COLORS) + un mode avancé (input color natif) pour une couleur
+  // libre. Utilisé pour la couleur d'un évènement et celle de chaque
+  // catégorie (congé/RTT/télétravail). currentColor : couleur hex de départ.
+  // onChange(hex) : appelé à chaque changement de sélection.
+  function buildColorPicker(currentColor, onChange){
+    const wrap = document.createElement('div');
+    wrap.className = 'color-picker';
+    const swatchRow = document.createElement('div');
+    swatchRow.className = 'color-picker-swatches';
+    let selected = currentColor || DEFAULT_EVENT_COLOR;
+    const advInput = document.createElement('input');
+    advInput.type = 'color';
+    advInput.className = 'color-picker-custom hidden';
+    function refresh(){
+      swatchRow.querySelectorAll('.color-swatch-btn').forEach(btn=>{
+        btn.classList.toggle('selected', btn.dataset.color.toLowerCase() === selected.toLowerCase());
+      });
+      advInput.value = /^#[0-9a-fA-F]{6}$/.test(selected) ? selected : '#000000';
+    }
+    PRESET_COLORS.forEach(c=>{
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'color-swatch-btn';
+      btn.style.background = c;
+      btn.dataset.color = c;
+      btn.title = c;
+      btn.addEventListener('click', ()=>{
+        selected = c;
+        refresh();
+        onChange(selected);
+      });
+      swatchRow.appendChild(btn);
+    });
+    wrap.appendChild(swatchRow);
+    const advRow = document.createElement('div');
+    advRow.className = 'color-picker-advanced';
+    const advToggle = document.createElement('button');
+    advToggle.type = 'button';
+    advToggle.className = 'color-picker-advanced-toggle';
+    advToggle.textContent = 'Couleur personnalisée…';
+    advToggle.addEventListener('click', ()=>{
+      advInput.classList.toggle('hidden');
+    });
+    advInput.addEventListener('input', ()=>{
+      selected = advInput.value;
+      refresh();
+      onChange(selected);
+    });
+    advRow.appendChild(advToggle);
+    advRow.appendChild(advInput);
+    wrap.appendChild(advRow);
+    refresh();
+    return wrap;
+  }
   // Retourne {key, half, label, color} pour un statut de jour donné
   // ("conge" | "rtt_am" | "teletravail_pm" | ...), ou null si vide/inconnu.
   function describeStatus(status){
@@ -507,7 +638,7 @@
     else if(status.endsWith('_pm')){ key = status.slice(0, -3); half = 'pm'; }
     const cat = data.settings.categories[key];
     if(!cat) return null;
-    return { key, half, label: cat.label, color: CATEGORY_COLORS[key] || '#ccc' };
+    return { key, half, label: cat.label, color: categoryColor(key) };
   }
   // Détermine settings.categories à partir de paramètres "bruts" reçus
   // (localStorage, Sheet, import JSON) : reprend la nouvelle structure si
@@ -797,9 +928,23 @@
       if(brushLabelEl) brushLabelEl.textContent = cat.label;
       if(cardLabelEl) cardLabelEl.textContent = cat.label;
       if(legendLabelEl) legendLabelEl.textContent = cat.label;
-      if(brushBtn) brushBtn.classList.toggle('hidden', !cat.enabled);
-      if(cardEl) cardEl.classList.toggle('hidden', !cat.enabled);
-      if(legendEl) legendEl.classList.toggle('hidden', !cat.enabled);
+      const color = categoryColor(catKey);
+      if(brushBtn){
+        brushBtn.classList.toggle('hidden', !cat.enabled);
+        brushBtn.style.setProperty('--cat-bg', pastelOf(color));
+        brushBtn.style.setProperty('--cat-border', darkOf(color));
+        brushBtn.style.setProperty('--cat-text', darkOf(color));
+      }
+      if(cardEl){
+        cardEl.classList.toggle('hidden', !cat.enabled);
+        const swatch = cardEl.querySelector('.swatch');
+        if(swatch) swatch.style.background = pastelOf(color);
+      }
+      if(legendEl){
+        legendEl.classList.toggle('hidden', !cat.enabled);
+        const box = legendEl.querySelector('.box');
+        if(box) box.style.background = pastelOf(color);
+      }
       if(!cat.enabled) return;
       const quotaMode = document.getElementById(catKey + 'QuotaMode');
       const simpleMode = document.getElementById(catKey + 'SimpleMode');
@@ -871,14 +1016,21 @@
         const ds2 = dateStr(d.getFullYear(), d.getMonth(), d.getDate());
         if(!data.days[ds2]) data.days[ds2] = {};
         if(!data.days[ds2].events) data.days[ds2].events = [];
-        data.days[ds2].events.push({ id: ev.id, title: ev.title, allDay: true, dateStart, dateEnd });
+        data.days[ds2].events.push({
+          id: ev.id, title: ev.title, allDay: true, dateStart, dateEnd,
+          color: ev.color || DEFAULT_EVENT_COLOR, location: ev.location || '', notes: ev.notes || ''
+        });
         d.setDate(d.getDate() + 1);
       }
     } else {
       const ds2 = ev.ds;
       if(!data.days[ds2]) data.days[ds2] = {};
       if(!data.days[ds2].events) data.days[ds2].events = [];
-      data.days[ds2].events.push({ id: ev.id, title: ev.title, allDay: false, start: ev.start, end: ev.end });
+      data.days[ds2].events.push({
+        id: ev.id, title: ev.title, allDay: false, start: ev.start, end: ev.end,
+        color: ev.color || DEFAULT_EVENT_COLOR, location: ev.location || '', notes: ev.notes || '',
+        reminder: ev.reminder || ''
+      });
     }
     save();
   }
@@ -887,6 +1039,50 @@
     menu.classList.add('hidden');
     menu.innerHTML = '';
   }
+  // Petit menu "où ouvrir ce lieu ?" (Apple Plans / Google Maps), affiché
+  // près du bouton lieu de la modale évènement. On ne peut pas deviner
+  // depuis une simple adresse texte si l'utilisateur préfère Apple ou
+  // Google : on lui laisse le choix à chaque clic plutôt que de choisir
+  // pour lui.
+  let mapsChoiceMenuEl = null;
+  function closeMapsChoice(){
+    if(mapsChoiceMenuEl){ mapsChoiceMenuEl.remove(); mapsChoiceMenuEl = null; }
+  }
+  function openMapsChoice(location, rect){
+    closeMapsChoice();
+    const menu = document.createElement('div');
+    menu.className = 'maps-choice-menu';
+    const q = encodeURIComponent(location);
+    const options = [
+      { label: '📍 Ouvrir dans Plans (Apple)', url: 'https://maps.apple.com/?q=' + q },
+      { label: '🗺️ Ouvrir dans Google Maps', url: 'https://www.google.com/maps/search/?api=1&query=' + q }
+    ];
+    options.forEach(opt=>{
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.textContent = opt.label;
+      btn.addEventListener('click', (e)=>{
+        e.stopPropagation();
+        window.open(opt.url, '_blank', 'noopener');
+        closeMapsChoice();
+      });
+      menu.appendChild(btn);
+    });
+    document.body.appendChild(menu);
+    const menuWidth = menu.offsetWidth || 200;
+    let left = rect.left;
+    if(left + menuWidth > window.innerWidth) left = window.innerWidth - menuWidth - 8;
+    let top = rect.bottom + 4;
+    if(top + 100 > window.innerHeight) top = Math.max(8, rect.top - 100);
+    menu.style.left = left + 'px';
+    menu.style.top = top + 'px';
+    mapsChoiceMenuEl = menu;
+  }
+  document.addEventListener('click', (e)=>{
+    if(mapsChoiceMenuEl && !mapsChoiceMenuEl.contains(e.target) && e.target.id !== 'evLocationOpen'){
+      closeMapsChoice();
+    }
+  });
   // Small popup shown when re-clicking the same (pending) day: lets you pick
   // journée entière / matin / après-midi (or clear) for that single day.
   function openHalfDayMenu(ds, rect){
@@ -894,7 +1090,7 @@
     menu.innerHTML = '';
     const catForBrush = data.settings.categories[currentBrush];
     const brushLabel = (catForBrush && catForBrush.label) || currentBrush;
-    const brushColor = CATEGORY_COLORS[currentBrush] || '#ccc';
+    const brushColor = currentBrush ? categoryColor(currentBrush) : '#ccc';
     const options = [
       {value: currentBrush, label: brushLabel + ' — journée entière', color: brushColor},
       {value: currentBrush + '_am', label: brushLabel + ' — matin', color: brushColor},
@@ -1010,7 +1206,10 @@
     const chip = document.createElement('div');
     chip.className = 'event-chip';
     chip.textContent = ev.title;
-    chip.title = ev.title;
+    chip.title = ev.title + (ev.location ? ' · ' + ev.location : '');
+    const color = ev.color || DEFAULT_EVENT_COLOR;
+    chip.style.background = pastelOf(color);
+    chip.style.color = darkOf(color);
     chip.addEventListener('click', (e)=>{ e.stopPropagation(); openEventModal(ds, ev.id); });
     return chip;
   }
@@ -1030,20 +1229,26 @@
     if(ds === todayStr) cell.classList.add('today');
     if(ds === pendingStart) cell.classList.add('pending');
     if(isWeekend || holidayLabel) cell.classList.add('off');
-    const statusClassMap = {
-      conge:'conge', conge_am:'conge-am', conge_pm:'conge-pm',
-      rtt:'rtt', rtt_am:'rtt-am', rtt_pm:'rtt-pm',
-      teletravail:'teletravail', teletravail_am:'teletravail-am', teletravail_pm:'teletravail-pm'
-    };
-    if(statusClassMap[status]) cell.classList.add(statusClassMap[status]);
-    const statusLabels = {
-      conge:'Congé (journée)', conge_am:'Congé (matin)', conge_pm:'Congé (après-midi)',
-      rtt:'RTT (journée)', rtt_am:'RTT (matin)', rtt_pm:'RTT (après-midi)',
-      teletravail:'Télétravail (journée)', teletravail_am:'Télétravail (matin)', teletravail_pm:'Télétravail (après-midi)'
-    };
+    // Fond de la case selon le statut posé (journée entière ou demi-journée),
+    // à partir de la couleur configurable de la catégorie plutôt que d'une
+    // classe CSS fixe (voir defaultCategories / renderCategoriesTable).
+    const statusInfo = describeStatus(status);
+    if(statusInfo){
+      const pastel = pastelOf(statusInfo.color);
+      if(!statusInfo.half){
+        cell.style.background = pastel;
+      } else if(statusInfo.half === 'am'){
+        cell.style.background = 'linear-gradient(to bottom, ' + pastel + ' 50%, #fff 50%)';
+      } else {
+        cell.style.background = 'linear-gradient(to bottom, #fff 50%, ' + pastel + ' 50%)';
+      }
+    }
     const titleParts = [];
     if(holidayLabel) titleParts.push(holidayLabel);
-    if(statusLabels[status]) titleParts.push(statusLabels[status]);
+    if(statusInfo){
+      const halfSuffix = statusInfo.half === 'am' ? ' (matin)' : statusInfo.half === 'pm' ? ' (après-midi)' : ' (journée)';
+      titleParts.push(statusInfo.label + halfSuffix);
+    }
     if(titleParts.length) cell.title = titleParts.join(' · ');
     const num = document.createElement('div');
     num.className = 'daynum';
@@ -1124,6 +1329,7 @@
         } else {
           openSpans.set(key, {
             colStart: col, colEnd: col, title: ev.title, ds: cell.ds, id: ev.id,
+            color: ev.color || DEFAULT_EVENT_COLOR, location: ev.location || '',
             hiddenIds: [{ ds: cell.ds, id: ev.id }]
           });
         }
@@ -1289,7 +1495,9 @@
           const bar = document.createElement('div');
           bar.className = 'day-allday-bar' + (big ? '' : ' small');
           bar.textContent = sp.title;
-          bar.title = sp.title;
+          bar.title = sp.title + (sp.location ? ' · ' + sp.location : '');
+          bar.style.background = pastelOf(sp.color);
+          bar.style.color = darkOf(sp.color);
           bar.style.left = (r1.left - gridRect.left) + 'px';
           bar.style.top = (r1.top - gridRect.top + topOffset + sp.lane*barH) + 'px';
           bar.style.width = (r2.right - r1.left) + 'px';
@@ -1323,10 +1531,13 @@
     if(endMin <= startMin) endMin = startMin + 30;
     const block = document.createElement('div');
     block.className = 'event-block';
+    const color = ev.color || DEFAULT_EVENT_COLOR;
+    block.style.background = pastelOf(color);
+    block.style.color = darkOf(color);
     block.style.top = ((startMin/60) * HOUR_H) + 'px';
     block.style.height = Math.max(((endMin-startMin)/60) * HOUR_H, 18) + 'px';
     block.textContent = (showTime && ev.start ? ev.start + ' ' : '') + ev.title;
-    block.title = ev.title + (ev.start ? ' (' + ev.start + (ev.end ? '–' + ev.end : '') + ')' : '');
+    block.title = ev.title + (ev.start ? ' (' + ev.start + (ev.end ? '–' + ev.end : '') + ')' : '') + (ev.location ? ' · ' + ev.location : '');
     block.addEventListener('click', (e)=>{ e.stopPropagation(); openEventModal(ds, ev.id); });
     return block;
   }
@@ -1376,7 +1587,7 @@
         if(info){
           const badge = document.createElement('span');
           badge.className = 'daylabel-badge';
-          badge.style.background = info.color;
+          badge.style.background = pastelOf(info.color);
           badge.textContent = info.label + (info.half ? (info.half === 'am' ? ' (matin)' : ' (après-midi)') : '');
           lbl.appendChild(badge);
         }
@@ -1454,7 +1665,9 @@
           const bar = document.createElement('div');
           bar.className = 'day-allday-bar';
           bar.textContent = sp.title;
-          bar.title = sp.title;
+          bar.title = sp.title + (sp.location ? ' · ' + sp.location : '');
+          bar.style.background = pastelOf(sp.color);
+          bar.style.color = darkOf(sp.color);
           bar.style.left = (r1.left - rowRect.left) + 'px';
           bar.style.top = (5 + sp.lane * 21) + 'px';
           bar.style.width = (r2.right - r1.left) + 'px';
@@ -1613,6 +1826,13 @@
       tdLabel.appendChild(inLabel);
       tr.appendChild(tdLabel);
 
+      const tdColor = document.createElement('td');
+      tdColor.appendChild(buildColorPicker(cat.color, (hex)=>{
+        cat.color = hex;
+        save(); renderYear();
+      }));
+      tr.appendChild(tdColor);
+
       const tdQuota = document.createElement('td');
       const inQuota = document.createElement('input');
       inQuota.type = 'number'; inQuota.min = 0; inQuota.step = 0.5;
@@ -1678,6 +1898,7 @@
     renderCategoriesTable();
     document.getElementById('startYear').value = data.settings.startYear;
     document.getElementById('syncUrlInput').value = syncUrl;
+    updateNotifsStatus();
     const tbody = document.getElementById('holidayTableBody');
     tbody.innerHTML = '';
     (data.settings.holidayRules||[]).forEach((rule, idx)=>{
@@ -1794,6 +2015,7 @@
 
   // ---- Modale de création / édition d'évènement ----
   let eventModalCtx = null; // { ds, id } — id est null pour une création
+  let evCurrentColor = DEFAULT_EVENT_COLOR; // couleur choisie dans le sélecteur (voir buildColorPicker)
   function openEventModal(ds, eventId, defaults){
     defaults = defaults || {};
     eventModalCtx = { ds, id: eventId || null };
@@ -1812,9 +2034,20 @@
     // (dateStart/dateEnd), disponible sur chacune de ses copies quotidiennes.
     document.getElementById('evDateStart').value = ev ? (ev.dateStart || ds) : (defaults.dateStart || ds);
     document.getElementById('evDateEnd').value = ev ? (ev.dateEnd || ev.dateStart || ds) : (defaults.dateEnd || defaults.dateStart || ds);
+    document.getElementById('evLocation').value = ev ? (ev.location || '') : '';
+    document.getElementById('evNotes').value = ev ? (ev.notes || '') : '';
+    document.getElementById('evReminder').value = ev ? (ev.reminder || '') : '';
     document.getElementById('evTimeRow').style.display = allDay ? 'none' : 'flex';
     document.getElementById('evDateRow').style.display = allDay ? 'flex' : 'none';
+    // Le rappel n'a de sens que pour un évènement avec une heure précise :
+    // masqué pour les évènements journée entière.
+    document.getElementById('evReminderLabel').style.display = allDay ? 'none' : 'block';
+    document.getElementById('evReminder').style.display = allDay ? 'none' : 'block';
     document.getElementById('evDelete').style.display = isEdit ? 'inline-block' : 'none';
+    evCurrentColor = ev ? (ev.color || DEFAULT_EVENT_COLOR) : DEFAULT_EVENT_COLOR;
+    const colorHost = document.getElementById('evColorPicker');
+    colorHost.innerHTML = '';
+    colorHost.appendChild(buildColorPicker(evCurrentColor, (hex)=>{ evCurrentColor = hex; }));
     document.getElementById('eventModal').classList.remove('hidden');
     document.getElementById('evTitle').focus();
   }
@@ -1826,6 +2059,8 @@
     const allDay = e.target.checked;
     document.getElementById('evTimeRow').style.display = allDay ? 'none' : 'flex';
     document.getElementById('evDateRow').style.display = allDay ? 'flex' : 'none';
+    document.getElementById('evReminderLabel').style.display = allDay ? 'none' : 'block';
+    document.getElementById('evReminder').style.display = allDay ? 'none' : 'block';
   });
   // En changeant l'heure de début, l'heure de fin suit automatiquement pour
   // rester une heure plus tard.
@@ -1837,23 +2072,35 @@
   document.getElementById('eventModal').addEventListener('click', (e)=>{
     if(e.target.id === 'eventModal') closeEventModal();
   });
+  // Clic sur le bouton lieu (ou sur le champ lui-même s'il contient déjà un
+  // lieu) : propose d'ouvrir Apple Plans ou Google Maps sur cette adresse
+  // (voir openMapsChoice — Task 51).
+  document.getElementById('evLocationOpen').addEventListener('click', (e)=>{
+    const loc = document.getElementById('evLocation').value.trim();
+    if(!loc){ document.getElementById('evLocation').focus(); return; }
+    openMapsChoice(loc, e.currentTarget.getBoundingClientRect());
+  });
   document.getElementById('evSave').addEventListener('click', ()=>{
     if(!eventModalCtx) return;
     const title = document.getElementById('evTitle').value.trim();
     if(!title){ alert('Merci de renseigner un titre.'); return; }
     const allDay = document.getElementById('evAllDay').checked;
     const id = eventModalCtx.id || makeEventId();
+    const location = document.getElementById('evLocation').value.trim();
+    const notes = document.getElementById('evNotes').value.trim();
+    const color = evCurrentColor;
+    const reminder = allDay ? '' : document.getElementById('evReminder').value;
     if(allDay){
       let dateStart = document.getElementById('evDateStart').value || eventModalCtx.ds;
       let dateEnd = document.getElementById('evDateEnd').value || dateStart;
       if(dateEnd < dateStart){ const tmp = dateStart; dateStart = dateEnd; dateEnd = tmp; }
       const spanDays = Math.round((new Date(dateEnd) - new Date(dateStart)) / 86400000) + 1;
       if(spanDays > 366){ alert('Cette période est trop longue (plus d\'un an).'); return; }
-      saveEvent({ id, title, allDay: true, dateStart, dateEnd });
+      saveEvent({ id, title, allDay: true, dateStart, dateEnd, location, notes, color, reminder: '' });
     } else {
       const start = document.getElementById('evStart').value || '00:00';
       const end = document.getElementById('evEnd').value || '';
-      saveEvent({ id, title, allDay: false, ds: eventModalCtx.ds, start, end });
+      saveEvent({ id, title, allDay: false, ds: eventModalCtx.ds, start, end, location, notes, color, reminder });
     }
     closeEventModal();
     renderYear();
@@ -1867,6 +2114,80 @@
       renderYear();
     }
   });
+  // ---- Rappels / notifications ----
+  // Limite importante : sans backend de push ni service worker, une
+  // notification ne peut se déclencher que si cet onglet reste ouvert dans
+  // le navigateur — on vérifie donc périodiquement (toutes les 20s) si un
+  // évènement du jour avec une alerte configurée atteint son heure de
+  // déclenchement, tant que la page est chargée.
+  const NOTIFIED_KEY = 'congesCalendarNotified_v1';
+  function loadNotifiedState(){
+    const todayStr = dateStr(new Date().getFullYear(), new Date().getMonth(), new Date().getDate());
+    try {
+      const raw = JSON.parse(localStorage.getItem(NOTIFIED_KEY) || '{}');
+      if(raw.day === todayStr && Array.isArray(raw.ids)) return raw;
+    } catch(e){ /* ignore */ }
+    return { day: todayStr, ids: [] };
+  }
+  let notifiedState = loadNotifiedState();
+  function markNotified(key){
+    notifiedState.ids.push(key);
+    localStorage.setItem(NOTIFIED_KEY, JSON.stringify(notifiedState));
+  }
+  function updateNotifsStatus(){
+    const el = document.getElementById('notifsStatus');
+    const btn = document.getElementById('enableNotifs');
+    if(!el || !btn) return;
+    if(!('Notification' in window)){
+      el.textContent = 'Non supporté par ce navigateur';
+      el.className = 'sync-status error';
+      btn.disabled = true;
+      return;
+    }
+    if(Notification.permission === 'granted'){
+      el.textContent = 'Activées';
+      el.className = 'sync-status ok';
+      btn.disabled = true;
+    } else if(Notification.permission === 'denied'){
+      el.textContent = 'Bloquées (à réactiver dans les réglages du navigateur)';
+      el.className = 'sync-status error';
+      btn.disabled = true;
+    } else {
+      el.textContent = 'Non activées';
+      el.className = 'sync-status none';
+      btn.disabled = false;
+    }
+  }
+  document.getElementById('enableNotifs').addEventListener('click', ()=>{
+    if(!('Notification' in window)) return;
+    Notification.requestPermission().then(()=>updateNotifsStatus());
+  });
+  function checkReminders(){
+    if(!('Notification' in window) || Notification.permission !== 'granted') return;
+    const now = new Date();
+    const todayStr = dateStr(now.getFullYear(), now.getMonth(), now.getDate());
+    if(notifiedState.day !== todayStr) notifiedState = { day: todayStr, ids: [] };
+    getDayEvents(todayStr).filter(ev=>!ev.allDay && ev.reminder).forEach(ev=>{
+      const key = ev.id + ':' + ev.reminder;
+      if(notifiedState.ids.indexOf(key) !== -1) return;
+      const parts = String(ev.start || '00:00').split(':');
+      const startDt = new Date(now.getFullYear(), now.getMonth(), now.getDate(), Number(parts[0])||0, Number(parts[1])||0, 0);
+      const triggerDt = new Date(startDt.getTime() - Number(ev.reminder) * 60000);
+      const diffMs = now - triggerDt;
+      // Fenêtre de 60s : la vérification tourne toutes les 20s, une fenêtre
+      // plus large évite de rater le déclenchement entre deux vérifications.
+      if(diffMs >= 0 && diffMs < 60000){
+        try {
+          new Notification(ev.title, {
+            body: 'À ' + ev.start + (ev.location ? ' · ' + ev.location : ''),
+            tag: key
+          });
+        } catch(e){ /* ignore */ }
+        markNotified(key);
+      }
+    });
+  }
+  setInterval(checkReminders, 20000);
   document.getElementById('resetData').addEventListener('click', ()=>{
     if(confirm('Réinitialiser toutes les données (congés posés, notes, paramètres) ? Cette action est irréversible.')){
       localStorage.removeItem(STORAGE_KEY);
