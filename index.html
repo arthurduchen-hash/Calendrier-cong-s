@@ -25,11 +25,18 @@
   }
   * { box-sizing: border-box; }
   button { border-radius:10px; font-family:inherit; }
-  html { overflow-x:hidden; }
+  /* overflow-x:hidden (repli pour vieux navigateurs) puis overflow-x:clip
+     (ignoré par les navigateurs qui ne le connaissent pas, donc le repli
+     ci-dessus reste actif pour eux) : "hidden" transforme html/body en
+     conteneurs de défilement à part entière, ce qui casse le bandeau figé
+     du haut (position:sticky) car il se retrouve alors ancré à un conteneur
+     qui ne défile jamais lui-même (sa hauteur s'ajuste à son contenu). "clip"
+     empêche le débordement horizontal sans créer ce conteneur de défilement. */
+  html { overflow-x:hidden; overflow-x:clip; }
   body {
     margin:0; padding:24px; background:var(--bg); color:var(--text);
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    overflow-x:hidden; max-width:100vw;
+    overflow-x:hidden; overflow-x:clip; max-width:100vw;
   }
   #app { max-width:1400px; margin:0 auto; }
   /* Tables de Paramètres (calendriers/catégories/jours fériés) : plus de
