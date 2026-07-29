@@ -651,25 +651,24 @@
     box-shadow:0 0 0 1px rgba(0,0,0,0.08);
   }
   .color-swatch-btn.selected { border-color:#333; box-shadow:0 0 0 2px #fff inset, 0 0 0 1px #333; }
-  /* Ligne "Plus ›" façon menu Apple (Réglages iOS) : remplace l'ancien lien
-     "Couleur personnalisée…" qu'il fallait cliquer pour RÉVÉLER l'input
-     couleur natif, lui-même à cliquer une 2e fois pour ouvrir le vrai
-     sélecteur. Ici, l'input couleur réel est superposé (transparent) sur
-     TOUTE cette ligne (voir .color-picker-custom-overlay) : on ne déclenche
-     plus advInput.click() par programme, car iOS/WKWebView refuse d'ouvrir
-     le sélecteur système si le clic ne vient pas d'un contact DIRECT et
-     visible sur l'input — même trick déjà utilisé pour les interrupteurs
-     .ev-switch (input réel invisible mais posé pile sur l'élément visuel
-     stylé, jamais interagi via .click() JS). */
-  .color-picker-more-row-wrap { position:relative; }
+  /* Ligne "Plus" façon menu Apple : après deux essais qui ne fonctionnaient
+     pas de façon fiable dans l'app Xcode (advInput.click() par programme, ou
+     input superposé en opacity:0), retour à un principe plus sûr — l'input
+     couleur natif reste RÉELLEMENT VISIBLE (petit rond, à droite du texte
+     "Plus"), exactement comme l'ancien input "Couleur personnalisée" qui,
+     lui, fonctionnait toujours (l'utilisateur le confirme). On ne fait que
+     fusionner les 2 anciennes étapes (révéler puis cliquer) en une seule
+     ligne toujours visible, sans jamais déclencher le picker par JS ni le
+     cacher visuellement — seul un tap direct et réel sur ce rond ouvre le
+     sélecteur système, ce qui est fiable sur WKWebView. */
   .color-picker-more-row {
     display:flex; align-items:center; justify-content:space-between; width:100%;
     border-top:1px solid #eee; margin-top:6px; padding:10px 2px 2px;
-    font-size:14px; color:var(--text); pointer-events:none;
+    font-size:14px; color:var(--text);
   }
-  .color-picker-more-chevron { color:#c7c7cc; font-size:16px; }
-  .color-picker-custom-overlay {
-    position:absolute; inset:0; width:100%; height:100%; opacity:0; border:none; padding:0; margin:0; cursor:pointer;
+  .color-picker-more-swatch {
+    width:26px; height:26px; border-radius:50%; border:2px solid #fff; padding:0; cursor:pointer;
+    box-shadow:0 0 0 1px rgba(0,0,0,0.15); flex-shrink:0;
   }
   /* Bouton OK : seul moyen de refermer le panneau une fois qu'on a touché au
      sélecteur de couleur avancé — demande explicite, car sur iPhone le
@@ -1240,7 +1239,7 @@
     swatchRow.className = 'color-picker-swatches';
     const advInput = document.createElement('input');
     advInput.type = 'color';
-    advInput.className = 'color-picker-custom-overlay';
+    advInput.className = 'color-picker-more-swatch';
 
     function refresh(){
       swatchBtn.style.background = selected;
@@ -1273,24 +1272,16 @@
       swatchRow.appendChild(btn);
     });
     panel.appendChild(swatchRow);
-    // Ligne "Plus ›" façon menu Apple : l'input couleur réel est superposé
-    // (transparent, mais occupant toute la ligne) directement PAR-DESSUS ce
-    // libellé décoratif, plutôt que déclenché via advInput.click() depuis un
-    // autre bouton — sur iPhone/WKWebView, .click() par programme n'ouvrait
-    // pas le sélecteur système (contact "indirect", refusé). Ici le tap de
-    // l'utilisateur tombe directement sur le vrai input, donc ça marche.
-    const advWrap = document.createElement('div');
-    advWrap.className = 'color-picker-more-row-wrap';
+    // Ligne "Plus" façon menu Apple : le rond de couleur à droite EST l'input
+    // natif réel, toujours visible (voir commentaire CSS .color-picker-more-
+    // swatch) — un tap direct dessus ouvre le sélecteur système, de façon
+    // fiable sur WKWebView (contrairement à .click() par programme ou à un
+    // input caché en opacity:0, testés avant et qui ne marchaient pas).
     const advLabelRow = document.createElement('div');
     advLabelRow.className = 'color-picker-more-row';
     const advToggleLabel = document.createElement('span');
     advToggleLabel.textContent = 'Plus…';
-    const advToggleChevron = document.createElement('span');
-    advToggleChevron.className = 'color-picker-more-chevron';
-    advToggleChevron.textContent = '›';
     advLabelRow.appendChild(advToggleLabel);
-    advLabelRow.appendChild(advToggleChevron);
-    advWrap.appendChild(advLabelRow);
     advInput.addEventListener('click', (e)=>e.stopPropagation());
     // Met à jour l'aperçu en continu pendant qu'on ajuste (utile pour voir la
     // teinte changer en direct), mais NE ferme PAS le panneau — seul le
@@ -1309,8 +1300,8 @@
       refresh();
       onChange(selected);
     });
-    advWrap.appendChild(advInput);
-    panel.appendChild(advWrap);
+    advLabelRow.appendChild(advInput);
+    panel.appendChild(advLabelRow);
     const okBtn = document.createElement('button');
     okBtn.type = 'button';
     okBtn.className = 'color-picker-ok-btn';
