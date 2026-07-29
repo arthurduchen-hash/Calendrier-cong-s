@@ -2241,8 +2241,12 @@
     // — plutôt on affiche "+3"/"+4" (comme sur la photo Apple, priorité aux
     // journées entières puis aux évènements plus petits) que de faire
     // déborder la case ou chevaucher le bandeau.
+    // La fête du jour (voir .holiday-label, sous le numéro) prend elle aussi
+    // de la place : on retire l'équivalent d'une chip quand elle est
+    // affichée, plutôt que de la laisser se faire recouvrir ou pousser le
+    // bandeau "journée entière" à moitié dessus.
     const baseMaxShow = big ? 4 : 3;
-    const maxShow = Math.max(0, baseMaxShow - laneCount);
+    const maxShow = Math.max(0, baseMaxShow - laneCount - (holidayLabel ? 1 : 0));
     events.slice(0, maxShow).forEach(ev=>{
       evList.appendChild(buildEventChip(ds, ev));
     });
@@ -2477,6 +2481,15 @@
       // avec toujours une petite marge entre 2 bandeaux (pitch > hauteur
       // visuelle réelle du bandeau, voir .day-allday-bar/.small).
       const barPitch = big ? 23 : 18;
+      // Un bandeau qui recouvre un jour de fête doit être poussé sous son
+      // libellé (voir .holiday-label, affiché sous le numéro) au lieu de
+      // passer par-dessus. Comme UN SEUL bandeau peut s'étirer sur plusieurs
+      // jours, on décale TOUT le bandeau (quitte à afficher moins
+      // d'évènements en dessous, via maxShow dans buildDayCell) dès qu'AU
+      // MOINS un des jours qu'il traverse a une fête — demande explicite :
+      // "décale tout quand il y a une fête quitte à afficher moins
+      // d'évènements".
+      const HOLIDAY_EXTRA = big ? 15 : 13;
       grid.style.position = 'relative';
       requestAnimationFrame(()=>{
         if(!grid.isConnected) return;
@@ -2487,6 +2500,11 @@
           if(!startEl || !endEl) return;
           const r1 = startEl.getBoundingClientRect();
           const r2 = endEl.getBoundingClientRect();
+          let holidayExtra = 0;
+          for(let col=sp.colStart; col<=sp.colEnd; col++){
+            const dsCol = dsAtGridIndex(year, month, firstDow, sp.row*7 + col);
+            if(getHolidayLabel(dsCol)){ holidayExtra = HOLIDAY_EXTRA; break; }
+          }
           const bar = document.createElement('div');
           bar.className = 'day-allday-bar' + (big ? '' : ' small');
           bar.textContent = sp.title;
@@ -2494,7 +2512,7 @@
           bar.style.background = pastelOf(sp.color);
           bar.style.color = darkOf(sp.color);
           bar.style.left = (r1.left - gridRect.left) + 'px';
-          bar.style.top = (r1.top - gridRect.top + topOffset + sp.lane*barPitch) + 'px';
+          bar.style.top = (r1.top - gridRect.top + topOffset + holidayExtra + sp.lane*barPitch) + 'px';
           bar.style.width = (r2.right - r1.left) + 'px';
           bar.addEventListener('click', (e)=>{ e.stopPropagation(); openEventModal(sp.ds, sp.id, sp.userId); });
           grid.appendChild(bar);
