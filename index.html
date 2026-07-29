@@ -2748,11 +2748,12 @@
     // classe de #calendarGrid à chaque rendu (vue mois/semaine/jour/année),
     // ce qui effacerait un "hidden" posé directement dessus.
     document.getElementById('calendarGridWrap').classList.toggle('hidden', opening);
-    // Paramètres = une page à part : on masque tout ce qui ne concerne que
-    // le calendrier (sélection congé/RTT/télétravail, choix de vue
-    // jour/semaine/mois/année), pas seulement la grille — ça revient dès
-    // qu'on referme les Paramètres.
-    const toHide = ['.brush-bar', '.view-switch'];
+    // Paramètres = une page à part : ne laisse plus rien visible dans le
+    // bandeau du haut à part le bouton Paramètres lui-même (qui permet de
+    // revenir) — titre, navigation mois/année, sélection
+    // Jour/Semaine/Mois/Année, congé/RTT/télétravail, "Aujourd'hui" — tout
+    // ça revient dès qu'on referme les Paramètres.
+    const toHide = ['header h1', '.year-nav', '.view-switch', '#todayBtn', '.brush-bar'];
     toHide.forEach(sel=>{
       const el = document.querySelector(sel);
       if(el) el.classList.toggle('hidden', opening);
