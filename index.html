@@ -327,17 +327,24 @@
   .btn-danger-ghost:hover { background:#fdecea; }
 
   /* Sélecteur de couleur — évènements, calendriers et catégories. N'affiche
-     que le rond de la couleur actuelle ; cliquer dessus ouvre un petit
-     panneau flottant avec les 8 couleurs suggérées + le mode avancé, qui se
-     referme dès qu'on choisit une couleur ou qu'on clique ailleurs. */
+     que le rond de la couleur actuelle ; cliquer dessus ouvre un panneau
+     centré au milieu de l'écran (et non collé à la pastille : sur mobile
+     comme sur desktop, la pastille peut être tout à droite/en bas et le
+     panneau serait alors inaccessible ou coupé). Un fond semi-transparent
+     ferme le panneau si on clique en dehors. Le panneau se referme aussi dès
+     qu'une couleur est choisie. */
   .color-picker { position:relative; display:inline-block; }
   .color-picker-current {
     width:26px; height:26px; border-radius:50%; border:2px solid #fff; cursor:pointer; padding:0;
     box-shadow:0 0 0 1px rgba(0,0,0,0.15); flex-shrink:0;
   }
+  .color-picker-backdrop {
+    position:fixed; inset:0; background:rgba(0,0,0,0.25); z-index:290;
+  }
+  .color-picker-backdrop.hidden { display:none; }
   .color-picker-panel {
-    position:absolute; top:calc(100% + 6px); left:0; background:#fff; border-radius:12px;
-    box-shadow:0 8px 24px rgba(0,0,0,0.2); padding:10px; z-index:60; width:184px;
+    position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); background:#fff; border-radius:14px;
+    box-shadow:0 12px 32px rgba(0,0,0,0.3); padding:16px; z-index:300; width:220px; max-width:88vw;
   }
   .color-picker-panel.hidden { display:none; }
   .color-picker-swatches { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:6px; }
@@ -768,14 +775,28 @@
     const cat = cats && cats[catKey];
     return (cat && cat.color) || '#1976d2';
   }
+  // Fond semi-transparent affiché derrière le panneau de couleur pendant
+  // qu'il est ouvert (un seul, partagé par tous les sélecteurs de couleur de
+  // la page) : cliquer dessus referme le panneau, comme un clic ailleurs.
+  let colorPickerBackdrop = null;
+  function getColorPickerBackdrop(){
+    if(!colorPickerBackdrop){
+      colorPickerBackdrop = document.createElement('div');
+      colorPickerBackdrop.className = 'color-picker-backdrop hidden';
+      colorPickerBackdrop.addEventListener('click', closeAllColorPickerPanels);
+      document.body.appendChild(colorPickerBackdrop);
+    }
+    return colorPickerBackdrop;
+  }
   // Ferme tout panneau de couleur actuellement ouvert (utilisé au clic
   // ailleurs sur la page, et avant d'en ouvrir un autre pour n'en garder
   // qu'un seul ouvert à la fois).
   function closeAllColorPickerPanels(){
     document.querySelectorAll('.color-picker-panel').forEach(p=>p.classList.add('hidden'));
+    if(colorPickerBackdrop) colorPickerBackdrop.classList.add('hidden');
   }
   document.addEventListener('click', (e)=>{
-    if(!e.target.closest('.color-picker')) closeAllColorPickerPanels();
+    if(!e.target.closest('.color-picker') && !e.target.closest('.color-picker-panel')) closeAllColorPickerPanels();
   });
   // Sélecteur de couleur réutilisable : n'affiche que le rond de la couleur
   // actuelle ; cliquer dessus ouvre un petit panneau avec les 8 couleurs
@@ -815,6 +836,7 @@
       const willOpen = panel.classList.contains('hidden');
       closeAllColorPickerPanels();
       panel.classList.toggle('hidden', !willOpen);
+      getColorPickerBackdrop().classList.toggle('hidden', !willOpen);
     });
     PRESET_COLORS.forEach(c=>{
       const btn = document.createElement('button');
@@ -828,7 +850,7 @@
         selected = c;
         refresh();
         onChange(selected);
-        panel.classList.add('hidden');
+        closeAllColorPickerPanels();
       });
       swatchRow.appendChild(btn);
     });
@@ -851,12 +873,17 @@
     // Ferme le panneau une fois le choix confirmé (change se déclenche à la
     // fermeture du sélecteur natif), pas à chaque valeur survolée pendant
     // qu'on fait glisser le curseur (input, géré au-dessus).
-    advInput.addEventListener('change', (e)=>{ e.stopPropagation(); panel.classList.add('hidden'); });
+    advInput.addEventListener('change', (e)=>{ e.stopPropagation(); closeAllColorPickerPanels(); });
     advRow.appendChild(advToggle);
     advRow.appendChild(advInput);
     panel.appendChild(advRow);
     wrap.appendChild(swatchBtn);
-    wrap.appendChild(panel);
+    // Le panneau est rattaché à <body> (et non à wrap) : positionné en
+    // "fixed" et centré à l'écran (voir CSS .color-picker-panel), il doit
+    // échapper à tout parent avec overflow:hidden/scroll ou à un ancêtre qui
+    // formerait un nouveau contexte de positionnement, sinon il pourrait être
+    // coupé ou mal centré selon l'endroit de la page où se trouve la pastille.
+    document.body.appendChild(panel);
     refresh();
     return wrap;
   }
