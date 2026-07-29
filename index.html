@@ -117,19 +117,36 @@
   .sync-status.ok { background:#d1e7dd; color:#0f5132; }
   .sync-status.error { background:#f8d7da; color:#842029; }
   .hint { font-size:12px; color:#888; margin:-4px 0 12px; }
-  table#holidayTable, table#categoriesTable, table#calendarsTable { width:100%; border-collapse:collapse; font-size:13px; margin-bottom:10px; }
-  table#holidayTable th, table#holidayTable td, table#categoriesTable th, table#categoriesTable td, table#calendarsTable th, table#calendarsTable td { border-bottom:1px solid var(--border); padding:6px 6px; text-align:left; }
-  table#holidayTable input[type=text], table#categoriesTable input[type=text], table#calendarsTable input[type=text] { width:100%; padding:4px 6px; border:1px solid var(--border); border-radius:5px; }
-  table#holidayTable input[type=number], table#categoriesTable input[type=number] { width:60px; padding:4px 6px; border:1px solid var(--border); border-radius:5px; }
+  table#holidayTable, table.categories-table, table.calendars-table { width:100%; border-collapse:collapse; font-size:13px; margin-bottom:10px; }
+  table#holidayTable th, table#holidayTable td, table.categories-table th, table.categories-table td, table.calendars-table th, table.calendars-table td { border-bottom:1px solid var(--border); padding:6px 6px; text-align:left; }
+  table#holidayTable input[type=text], table.categories-table input[type=text], table.calendars-table input[type=text] { width:100%; padding:4px 6px; border:1px solid var(--border); border-radius:5px; }
+  table#holidayTable input[type=number], table.categories-table input[type=number] { width:60px; padding:4px 6px; border:1px solid var(--border); border-radius:5px; }
   table#holidayTable select { padding:4px 6px; border:1px solid var(--border); border-radius:5px; }
-  table#categoriesTable input[type=checkbox] { width:16px; height:16px; }
-  table#calendarsTable .color-picker { margin:0; }
-  table#calendarsTable .color-picker-swatches { gap:4px; }
-  table#calendarsTable .color-swatch-btn { width:18px; height:18px; }
-  table#calendarsTable .color-picker-advanced-toggle { font-size:10px; }
-  table#calendarsTable .color-picker-custom { width:26px; height:18px; }
+  table.categories-table input[type=checkbox] { width:16px; height:16px; }
+  table.calendars-table .color-picker { margin:0; }
+  table.calendars-table .color-picker-swatches { gap:4px; }
+  table.calendars-table .color-swatch-btn { width:18px; height:18px; }
+  table.calendars-table .color-picker-advanced-toggle { font-size:10px; }
+  table.calendars-table .color-picker-custom { width:26px; height:18px; }
+  .user-bar {
+    display:flex; align-items:center; gap:16px; flex-wrap:wrap; margin-bottom:12px;
+    background:var(--card-bg); border:1px solid var(--border); border-radius:10px; padding:8px 14px; font-size:13px;
+  }
+  .user-bar .user-edit-select { display:flex; align-items:center; gap:8px; }
+  .user-bar select { padding:5px 8px; border:1px solid var(--border); border-radius:8px; font-size:13px; font-weight:600; }
+  .user-bar .user-visibility { display:flex; align-items:center; gap:14px; }
+  .user-bar label { display:flex; align-items:center; gap:5px; cursor:pointer; }
+  .user-settings-block + .user-settings-block { margin-top:22px; padding-top:18px; border-top:1px dashed var(--border); }
+  /* Case coupée en 2 (gauche/droite) quand les statuts des 2 utilisateurs
+     sont visibles et posés le même jour : voir renderSplitStatusBackground. */
+  .day-status-half { position:absolute; top:0; bottom:0; width:50%; z-index:-1; pointer-events:none; }
+  .day-status-half.left { left:0; }
+  .day-status-half.right { right:0; }
+  .timegrid-daylabel-half { position:absolute; top:0; bottom:0; width:50%; z-index:-1; pointer-events:none; }
+  .timegrid-daylabel-half.left { left:0; }
+  .timegrid-daylabel-half.right { right:0; }
   .del-btn { background:none; border:none; border-radius:0; color:#c0392b; cursor:pointer; font-size:15px; }
-  #addHoliday, #addCalendar { margin-top:4px; border:1px dashed #aaa; background:#fff; padding:6px 12px; border-radius:10px; cursor:pointer; font-size:13px; }
+  #addHoliday, .add-calendar-btn { margin-top:4px; border:1px dashed #aaa; background:#fff; padding:6px 12px; border-radius:10px; cursor:pointer; font-size:13px; }
   .settings-actions { display:flex; gap:10px; margin-top:16px; flex-wrap:wrap; }
   .months-grid {
     display:grid; grid-template-columns: repeat(3, 1fr); gap:16px;
@@ -217,7 +234,7 @@
   }
   .timegrid-daylabel {
     padding:8px 4px; text-align:center; font-size:13px; font-weight:600;
-    border-radius:8px; background:var(--card-bg); text-transform:capitalize;
+    border-radius:8px; background:var(--card-bg); text-transform:capitalize; position:relative; overflow:hidden;
   }
   .timegrid-daylabel.today { color:#e53935; background:#fdecea; }
   .timegrid-allday-cell {
@@ -349,6 +366,19 @@
       <button id="todayBtn">Aujourd'hui</button>
       <button id="toggleSettings" title="Paramètres">⚙</button>
     </header>
+    <div class="user-bar">
+      <div class="user-edit-select">
+        <label for="activeUserSelect">J'édite en tant que</label>
+        <select id="activeUserSelect">
+          <option value="user1">Utilisateur 1</option>
+          <option value="user2">Utilisateur 2</option>
+        </select>
+      </div>
+      <div class="user-visibility">
+        <label><input type="checkbox" id="showUser1" checked> Afficher <span id="showUser1Label">Utilisateur 1</span></label>
+        <label><input type="checkbox" id="showUser2" checked> Afficher <span id="showUser2Label">Utilisateur 2</span></label>
+      </div>
+    </div>
     <div class="brush-bar">
       <button class="brush-btn conge active" data-brush="conge"><span id="brushLabelConge">Congé</span></button>
       <button class="brush-btn rtt" data-brush="rtt"><span id="brushLabelRtt">RTT</span></button>
@@ -362,78 +392,167 @@
     <div id="stickyExtra"></div>
   </div>
   <div id="settingsPanel" class="hidden">
-    <h3>Calendriers</h3>
-    <table id="calendarsTable">
-      <thead><tr><th>Nom</th><th>Couleur</th><th></th></tr></thead>
-      <tbody id="calendarsTableBody"></tbody>
-    </table>
-    <button id="addCalendar">+ Ajouter un calendrier</button>
-    <div class="hint">Chaque évènement appartient à un calendrier et prend sa couleur (voir la modale de création). Créez-en autant que nécessaire (perso, travail, projets...). Supprimer un calendrier reporte ses évènements sur le calendrier restant le plus ancien.</div>
-    <h3>Catégories</h3>
-    <table id="categoriesTable">
-      <thead><tr><th>Activée</th><th>Nom</th><th>Couleur</th><th>Quota/an (j)</th><th>Report</th><th>Plafond report</th><th>Demi-journée</th></tr></thead>
-      <tbody id="categoriesTableBody"></tbody>
-    </table>
-    <div class="hint">3 catégories maximum, déjà toutes présentes ci-dessus : renommez-les et désactivez celles que vous n'utilisez pas. Quota à 0 = simple compteur sans suivi de solde. Le report permet de garder les jours non pris pour l'année suivante (avec un plafond optionnel).</div>
+    <h3>Utilisateurs</h3>
+    <div class="settings-row">
+      <label for="userName1">Nom utilisateur 1</label>
+      <input type="text" id="userName1">
+    </div>
+    <div class="settings-row">
+      <label for="userName2">Nom utilisateur 2</label>
+      <input type="text" id="userName2">
+    </div>
+    <div class="hint">2 utilisateurs fixes, partageant ce même calendrier : chacun a ses propres catégories (congé/RTT/télétravail), ses propres calendriers d'évènements et son propre récapitulatif ci-dessous. Choisissez en haut de page qui édite (statuts/évènements posés en cliquant sur une case) et qui est affiché.</div>
     <div class="settings-row">
       <label for="startYear">Année de départ (pas de report avant)</label>
       <input type="number" id="startYear" min="2000" max="2100">
     </div>
-    <h3>Récapitulatif des jours</h3>
-    <div class="summary">
-      <div class="card conge-card" id="cardConge">
-        <div class="card-title"><span class="swatch"></span> <span id="cardLabelConge">Congé</span></div>
-        <div class="card-body">
-          <div id="congeQuotaMode">
-            <span>Disponible sur l'année : <b id="congeDispo">0</b> j</span>
-            <span>Pris : <b id="congePris">0</b> j</span>
-            <span>Restant : <b id="congeRestant">0</b> j</span>
-            <span class="sub" id="congeReportLine">dont report de l'année précédente : <span id="congeReport">0</span> j</span>
+
+    <div class="user-settings-block">
+      <h3 id="userSectionCal_user1">Calendriers — Utilisateur 1</h3>
+      <table class="calendars-table" id="calendarsTable_user1">
+        <thead><tr><th>Nom</th><th>Couleur</th><th></th></tr></thead>
+        <tbody id="calendarsTableBody_user1"></tbody>
+      </table>
+      <button class="add-calendar-btn" id="addCalendar_user1">+ Ajouter un calendrier</button>
+      <div class="hint">Chaque évènement de cet utilisateur appartient à un de ses calendriers et prend sa couleur (voir la modale de création). Supprimer un calendrier reporte ses évènements sur le calendrier restant le plus ancien.</div>
+
+      <h3 id="userSectionCat_user1">Catégories — Utilisateur 1</h3>
+      <table class="categories-table" id="categoriesTable_user1">
+        <thead><tr><th>Activée</th><th>Nom</th><th>Couleur</th><th>Quota/an (j)</th><th>Report</th><th>Plafond report</th><th>Demi-journée</th></tr></thead>
+        <tbody id="categoriesTableBody_user1"></tbody>
+      </table>
+      <div class="hint">3 catégories maximum, déjà toutes présentes ci-dessus : renommez-les et désactivez celles que vous n'utilisez pas. Quota à 0 = simple compteur sans suivi de solde. Le report permet de garder les jours non pris pour l'année suivante (avec un plafond optionnel).</div>
+
+      <h3 id="userSectionRec_user1">Récapitulatif des jours — Utilisateur 1</h3>
+      <div class="summary">
+        <div class="card conge-card" id="cardConge_user1">
+          <div class="card-title"><span class="swatch"></span> <span id="cardLabelConge_user1">Congé</span></div>
+          <div class="card-body">
+            <div id="congeQuotaMode_user1">
+              <span>Disponible sur l'année : <b id="congeDispo_user1">0</b> j</span>
+              <span>Pris : <b id="congePris_user1">0</b> j</span>
+              <span>Restant : <b id="congeRestant_user1">0</b> j</span>
+              <span class="sub" id="congeReportLine_user1">dont report de l'année précédente : <span id="congeReport_user1">0</span> j</span>
+            </div>
+            <div id="congeSimpleMode_user1" class="hidden">
+              <span>Jours cette année : <b id="congeSimplePris_user1">0</b> j</span>
+              <span class="sub">aucun quota défini pour cette catégorie</span>
+            </div>
           </div>
-          <div id="congeSimpleMode" class="hidden">
-            <span>Jours cette année : <b id="congeSimplePris">0</b> j</span>
-            <span class="sub">aucun quota défini pour cette catégorie</span>
+        </div>
+        <div class="card rtt-card" id="cardRtt_user1">
+          <div class="card-title"><span class="swatch"></span> <span id="cardLabelRtt_user1">RTT</span></div>
+          <div class="card-body">
+            <div id="rttQuotaMode_user1">
+              <span>Disponible sur l'année : <b id="rttDispo_user1">0</b> j</span>
+              <span>Pris : <b id="rttPris_user1">0</b> j</span>
+              <span>Restant : <b id="rttRestant_user1">0</b> j</span>
+              <span class="sub" id="rttReportLine_user1">dont report de l'année précédente : <span id="rttReport_user1">0</span> j</span>
+            </div>
+            <div id="rttSimpleMode_user1" class="hidden">
+              <span>Jours cette année : <b id="rttSimplePris_user1">0</b> j</span>
+              <span class="sub">aucun quota défini pour cette catégorie</span>
+            </div>
+          </div>
+        </div>
+        <div class="card tt-card" id="cardTeletravail_user1">
+          <div class="card-title"><span class="swatch"></span> <span id="cardLabelTeletravail_user1">Télétravail</span></div>
+          <div class="card-body">
+            <div id="teletravailQuotaMode_user1" class="hidden">
+              <span>Disponible sur l'année : <b id="teletravailDispo_user1">0</b> j</span>
+              <span>Pris : <b id="teletravailPris_user1">0</b> j</span>
+              <span>Restant : <b id="teletravailRestant_user1">0</b> j</span>
+              <span class="sub" id="teletravailReportLine_user1">dont report de l'année précédente : <span id="teletravailReport_user1">0</span> j</span>
+            </div>
+            <div id="teletravailSimpleMode_user1">
+              <span>Jours cette année : <b id="teletravailSimplePris_user1">0</b> j</span>
+              <span class="sub">aucun quota défini pour cette catégorie</span>
+            </div>
           </div>
         </div>
       </div>
-      <div class="card rtt-card" id="cardRtt">
-        <div class="card-title"><span class="swatch"></span> <span id="cardLabelRtt">RTT</span></div>
-        <div class="card-body">
-          <div id="rttQuotaMode">
-            <span>Disponible sur l'année : <b id="rttDispo">0</b> j</span>
-            <span>Pris : <b id="rttPris">0</b> j</span>
-            <span>Restant : <b id="rttRestant">0</b> j</span>
-            <span class="sub" id="rttReportLine">dont report de l'année précédente : <span id="rttReport">0</span> j</span>
-          </div>
-          <div id="rttSimpleMode" class="hidden">
-            <span>Jours cette année : <b id="rttSimplePris">0</b> j</span>
-            <span class="sub">aucun quota défini pour cette catégorie</span>
-          </div>
-        </div>
-      </div>
-      <div class="card tt-card" id="cardTeletravail">
-        <div class="card-title"><span class="swatch"></span> <span id="cardLabelTeletravail">Télétravail</span></div>
-        <div class="card-body">
-          <div id="teletravailQuotaMode" class="hidden">
-            <span>Disponible sur l'année : <b id="teletravailDispo">0</b> j</span>
-            <span>Pris : <b id="teletravailPris">0</b> j</span>
-            <span>Restant : <b id="teletravailRestant">0</b> j</span>
-            <span class="sub" id="teletravailReportLine">dont report de l'année précédente : <span id="teletravailReport">0</span> j</span>
-          </div>
-          <div id="teletravailSimpleMode">
-            <span>Jours cette année : <b id="teletravailSimplePris">0</b> j</span>
-            <span class="sub">aucun quota défini pour cette catégorie</span>
-          </div>
-        </div>
+      <div class="legend">
+        <div class="item" id="legendConge_user1"><span class="box" style="background:var(--bleu-conge)"></span> <span id="legendLabelConge_user1">Congé</span> posé</div>
+        <div class="item" id="legendRtt_user1"><span class="box" style="background:var(--orange-rtt)"></span> <span id="legendLabelRtt_user1">RTT</span> posé</div>
+        <div class="item" id="legendTeletravail_user1"><span class="box" style="background:var(--vert-tt)"></span> <span id="legendLabelTeletravail_user1">Télétravail</span></div>
       </div>
     </div>
-    <div class="legend">
-      <div class="item" id="legendConge"><span class="box" style="background:var(--bleu-conge)"></span> <span id="legendLabelConge">Congé</span> posé</div>
-      <div class="item" id="legendRtt"><span class="box" style="background:var(--orange-rtt)"></span> <span id="legendLabelRtt">RTT</span> posé</div>
-      <div class="item" id="legendTeletravail"><span class="box" style="background:var(--vert-tt)"></span> <span id="legendLabelTeletravail">Télétravail</span></div>
+
+    <div class="user-settings-block">
+      <h3 id="userSectionCal_user2">Calendriers — Utilisateur 2</h3>
+      <table class="calendars-table" id="calendarsTable_user2">
+        <thead><tr><th>Nom</th><th>Couleur</th><th></th></tr></thead>
+        <tbody id="calendarsTableBody_user2"></tbody>
+      </table>
+      <button class="add-calendar-btn" id="addCalendar_user2">+ Ajouter un calendrier</button>
+      <div class="hint">Chaque évènement de cet utilisateur appartient à un de ses calendriers et prend sa couleur (voir la modale de création). Supprimer un calendrier reporte ses évènements sur le calendrier restant le plus ancien.</div>
+
+      <h3 id="userSectionCat_user2">Catégories — Utilisateur 2</h3>
+      <table class="categories-table" id="categoriesTable_user2">
+        <thead><tr><th>Activée</th><th>Nom</th><th>Couleur</th><th>Quota/an (j)</th><th>Report</th><th>Plafond report</th><th>Demi-journée</th></tr></thead>
+        <tbody id="categoriesTableBody_user2"></tbody>
+      </table>
+      <div class="hint">3 catégories maximum, déjà toutes présentes ci-dessus : renommez-les et désactivez celles que vous n'utilisez pas. Quota à 0 = simple compteur sans suivi de solde. Le report permet de garder les jours non pris pour l'année suivante (avec un plafond optionnel).</div>
+
+      <h3 id="userSectionRec_user2">Récapitulatif des jours — Utilisateur 2</h3>
+      <div class="summary">
+        <div class="card conge-card" id="cardConge_user2">
+          <div class="card-title"><span class="swatch"></span> <span id="cardLabelConge_user2">Congé</span></div>
+          <div class="card-body">
+            <div id="congeQuotaMode_user2">
+              <span>Disponible sur l'année : <b id="congeDispo_user2">0</b> j</span>
+              <span>Pris : <b id="congePris_user2">0</b> j</span>
+              <span>Restant : <b id="congeRestant_user2">0</b> j</span>
+              <span class="sub" id="congeReportLine_user2">dont report de l'année précédente : <span id="congeReport_user2">0</span> j</span>
+            </div>
+            <div id="congeSimpleMode_user2" class="hidden">
+              <span>Jours cette année : <b id="congeSimplePris_user2">0</b> j</span>
+              <span class="sub">aucun quota défini pour cette catégorie</span>
+            </div>
+          </div>
+        </div>
+        <div class="card rtt-card" id="cardRtt_user2">
+          <div class="card-title"><span class="swatch"></span> <span id="cardLabelRtt_user2">RTT</span></div>
+          <div class="card-body">
+            <div id="rttQuotaMode_user2">
+              <span>Disponible sur l'année : <b id="rttDispo_user2">0</b> j</span>
+              <span>Pris : <b id="rttPris_user2">0</b> j</span>
+              <span>Restant : <b id="rttRestant_user2">0</b> j</span>
+              <span class="sub" id="rttReportLine_user2">dont report de l'année précédente : <span id="rttReport_user2">0</span> j</span>
+            </div>
+            <div id="rttSimpleMode_user2" class="hidden">
+              <span>Jours cette année : <b id="rttSimplePris_user2">0</b> j</span>
+              <span class="sub">aucun quota défini pour cette catégorie</span>
+            </div>
+          </div>
+        </div>
+        <div class="card tt-card" id="cardTeletravail_user2">
+          <div class="card-title"><span class="swatch"></span> <span id="cardLabelTeletravail_user2">Télétravail</span></div>
+          <div class="card-body">
+            <div id="teletravailQuotaMode_user2" class="hidden">
+              <span>Disponible sur l'année : <b id="teletravailDispo_user2">0</b> j</span>
+              <span>Pris : <b id="teletravailPris_user2">0</b> j</span>
+              <span>Restant : <b id="teletravailRestant_user2">0</b> j</span>
+              <span class="sub" id="teletravailReportLine_user2">dont report de l'année précédente : <span id="teletravailReport_user2">0</span> j</span>
+            </div>
+            <div id="teletravailSimpleMode_user2">
+              <span>Jours cette année : <b id="teletravailSimplePris_user2">0</b> j</span>
+              <span class="sub">aucun quota défini pour cette catégorie</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="legend">
+        <div class="item" id="legendConge_user2"><span class="box" style="background:var(--bleu-conge)"></span> <span id="legendLabelConge_user2">Congé</span> posé</div>
+        <div class="item" id="legendRtt_user2"><span class="box" style="background:var(--orange-rtt)"></span> <span id="legendLabelRtt_user2">RTT</span> posé</div>
+        <div class="item" id="legendTeletravail_user2"><span class="box" style="background:var(--vert-tt)"></span> <span id="legendLabelTeletravail_user2">Télétravail</span></div>
+      </div>
+    </div>
+
+    <div class="legend" style="margin-top:16px;">
       <div class="item"><span class="box" style="background:var(--gris-off)"></span> Week-end / jour férié</div>
       <div class="item"><span class="box" style="background:#fff;border:1px solid #ccc"></span> Jour travaillé</div>
-      <div class="item" style="color:#999">Choisissez le type ci-dessus, cliquez un 1er jour puis un 2nd jour pour poser une période, re-cliquez le même jour (demi-journée si autorisée pour la catégorie).</div>
+      <div class="item" style="color:#999">Choisissez le type ci-dessus (utilisateur actif), cliquez un 1er jour puis un 2nd jour pour poser une période, re-cliquez le même jour (demi-journée si autorisée pour la catégorie).</div>
     </div>
     <h3>Jours fériés (paramétrables)</h3>
     <table id="holidayTable">
@@ -567,6 +686,28 @@
     };
   }
   const CATEGORY_KEYS = ['conge', 'rtt', 'teletravail'];
+  // "Vision double" (calendrier partagé) : exactement 2 utilisateurs fixes
+  // (pas d'ajout/suppression, seulement renommables), chacun avec ses
+  // propres catégories/calendriers/jours. Les clés internes restent fixes
+  // pour la compatibilité des données déjà enregistrées.
+  const USER_KEYS = ['user1', 'user2'];
+  function defaultUsers(){
+    return { user1: { name: 'Utilisateur 1' }, user2: { name: 'Utilisateur 2' } };
+  }
+  // Reprend les noms déjà enregistrés (en complétant les champs manquants),
+  // sinon les valeurs par défaut — pour ne jamais perdre un renommage existant.
+  function resolveUsers(incoming){
+    const def = defaultUsers();
+    if(incoming && incoming.users){
+      USER_KEYS.forEach(u=>{ def[u] = Object.assign({}, def[u], incoming.users[u] || {}); });
+    }
+    return def;
+  }
+  function userName(userId){
+    const u = data.settings.users && data.settings.users[userId];
+    if(u && u.name) return u.name;
+    return userId === 'user2' ? 'Utilisateur 2' : 'Utilisateur 1';
+  }
   // 8 couleurs présélectionnées proposées dans le sélecteur de couleur
   // (évènements et catégories), plus un mode avancé (couleur libre) — voir
   // buildColorPicker.
@@ -579,8 +720,9 @@
   // couleurs en JS.
   function pastelOf(hex){ return 'color-mix(in srgb, ' + hex + ' 35%, white)'; }
   function darkOf(hex){ return 'color-mix(in srgb, ' + hex + ' 75%, black)'; }
-  function categoryColor(catKey){
-    const cat = data.settings.categories[catKey];
+  function categoryColor(userId, catKey){
+    const cats = data.settings.categories[userId];
+    const cat = cats && cats[catKey];
     return (cat && cat.color) || '#1976d2';
   }
   // Sélecteur de couleur réutilisable : 8 pastilles présélectionnées (voir
@@ -638,73 +780,120 @@
     refresh();
     return wrap;
   }
-  // Retourne {key, half, label, color} pour un statut de jour donné
-  // ("conge" | "rtt_am" | "teletravail_pm" | ...), ou null si vide/inconnu.
-  function describeStatus(status){
+  // Retourne {key, half, label, color} pour le statut d'un jour donné, pour
+  // l'utilisateur userId ("conge" | "rtt_am" | "teletravail_pm" | ...), ou
+  // null si vide/inconnu.
+  function describeStatus(status, userId){
     if(!status) return null;
     let key = status, half = null;
     if(status.endsWith('_am')){ key = status.slice(0, -3); half = 'am'; }
     else if(status.endsWith('_pm')){ key = status.slice(0, -3); half = 'pm'; }
-    const cat = data.settings.categories[key];
+    const cats = data.settings.categories[userId];
+    const cat = cats && cats[key];
     if(!cat) return null;
-    return { key, half, label: cat.label, color: categoryColor(key) };
+    return { key, half, label: cat.label, color: categoryColor(userId, key) };
   }
-  // Détermine settings.categories à partir de paramètres "bruts" reçus
-  // (localStorage, Sheet, import JSON) : reprend la nouvelle structure si
-  // elle existe déjà (en complétant les champs manquants pour survivre aux
-  // évolutions du schéma), sinon la reconstruit à partir des anciens champs
-  // congesParAn/rttParAn/capReport... pour ne perdre aucun réglage existant.
-  function resolveCategories(incoming){
+  // Détermine les 3 catégories d'UN utilisateur à partir de paramètres "bruts"
+  // déjà isolés pour cet utilisateur (reprend la structure existante en
+  // complétant les champs manquants, pour survivre aux évolutions du schéma).
+  function resolveCategoriesForUser(incomingUserCats){
     const def = defaultCategories();
-    if(incoming && incoming.categories){
+    if(incomingUserCats){
       CATEGORY_KEYS.forEach(k=>{
-        def[k] = Object.assign({}, def[k], incoming.categories[k] || {});
+        def[k] = Object.assign({}, def[k], incomingUserCats[k] || {});
       });
-      return def;
-    }
-    if(incoming){
-      if(incoming.congesParAn !== undefined) def.conge.quotaParAn = Number(incoming.congesParAn) || 0;
-      if(incoming.rttParAn !== undefined) def.rtt.quotaParAn = Number(incoming.rttParAn) || 0;
-      if(incoming.capReportEnabled !== undefined) def.conge.carryoverCapEnabled = !!incoming.capReportEnabled;
-      if(incoming.capReport !== undefined) def.conge.carryoverCap = Number(incoming.capReport) || 0;
     }
     return def;
   }
+  // Détermine settings.categories (par utilisateur) à partir de paramètres
+  // "bruts" reçus (localStorage, Sheet, import JSON) : reprend la structure
+  // {user1:{...}, user2:{...}} si elle existe déjà, migre l'ancienne structure
+  // à plat (mono-utilisateur, devient user1) vers user1 en donnant les
+  // catégories par défaut à user2, ou reconstruit depuis les tout anciens
+  // champs congesParAn/rttParAn/capReport... pour ne perdre aucun réglage.
+  function resolveCategories(incoming){
+    const rawCats = incoming && incoming.categories;
+    const result = {};
+    if(rawCats && (rawCats.user1 || rawCats.user2)){
+      USER_KEYS.forEach(u=>{ result[u] = resolveCategoriesForUser(rawCats[u]); });
+      return result;
+    }
+    if(rawCats){
+      result.user1 = resolveCategoriesForUser(rawCats);
+      result.user2 = defaultCategories();
+      return result;
+    }
+    if(incoming && (incoming.congesParAn !== undefined || incoming.rttParAn !== undefined || incoming.capReportEnabled !== undefined || incoming.capReport !== undefined)){
+      const u1 = defaultCategories();
+      if(incoming.congesParAn !== undefined) u1.conge.quotaParAn = Number(incoming.congesParAn) || 0;
+      if(incoming.rttParAn !== undefined) u1.rtt.quotaParAn = Number(incoming.rttParAn) || 0;
+      if(incoming.capReportEnabled !== undefined) u1.conge.carryoverCapEnabled = !!incoming.capReportEnabled;
+      if(incoming.capReport !== undefined) u1.conge.carryoverCap = Number(incoming.capReport) || 0;
+      result.user1 = u1;
+      result.user2 = defaultCategories();
+      return result;
+    }
+    result.user1 = defaultCategories();
+    result.user2 = defaultCategories();
+    return result;
+  }
   // "Calendriers" : regroupements libres d'évènements (illimités, contrairement
   // aux 3 catégories congé/RTT/télétravail qui restent fixes) — chaque
-  // évènement appartient à un calendrier et prend sa couleur, plutôt que
-  // d'avoir sa propre couleur individuelle. Il y a toujours au moins un
-  // calendrier (celui par défaut, créé à l'installation).
-  function defaultCalendars(){
-    return [ { id: 'cal-default', name: 'Calendrier', color: DEFAULT_EVENT_COLOR } ];
+  // évènement appartient à un calendrier (de son propriétaire) et prend sa
+  // couleur, plutôt que d'avoir sa propre couleur individuelle. Chaque
+  // utilisateur a toujours au moins un calendrier (celui par défaut, créé à
+  // l'installation) ; l'id par défaut est suffixé par utilisateur pour ne
+  // jamais entrer en collision entre les 2 jeux de calendriers.
+  function defaultCalendarsForUser(userId){
+    return [ { id: 'cal-default-' + userId, name: 'Calendrier', color: DEFAULT_EVENT_COLOR } ];
   }
   function makeCalendarId(){
     return 'cal' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
   }
-  // Reprend la liste de calendriers déjà enregistrée si elle existe (en
-  // s'assurant que chaque entrée a bien un id/nom/couleur), sinon crée le
-  // calendrier par défaut — pour les données antérieures à cette fonctionnalité.
-  function resolveCalendars(incoming){
-    if(incoming && Array.isArray(incoming.calendars) && incoming.calendars.length){
-      return incoming.calendars.map(c=>({
+  // Reprend la liste de calendriers déjà enregistrée pour UN utilisateur si
+  // elle existe (en s'assurant que chaque entrée a bien un id/nom/couleur),
+  // sinon crée son calendrier par défaut.
+  function resolveCalendarsForUser(userId, incomingList){
+    if(Array.isArray(incomingList) && incomingList.length){
+      return incomingList.map(c=>({
         id: c.id || makeCalendarId(),
         name: c.name || 'Calendrier',
         color: c.color || DEFAULT_EVENT_COLOR
       }));
     }
-    return defaultCalendars();
+    return defaultCalendarsForUser(userId);
   }
-  // S'assure que chaque évènement (dans days) a un calendarId valide, en
-  // rattachant au calendrier par défaut ceux créés avant cette fonctionnalité
-  // (qui n'avaient qu'une couleur individuelle "ev.color") — sans rien
-  // perdre visuellement, le calendrier par défaut reprenant la même couleur
-  // bleue qui était utilisée par défaut auparavant.
-  function migrateEventsToCalendars(days, calendars){
+  // Même logique que resolveCategories : structure {user1:[...], user2:[...]}
+  // si déjà présente, sinon migration de l'ancienne liste unique (mono-
+  // utilisateur, devient user1, user2 reçoit son calendrier par défaut).
+  function resolveCalendars(incoming){
+    const rawCals = incoming && incoming.calendars;
+    const result = {};
+    if(rawCals && !Array.isArray(rawCals) && (rawCals.user1 || rawCals.user2)){
+      USER_KEYS.forEach(u=>{ result[u] = resolveCalendarsForUser(u, rawCals[u]); });
+      return result;
+    }
+    if(Array.isArray(rawCals) && rawCals.length){
+      result.user1 = resolveCalendarsForUser('user1', rawCals);
+      result.user2 = defaultCalendarsForUser('user2');
+      return result;
+    }
+    result.user1 = defaultCalendarsForUser('user1');
+    result.user2 = defaultCalendarsForUser('user2');
+    return result;
+  }
+  // S'assure que chaque évènement d'UN utilisateur (dans days) a un
+  // calendarId valide, en rattachant au calendrier par défaut ceux créés
+  // avant cette fonctionnalité (qui n'avaient qu'une couleur individuelle
+  // "ev.color") — sans rien perdre visuellement, le calendrier par défaut
+  // reprenant la même couleur bleue qui était utilisée par défaut auparavant.
+  function migrateEventsToCalendarsForUser(days, userId, calendars){
     const validIds = {};
     calendars.forEach(c=>{ validIds[c.id] = true; });
     const fallbackId = calendars[0].id;
     Object.keys(days || {}).forEach(ds=>{
-      const evs = days[ds] && days[ds].events;
+      const bucket = days[ds] && days[ds][userId];
+      const evs = bucket && bucket.events;
       if(!evs) return;
       evs.forEach(ev=>{
         if(!ev.calendarId || !validIds[ev.calendarId]) ev.calendarId = fallbackId;
@@ -712,15 +901,21 @@
     });
     return days;
   }
-  function findCalendar(calendarId){
-    return (data.settings.calendars || []).filter(c=>c.id === calendarId)[0];
+  function migrateEventsToCalendars(days, calendarsByUser){
+    USER_KEYS.forEach(u=>migrateEventsToCalendarsForUser(days, u, calendarsByUser[u]));
+    return days;
   }
-  // Couleur effective d'un évènement : celle de son calendrier (la source de
-  // vérité désormais) ; repli sur l'ancienne couleur individuelle ev.color
-  // pour un très bref instant avant que migrateEventsToCalendars() ne
-  // s'exécute, ou sur la couleur par défaut si tout manque.
+  function findCalendar(userId, calendarId){
+    const list = (data.settings.calendars && data.settings.calendars[userId]) || [];
+    return list.filter(c=>c.id === calendarId)[0];
+  }
+  // Couleur effective d'un évènement : celle de son calendrier, chez son
+  // propriétaire (ev._owner, posé par getVisibleDayEvents/getDayEvents au
+  // moment du rendu — voir plus bas) ; repli sur l'ancienne couleur
+  // individuelle ev.color, ou sur la couleur par défaut si tout manque.
   function eventColor(ev){
-    const cal = findCalendar(ev.calendarId);
+    const owner = ev._owner || 'user1';
+    const cal = findCalendar(owner, ev.calendarId);
     if(cal) return cal.color;
     return ev.color || DEFAULT_EVENT_COLOR;
   }
@@ -728,13 +923,15 @@
     const y = new Date().getFullYear();
     return {
       settings: {
-        categories: defaultCategories(),
-        calendars: defaultCalendars(),
+        users: defaultUsers(),
+        categories: { user1: defaultCategories(), user2: defaultCategories() },
+        calendars: { user1: defaultCalendarsForUser('user1'), user2: defaultCalendarsForUser('user2') },
         startYear: y,
         holidayRules: defaultHolidayRules()
       },
       lastViewedYear: y,
-      days: {} // "YYYY-MM-DD": {status:'conge'|'rtt'|'teletravail'|'', events:[{id,title,allDay,start,end,calendarId}]}
+      // "YYYY-MM-DD": { user1:{status,events:[...]}, user2:{status,events:[...]} }
+      days: {}
     };
   }
   function makeEventId(){
@@ -742,6 +939,9 @@
   }
   // Convertit les anciennes notes libres (un texte par jour) en évènement
   // "journée entière", pour ne rien perdre lors du passage aux évènements.
+  // Doit tourner avant migrateDaysToUsers (elle attend encore l'ancienne
+  // forme à plat {status, events, note} par jour, pas les casiers par
+  // utilisateur).
   function migrateLegacyNotes(daysObj){
     Object.keys(daysObj || {}).forEach(ds=>{
       const d = daysObj[ds];
@@ -752,6 +952,29 @@
     });
     return daysObj;
   }
+  // Convertit l'ancienne forme mono-utilisateur de data.days (un seul
+  // {status, events} par jour) vers la nouvelle forme à 2 casiers
+  // {user1:{...}, user2:{...}} — les données existantes deviennent celles
+  // de l'Utilisateur 1, l'Utilisateur 2 démarre vide.
+  function migrateDaysToUsers(daysObj){
+    const out = {};
+    Object.keys(daysObj || {}).forEach(ds=>{
+      const d = daysObj[ds];
+      if(!d) return;
+      if(d.user1 || d.user2){
+        out[ds] = {
+          user1: d.user1 || { status:'', events:[] },
+          user2: d.user2 || { status:'', events:[] }
+        };
+      } else {
+        out[ds] = {
+          user1: { status: d.status || '', events: d.events || [] },
+          user2: { status:'', events:[] }
+        };
+      }
+    });
+    return out;
+  }
   function load(){
     try{
       const raw = localStorage.getItem(STORAGE_KEY);
@@ -761,12 +984,13 @@
       const d = defaultData();
       const incoming = parsed.settings || {};
       d.settings = Object.assign(d.settings, incoming);
+      d.settings.users = resolveUsers(incoming);
       d.settings.categories = resolveCategories(incoming);
       d.settings.calendars = resolveCalendars(incoming);
       delete d.settings.congesParAn; delete d.settings.rttParAn;
       delete d.settings.capReportEnabled; delete d.settings.capReport;
       d.lastViewedYear = parsed.lastViewedYear || d.lastViewedYear;
-      d.days = migrateEventsToCalendars(migrateLegacyNotes(parsed.days || {}), d.settings.calendars);
+      d.days = migrateEventsToCalendars(migrateDaysToUsers(migrateLegacyNotes(parsed.days || {})), d.settings.calendars);
       return d;
     }catch(e){
       console.error('Erreur chargement', e);
@@ -778,6 +1002,31 @@
     scheduleRemoteSync();
   }
   let data = load();
+  // ---- État d'interface local uniquement (jamais synchronisé/exporté) :
+  // utilisateur actif pour l'édition, et visibilité de chacun des 2
+  // utilisateurs sur le calendrier — indépendants l'un de l'autre.
+  const UI_STATE_KEY = 'congesCalendarUI_v1';
+  function loadUIState(){
+    try{
+      const raw = JSON.parse(localStorage.getItem(UI_STATE_KEY) || '{}');
+      return {
+        activeUser: raw.activeUser === 'user2' ? 'user2' : 'user1',
+        visible: {
+          user1: raw.visible ? raw.visible.user1 !== false : true,
+          user2: raw.visible ? raw.visible.user2 !== false : true
+        }
+      };
+    }catch(e){
+      return { activeUser: 'user1', visible: { user1:true, user2:true } };
+    }
+  }
+  let uiState = loadUIState();
+  function saveUIState(){ localStorage.setItem(UI_STATE_KEY, JSON.stringify(uiState)); }
+  function isUserVisible(userId){ return !!uiState.visible[userId]; }
+  function activeUserId(){ return uiState.activeUser; }
+  // Utilisateurs visibles, dans l'ordre fixe USER_KEYS (donc toujours
+  // user1 avant user2 quand les deux sont affichés).
+  function visibleUserKeys(){ return USER_KEYS.filter(isUserVisible); }
   // Vue : toujours ouverte sur le mois en cours, jamais restaurée depuis une
   // session précédente ni depuis le Sheet (demande explicite de l'utilisateur).
   let viewMode = 'month'; // 'day' | 'week' | 'month' | 'year'
@@ -847,6 +1096,7 @@
     const merged = defaultData();
     const incoming = remote.settings || {};
     merged.settings = Object.assign(merged.settings, incoming);
+    merged.settings.users = resolveUsers(incoming);
     merged.settings.categories = resolveCategories(incoming);
     merged.settings.calendars = resolveCalendars(incoming);
     delete merged.settings.congesParAn; delete merged.settings.rttParAn;
@@ -858,7 +1108,7 @@
     // doit jamais être écrasée par une valeur venue du Sheet (sinon chaque
     // rafraîchissement automatique ramène tout le monde sur la même année).
     merged.lastViewedYear = currentYear || merged.lastViewedYear;
-    merged.days = migrateEventsToCalendars(migrateLegacyNotes(remote.days || {}), merged.settings.calendars);
+    merged.days = migrateEventsToCalendars(migrateDaysToUsers(migrateLegacyNotes(remote.days || {})), merged.settings.calendars);
     data = merged;
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
     renderSettings();
@@ -934,40 +1184,41 @@
     });
     return map;
   }
-  // type = 'conge' or 'rtt'. Counts full days as 1, half-days (_am/_pm) as 0.5.
-  function sumDays(year, type){
+  // type = 'conge' or 'rtt', pour l'utilisateur userId. Counts full days as
+  // 1, half-days (_am/_pm) as 0.5.
+  function sumDays(year, type, userId){
     let total = 0;
     Object.keys(data.days).forEach(k=>{
       if(!k.startsWith(String(year)+'-')) return;
-      const st = data.days[k].status;
+      const bucket = data.days[k][userId];
+      const st = bucket && bucket.status;
       if(st === type) total += 1;
       else if(st === type+'_am' || st === type+'_pm') total += 0.5;
     });
     return total;
   }
-  // Calcul générique du solde d'une catégorie (jadis deux fonctions
-  // séparées, une pour les congés avec report/plafond, une pour les RTT
-  // sans report) : le comportement (quota, report, plafond) vient
-  // maintenant des réglages de la catégorie elle-même, donc n'importe
-  // laquelle des 3 catégories peut avoir n'importe lequel de ces comportements.
-  function computeCategoryBalance(catKey, year){
-    const cat = data.settings.categories[catKey];
+  // Calcul générique du solde d'une catégorie pour un utilisateur donné
+  // (jadis deux fonctions séparées, une pour les congés avec report/plafond,
+  // une pour les RTT sans report) : le comportement (quota, report, plafond)
+  // vient des réglages de la catégorie elle-même, chez cet utilisateur.
+  function computeCategoryBalance(catKey, year, userId){
+    const cat = data.settings.categories[userId][catKey];
     const quotaParAn = Number(cat.quotaParAn) || 0;
     if(!cat.carryoverEnabled){
-      const pris = sumDays(year, catKey);
+      const pris = sumDays(year, catKey, userId);
       return { disponible: quotaParAn, pris, report: 0, restant: quotaParAn - pris };
     }
     const startYear = Number(data.settings.startYear) || year;
     const cap = cat.carryoverCapEnabled ? (Number(cat.carryoverCap) || 0) : null;
     if(year < startYear){
-      const pris = sumDays(year, catKey);
+      const pris = sumDays(year, catKey, userId);
       return { disponible: quotaParAn, pris, report: 0, restant: quotaParAn - pris };
     }
     let report = 0;
     let result = null;
     for(let y = startYear; y <= year; y++){
       const disponible = report + quotaParAn;
-      const pris = sumDays(y, catKey);
+      const pris = sumDays(y, catKey, userId);
       let carry = disponible - pris;
       if(carry < 0) carry = 0;
       if(cap !== null) carry = Math.min(carry, cap);
@@ -976,31 +1227,42 @@
     }
     return result;
   }
-  // Met à jour tout ce qui dépend des réglages de catégories : libellés des
-  // boutons de la barre de brosse, des cartes du récap et de la légende,
-  // visibilité si une catégorie est désactivée, et mode d'affichage de
-  // chaque carte (quota complet si un quota est défini, simple compteur
-  // sinon, comme le faisait Télétravail par défaut).
-  function updateCategoryUI(year){
+  // Met à jour la barre de brosse (haut de page) : reflète toujours les
+  // catégories de l'utilisateur ACTIF (celui pour lequel on édite), jamais
+  // celles de l'autre — voir le sélecteur "J'édite en tant que".
+  function updateBrushBar(){
+    const userId = activeUserId();
     CATEGORY_KEYS.forEach(catKey=>{
-      const cat = data.settings.categories[catKey];
+      const cat = data.settings.categories[userId][catKey];
       const cap = catKey.charAt(0).toUpperCase() + catKey.slice(1);
       const brushBtn = document.querySelector('.brush-btn.' + catKey);
       const brushLabelEl = document.getElementById('brushLabel' + cap);
-      const cardEl = document.getElementById('card' + cap);
-      const cardLabelEl = document.getElementById('cardLabel' + cap);
-      const legendEl = document.getElementById('legend' + cap);
-      const legendLabelEl = document.getElementById('legendLabel' + cap);
       if(brushLabelEl) brushLabelEl.textContent = cat.label;
-      if(cardLabelEl) cardLabelEl.textContent = cat.label;
-      if(legendLabelEl) legendLabelEl.textContent = cat.label;
-      const color = categoryColor(catKey);
+      const color = categoryColor(userId, catKey);
       if(brushBtn){
         brushBtn.classList.toggle('hidden', !cat.enabled);
         brushBtn.style.setProperty('--cat-bg', pastelOf(color));
         brushBtn.style.setProperty('--cat-border', darkOf(color));
         brushBtn.style.setProperty('--cat-text', darkOf(color));
       }
+    });
+  }
+  // Met à jour les cartes de récap + légende d'UN utilisateur (Paramètres,
+  // section dupliquée par utilisateur) : libellés, visibilité si une
+  // catégorie est désactivée, et mode d'affichage (quota complet si un quota
+  // est défini, simple compteur sinon).
+  function updateCategoryCardsForUser(year, userId){
+    const suffix = '_' + userId;
+    CATEGORY_KEYS.forEach(catKey=>{
+      const cat = data.settings.categories[userId][catKey];
+      const cap = catKey.charAt(0).toUpperCase() + catKey.slice(1);
+      const cardEl = document.getElementById('card' + cap + suffix);
+      const cardLabelEl = document.getElementById('cardLabel' + cap + suffix);
+      const legendEl = document.getElementById('legend' + cap + suffix);
+      const legendLabelEl = document.getElementById('legendLabel' + cap + suffix);
+      if(cardLabelEl) cardLabelEl.textContent = cat.label;
+      if(legendLabelEl) legendLabelEl.textContent = cat.label;
+      const color = categoryColor(userId, catKey);
       if(cardEl){
         cardEl.classList.toggle('hidden', !cat.enabled);
         const swatch = cardEl.querySelector('.swatch');
@@ -1012,67 +1274,107 @@
         if(box) box.style.background = pastelOf(color);
       }
       if(!cat.enabled) return;
-      const quotaMode = document.getElementById(catKey + 'QuotaMode');
-      const simpleMode = document.getElementById(catKey + 'SimpleMode');
+      const quotaMode = document.getElementById(catKey + 'QuotaMode' + suffix);
+      const simpleMode = document.getElementById(catKey + 'SimpleMode' + suffix);
       const hasQuota = Number(cat.quotaParAn) > 0;
       if(quotaMode) quotaMode.classList.toggle('hidden', !hasQuota);
       if(simpleMode) simpleMode.classList.toggle('hidden', hasQuota);
       if(hasQuota){
-        const b = computeCategoryBalance(catKey, year);
-        const elDispo = document.getElementById(catKey + 'Dispo');
-        const elPris = document.getElementById(catKey + 'Pris');
-        const elRestant = document.getElementById(catKey + 'Restant');
-        const elReport = document.getElementById(catKey + 'Report');
-        const reportLine = document.getElementById(catKey + 'ReportLine');
+        const b = computeCategoryBalance(catKey, year, userId);
+        const elDispo = document.getElementById(catKey + 'Dispo' + suffix);
+        const elPris = document.getElementById(catKey + 'Pris' + suffix);
+        const elRestant = document.getElementById(catKey + 'Restant' + suffix);
+        const elReport = document.getElementById(catKey + 'Report' + suffix);
+        const reportLine = document.getElementById(catKey + 'ReportLine' + suffix);
         if(elDispo) elDispo.textContent = b.disponible;
         if(elPris) elPris.textContent = b.pris;
         if(elRestant) elRestant.textContent = b.restant;
         if(elReport) elReport.textContent = b.report;
         if(reportLine) reportLine.classList.toggle('hidden', !cat.carryoverEnabled);
       } else {
-        const elSimplePris = document.getElementById(catKey + 'SimplePris');
-        if(elSimplePris) elSimplePris.textContent = sumDays(year, catKey);
+        const elSimplePris = document.getElementById(catKey + 'SimplePris' + suffix);
+        if(elSimplePris) elSimplePris.textContent = sumDays(year, catKey, userId);
       }
     });
   }
+  // Point d'entrée appelé à chaque rendu (renderYear) et à chaque ouverture
+  // des Paramètres : rafraîchit la barre de brosse (utilisateur actif) et
+  // les récaps des 2 utilisateurs (toujours visibles en Paramètres, quels
+  // que soient l'utilisateur actif ou les cases "Afficher").
+  function updateCategoryUI(year){
+    updateBrushBar();
+    USER_KEYS.forEach(u=>updateCategoryCardsForUser(year, u));
+  }
   let currentBrush = 'conge'; // clé de catégorie ('conge'|'rtt'|'teletravail') | '' (effacer)
   let pendingStart = null; // dateStr of the first click, awaiting a second click
-  function cleanupDay(ds){
-    const d = data.days[ds];
-    if(d && !d.status && (!d.events || !d.events.length)) delete data.days[ds];
+  // Toutes les fonctions de lecture/écriture d'un jour prennent désormais un
+  // userId : chaque utilisateur a son propre casier {status, events} dans
+  // data.days[ds] (voir migrateDaysToUsers).
+  function cleanupDay(ds, userId){
+    const bucket = data.days[ds] && data.days[ds][userId];
+    if(bucket && !bucket.status && (!bucket.events || !bucket.events.length)){
+      delete data.days[ds][userId];
+    }
+    if(data.days[ds] && !data.days[ds].user1 && !data.days[ds].user2){
+      delete data.days[ds];
+    }
   }
-  function setStatus(ds, value){
+  function setStatus(ds, value, userId){
     if(!data.days[ds]) data.days[ds] = {};
-    data.days[ds].status = value;
-    cleanupDay(ds);
+    if(!data.days[ds][userId]) data.days[ds][userId] = { status:'', events:[] };
+    data.days[ds][userId].status = value;
+    cleanupDay(ds, userId);
     save();
   }
-  function getDayEvents(ds){
-    const evs = (data.days[ds] && data.days[ds].events) || [];
+  function getDayStatus(ds, userId){
+    const bucket = data.days[ds] && data.days[ds][userId];
+    return (bucket && bucket.status) || '';
+  }
+  function getDayEvents(ds, userId){
+    const bucket = data.days[ds] && data.days[ds][userId];
+    const evs = (bucket && bucket.events) || [];
     return evs.slice().sort((a, b)=>{
       if(!!a.allDay !== !!b.allDay) return a.allDay ? -1 : 1;
       return (a.start || '').localeCompare(b.start || '');
     });
   }
-  // Retire un évènement (par id) de TOUS les jours où il apparaît. Utilisé
-  // avant de ré-enregistrer un évènement (pour repartir d'un état propre,
-  // qu'il ait changé de plage de dates ou non) et pour une suppression.
-  function deleteEventEverywhere(id){
+  // Combine les évènements des utilisateurs VISIBLES sur ce jour (cases
+  // "Afficher" en haut de page) : chaque évènement est renvoyé sur une copie
+  // superficielle taggée _owner (jamais l'objet original), pour router
+  // correctement clic/édition et couleur (calendrier du bon propriétaire)
+  // sans jamais toucher aux données réelles.
+  function getVisibleDayEvents(ds){
+    let combined = [];
+    visibleUserKeys().forEach(u=>{
+      combined = combined.concat(getDayEvents(ds, u).map(ev=>Object.assign({}, ev, { _owner: u })));
+    });
+    combined.sort((a, b)=>{
+      if(!!a.allDay !== !!b.allDay) return a.allDay ? -1 : 1;
+      return (a.start || '').localeCompare(b.start || '');
+    });
+    return combined;
+  }
+  // Retire un évènement (par id) de TOUS les jours où il apparaît, chez UN
+  // utilisateur. Utilisé avant de ré-enregistrer un évènement (pour repartir
+  // d'un état propre, qu'il ait changé de plage de dates ou non) et pour une
+  // suppression.
+  function deleteEventEverywhere(id, userId){
     Object.keys(data.days).forEach(ds=>{
-      const d = data.days[ds];
-      if(d && d.events && d.events.length){
-        d.events = d.events.filter(e=>e.id !== id);
+      const bucket = data.days[ds] && data.days[ds][userId];
+      if(bucket && bucket.events && bucket.events.length){
+        bucket.events = bucket.events.filter(e=>e.id !== id);
       }
-      cleanupDay(ds);
+      cleanupDay(ds, userId);
     });
   }
-  // Enregistre un évènement. Pour un évènement "journée entière", ev.dateStart
-  // / ev.dateEnd définissent une plage (un seul jour si identiques) : le même
-  // évènement (même id) est dupliqué sur chaque jour de la plage, ce qui
-  // permet ensuite de le fusionner en un seul bandeau en vue Mois. Pour un
-  // évènement horaire, il n'existe que sur son unique jour (ev.ds).
-  function saveEvent(ev){
-    deleteEventEverywhere(ev.id);
+  // Enregistre un évènement pour l'utilisateur userId (son propriétaire).
+  // Pour un évènement "journée entière", ev.dateStart/ev.dateEnd définissent
+  // une plage (un seul jour si identiques) : le même évènement (même id) est
+  // dupliqué sur chaque jour de la plage, ce qui permet ensuite de le
+  // fusionner en un seul bandeau en vue Mois. Pour un évènement horaire, il
+  // n'existe que sur son unique jour (ev.ds).
+  function saveEvent(ev, userId){
+    deleteEventEverywhere(ev.id, userId);
     if(ev.allDay){
       const dateStart = ev.dateStart;
       const dateEnd = ev.dateEnd && ev.dateEnd >= dateStart ? ev.dateEnd : dateStart;
@@ -1081,8 +1383,8 @@
       while(d <= end){
         const ds2 = dateStr(d.getFullYear(), d.getMonth(), d.getDate());
         if(!data.days[ds2]) data.days[ds2] = {};
-        if(!data.days[ds2].events) data.days[ds2].events = [];
-        data.days[ds2].events.push({
+        if(!data.days[ds2][userId]) data.days[ds2][userId] = { status:'', events:[] };
+        data.days[ds2][userId].events.push({
           id: ev.id, title: ev.title, allDay: true, dateStart, dateEnd,
           calendarId: ev.calendarId, location: ev.location || '', notes: ev.notes || ''
         });
@@ -1091,8 +1393,8 @@
     } else {
       const ds2 = ev.ds;
       if(!data.days[ds2]) data.days[ds2] = {};
-      if(!data.days[ds2].events) data.days[ds2].events = [];
-      data.days[ds2].events.push({
+      if(!data.days[ds2][userId]) data.days[ds2][userId] = { status:'', events:[] };
+      data.days[ds2][userId].events.push({
         id: ev.id, title: ev.title, allDay: false, start: ev.start, end: ev.end,
         calendarId: ev.calendarId, location: ev.location || '', notes: ev.notes || '',
         reminder: ev.reminder || ''
@@ -1154,9 +1456,10 @@
   function openHalfDayMenu(ds, rect){
     const menu = document.getElementById('statusMenu');
     menu.innerHTML = '';
-    const catForBrush = data.settings.categories[currentBrush];
+    const userId = activeUserId();
+    const catForBrush = data.settings.categories[userId][currentBrush];
     const brushLabel = (catForBrush && catForBrush.label) || currentBrush;
-    const brushColor = currentBrush ? categoryColor(currentBrush) : '#ccc';
+    const brushColor = currentBrush ? categoryColor(userId, currentBrush) : '#ccc';
     const options = [
       {value: currentBrush, label: brushLabel + ' — journée entière', color: brushColor},
       {value: currentBrush + '_am', label: brushLabel + ' — matin', color: brushColor},
@@ -1174,7 +1477,7 @@
       btn.appendChild(document.createTextNode(opt.label));
       btn.addEventListener('click', (e)=>{
         e.stopPropagation();
-        setStatus(ds, opt.value);
+        setStatus(ds, opt.value, userId);
         closeStatusMenu();
         renderYear();
       });
@@ -1198,6 +1501,7 @@
   // Applies currentBrush (or clears, if '') as a full-day status across every
   // working day between dsA and dsB inclusive (order-independent).
   function applyRange(dsA, dsB, brush){
+    const userId = activeUserId();
     let start = new Date(dsA + 'T00:00:00');
     let end = new Date(dsB + 'T00:00:00');
     if(start > end){ const tmp = start; start = end; end = tmp; }
@@ -1211,7 +1515,7 @@
       const isWeekend = (dow === 0 || dow === 6);
       const isHoliday = !!holidayCache[y][ds];
       if(!isWeekend && !isHoliday){
-        setStatus(ds, brush);
+        setStatus(ds, brush, userId);
       }
       d.setDate(d.getDate() + 1);
     }
@@ -1231,7 +1535,7 @@
       updatePendingHint();
       renderYear();
     } else if(pendingStart === ds){
-      const catNow = data.settings.categories[currentBrush];
+      const catNow = data.settings.categories[activeUserId()][currentBrush];
       if(catNow && catNow.halfDayAllowed){
         // Seules les catégories autorisant la demi-journée proposent ce menu.
         const rect = numEl.getBoundingClientRect();
@@ -1241,7 +1545,7 @@
         openHalfDayMenu(ds, rect);
       } else {
         // Catégories sans demi-journée (ou "Effacer") : re-cliquer applique/efface directement la journée entière.
-        setStatus(ds, currentBrush);
+        setStatus(ds, currentBrush, activeUserId());
         pendingStart = null;
         updatePendingHint();
         renderYear();
@@ -1276,8 +1580,35 @@
     const color = eventColor(ev);
     chip.style.background = pastelOf(color);
     chip.style.color = darkOf(color);
-    chip.addEventListener('click', (e)=>{ e.stopPropagation(); openEventModal(ds, ev.id); });
+    chip.addEventListener('click', (e)=>{ e.stopPropagation(); openEventModal(ds, ev.id, ev._owner); });
     return chip;
+  }
+  // Pose le fond (plein ou dégradé demi-journée) d'un statut sur un élément
+  // donné — factorisé pour être réutilisé tel quel sur une case entière (1
+  // seul utilisateur avec un statut) ou sur une moitié de case (2
+  // utilisateurs, voir buildStatusHalf) ainsi que sur les en-têtes de
+  // jour/semaine (renderTimeGrid).
+  function applyStatusBackground(el, statusInfo){
+    const pastel = pastelOf(statusInfo.color);
+    if(!statusInfo.half){
+      el.style.background = pastel;
+    } else if(statusInfo.half === 'am'){
+      el.style.background = 'linear-gradient(to bottom, ' + pastel + ' 50%, #fff 50%)';
+    } else {
+      el.style.background = 'linear-gradient(to bottom, #fff 50%, ' + pastel + ' 50%)';
+    }
+  }
+  // Une moitié (gauche = Utilisateur 1, droite = Utilisateur 2) de case-jour
+  // coupée en 2 quand les 2 utilisateurs sont visibles et ont chacun un
+  // statut posé le même jour (voir buildDayCell) — technique : div en
+  // position:absolute, z-index négatif, insérée dans une case qui a déjà
+  // position:relative + overflow:hidden (voir CSS .day), pour rester sous le
+  // numéro/les évènements sans avoir besoin de pointer-events:none ailleurs.
+  function buildStatusHalf(side, statusInfo){
+    const half = document.createElement('div');
+    half.className = 'day-status-half ' + side;
+    applyStatusBackground(half, statusInfo);
+    return half;
   }
   // Construit une case-jour complète (utilisée par les vues mois et année).
   // hiddenIds : Set optionnel d'ids d'évènements à ne pas afficher en chip
@@ -1287,34 +1618,34 @@
     const dow = new Date(ds + 'T00:00:00').getDay();
     const isWeekend = (dow === 0 || dow === 6);
     const holidayLabel = getHolidayLabel(ds);
-    const dayData = data.days[ds] || {};
-    const status = dayData.status || '';
     const todayStr = dateStr(new Date().getFullYear(), new Date().getMonth(), new Date().getDate());
     const cell = document.createElement('div');
     cell.className = 'day' + (big ? ' big' : '');
     if(ds === todayStr) cell.classList.add('today');
     if(ds === pendingStart) cell.classList.add('pending');
     if(isWeekend || holidayLabel) cell.classList.add('off');
-    // Fond de la case selon le statut posé (journée entière ou demi-journée),
-    // à partir de la couleur configurable de la catégorie plutôt que d'une
-    // classe CSS fixe (voir defaultCategories / renderCategoriesTable).
-    const statusInfo = describeStatus(status);
-    if(statusInfo){
-      const pastel = pastelOf(statusInfo.color);
-      if(!statusInfo.half){
-        cell.style.background = pastel;
-      } else if(statusInfo.half === 'am'){
-        cell.style.background = 'linear-gradient(to bottom, ' + pastel + ' 50%, #fff 50%)';
-      } else {
-        cell.style.background = 'linear-gradient(to bottom, #fff 50%, ' + pastel + ' 50%)';
-      }
+    // Statut de chaque utilisateur visible sur ce jour ("Afficher Utilisateur
+    // X" en haut de page). Si les 2 sont visibles et ont chacun un statut, la
+    // case est coupée en 2 (gauche = Utilisateur 1, droite = Utilisateur 2,
+    // voir buildStatusHalf) ; sinon un seul statut occupe toute la case,
+    // comme avant l'ajout de la vision double.
+    const statusByUser = USER_KEYS.map(u => isUserVisible(u) ? describeStatus(getDayStatus(ds, u), u) : null);
+    const activeStatuses = statusByUser.filter(Boolean);
+    if(activeStatuses.length === 1){
+      applyStatusBackground(cell, activeStatuses[0]);
+    } else if(activeStatuses.length === 2){
+      cell.appendChild(buildStatusHalf('left', statusByUser[0]));
+      cell.appendChild(buildStatusHalf('right', statusByUser[1]));
     }
     const titleParts = [];
     if(holidayLabel) titleParts.push(holidayLabel);
-    if(statusInfo){
-      const halfSuffix = statusInfo.half === 'am' ? ' (matin)' : statusInfo.half === 'pm' ? ' (après-midi)' : ' (journée)';
-      titleParts.push(statusInfo.label + halfSuffix);
-    }
+    USER_KEYS.forEach((u, idx)=>{
+      const info = statusByUser[idx];
+      if(!info) return;
+      const halfSuffix = info.half === 'am' ? ' (matin)' : info.half === 'pm' ? ' (après-midi)' : ' (journée)';
+      const prefix = activeStatuses.length === 2 ? userName(u) + ' : ' : '';
+      titleParts.push(prefix + info.label + halfSuffix);
+    });
     if(titleParts.length) cell.title = titleParts.join(' · ');
     const num = document.createElement('div');
     num.className = 'daynum';
@@ -1341,7 +1672,10 @@
       spacer.style.flexShrink = '0';
       evList.appendChild(spacer);
     }
-    const events = getDayEvents(ds).filter(ev=> !(hiddenIds && hiddenIds.has(ev.id)));
+    // Évènements des 2 utilisateurs visibles, combinés (voir
+    // getVisibleDayEvents) : chacun garde son propriétaire (_owner) pour la
+    // couleur (son calendrier) et pour router le clic vers la bonne édition.
+    const events = getVisibleDayEvents(ds).filter(ev=> !(hiddenIds && hiddenIds.has(ev.id)));
     const maxShow = big ? 4 : 2;
     events.slice(0, maxShow).forEach(ev=>{
       evList.appendChild(buildEventChip(ds, ev));
@@ -1395,7 +1729,7 @@
         } else {
           openSpans.set(key, {
             colStart: col, colEnd: col, title: ev.title, ds: cell.ds, id: ev.id,
-            color: eventColor(ev), location: ev.location || '',
+            color: eventColor(ev), location: ev.location || '', userId: ev._owner,
             hiddenIds: [{ ds: cell.ds, id: ev.id }]
           });
         }
@@ -1458,7 +1792,7 @@
       for(let col=0; col<7; col++){
         const gridIndex = row*7 + col;
         const ds = dsAtGridIndex(year, month, firstDow, gridIndex);
-        rowCells.push({ ds, events: getDayEvents(ds).filter(e=>e.allDay) });
+        rowCells.push({ ds, events: getVisibleDayEvents(ds).filter(e=>e.allDay) });
       }
       computeAllDaySpansForRow(rowCells).forEach(sp=>{
         sp.row = row;
@@ -1567,7 +1901,7 @@
           bar.style.left = (r1.left - gridRect.left) + 'px';
           bar.style.top = (r1.top - gridRect.top + topOffset + sp.lane*barH) + 'px';
           bar.style.width = (r2.right - r1.left) + 'px';
-          bar.addEventListener('click', (e)=>{ e.stopPropagation(); openEventModal(sp.ds, sp.id); });
+          bar.addEventListener('click', (e)=>{ e.stopPropagation(); openEventModal(sp.ds, sp.id, sp.userId); });
           grid.appendChild(bar);
         });
       });
@@ -1604,7 +1938,7 @@
     block.style.height = Math.max(((endMin-startMin)/60) * HOUR_H, 18) + 'px';
     block.textContent = (showTime && ev.start ? ev.start + ' ' : '') + ev.title;
     block.title = ev.title + (ev.start ? ' (' + ev.start + (ev.end ? '–' + ev.end : '') + ')' : '') + (ev.location ? ' · ' + ev.location : '');
-    block.addEventListener('click', (e)=>{ e.stopPropagation(); openEventModal(ds, ev.id); });
+    block.addEventListener('click', (e)=>{ e.stopPropagation(); openEventModal(ds, ev.id, ev._owner); });
     return block;
   }
   // Regroupe, pour une liste de jours consécutifs (vue Jour = 1 jour, vue
@@ -1613,7 +1947,7 @@
   // même logique que computeAllDaySpans, mais sur une liste de dates plutôt
   // que sur toute une grille de mois (pas de saut de ligne à gérer ici).
   function computeAllDaySpansForDates(dsList){
-    const rowCells = dsList.map(ds=>({ ds, events: getDayEvents(ds).filter(e=>e.allDay) }));
+    const rowCells = dsList.map(ds=>({ ds, events: getVisibleDayEvents(ds).filter(e=>e.allDay) }));
     return computeAllDaySpansForRow(rowCells);
   }
   // Grille horaire générique (00h-23h), utilisée pour la vue Jour (1 colonne)
@@ -1651,19 +1985,32 @@
         lbl.appendChild(document.createTextNode(JOURS[(d.getDay()+6)%7] + ' ' + d.getDate()));
         // Statut du jour (congé/RTT/télétravail/autre) : surbrillance de la
         // case elle-même (comme en vue Mois), pas un badge texte à côté qui
-        // prenait trop de place et décalait tout sur petit écran.
-        const info = describeStatus(data.days[ds] && data.days[ds].status);
-        if(info){
-          const pastel = pastelOf(info.color);
-          lbl.title = info.label + (info.half === 'am' ? ' (matin)' : info.half === 'pm' ? ' (après-midi)' : ' (journée)');
-          if(!info.half){
-            lbl.style.background = pastel;
-          } else if(info.half === 'am'){
-            lbl.style.background = 'linear-gradient(to bottom, ' + pastel + ' 50%, #fff 50%)';
-          } else {
-            lbl.style.background = 'linear-gradient(to bottom, #fff 50%, ' + pastel + ' 50%)';
-          }
+        // prenait trop de place et décalait tout sur petit écran. Coupée en 2
+        // (gauche/droite) si les 2 utilisateurs sont visibles et ont chacun
+        // un statut ce jour-là — même règle que buildDayCell.
+        const statusByUser = USER_KEYS.map(u => isUserVisible(u) ? describeStatus(getDayStatus(ds, u), u) : null);
+        const activeStatuses = statusByUser.filter(Boolean);
+        if(activeStatuses.length === 1){
+          applyStatusBackground(lbl, activeStatuses[0]);
+        } else if(activeStatuses.length === 2){
+          const half1 = document.createElement('div');
+          half1.className = 'timegrid-daylabel-half left';
+          applyStatusBackground(half1, statusByUser[0]);
+          const half2 = document.createElement('div');
+          half2.className = 'timegrid-daylabel-half right';
+          applyStatusBackground(half2, statusByUser[1]);
+          lbl.appendChild(half1);
+          lbl.appendChild(half2);
         }
+        const titleParts = [];
+        USER_KEYS.forEach((u, idx)=>{
+          const info = statusByUser[idx];
+          if(!info) return;
+          const halfSuffix = info.half === 'am' ? ' (matin)' : info.half === 'pm' ? ' (après-midi)' : ' (journée)';
+          const prefix = activeStatuses.length === 2 ? userName(u) + ' : ' : '';
+          titleParts.push(prefix + info.label + halfSuffix);
+        });
+        if(titleParts.length) lbl.title = titleParts.join(' · ');
         header.appendChild(lbl);
       });
       stickyWrap.appendChild(header);
@@ -1709,10 +2056,10 @@
         spacer.style.flexShrink = '0';
         cell.appendChild(spacer);
       }
-      getDayEvents(ds).filter(e=>e.allDay && !(hidden && hidden.has(e.id))).forEach(ev=>{
+      getVisibleDayEvents(ds).filter(e=>e.allDay && !(hidden && hidden.has(e.id))).forEach(ev=>{
         cell.appendChild(buildEventChip(ds, ev));
       });
-      cell.addEventListener('click', (e)=>{ if(e.target === cell) openEventModal(ds, null, {allDay:true}); });
+      cell.addEventListener('click', (e)=>{ if(e.target === cell) openEventModal(ds, null, activeUserId(), {allDay:true}); });
       allDayRow.appendChild(cell);
       allDayCellEls.push(cell);
     });
@@ -1744,7 +2091,7 @@
           bar.style.left = (r1.left - rowRect.left) + 'px';
           bar.style.top = (5 + sp.lane * 21) + 'px';
           bar.style.width = (r2.right - r1.left) + 'px';
-          bar.addEventListener('click', (e)=>{ e.stopPropagation(); openEventModal(sp.ds, sp.id); });
+          bar.addEventListener('click', (e)=>{ e.stopPropagation(); openEventModal(sp.ds, sp.id, sp.userId); });
           allDayRow.appendChild(bar);
         });
       });
@@ -1779,11 +2126,11 @@
         line.style.top = (h * HOUR_H) + 'px';
         line.style.height = HOUR_H + 'px';
         line.addEventListener('click', ()=>{
-          openEventModal(ds, null, { allDay:false, start: String(h).padStart(2,'0') + ':00' });
+          openEventModal(ds, null, activeUserId(), { allDay:false, start: String(h).padStart(2,'0') + ':00' });
         });
         col.appendChild(line);
       }
-      getDayEvents(ds).filter(e=>!e.allDay).forEach(ev=>{
+      getVisibleDayEvents(ds).filter(e=>!e.allDay).forEach(ev=>{
         col.appendChild(buildEventBlock(ds, ev, showTime));
       });
       inner.appendChild(col);
@@ -1869,11 +2216,14 @@
   // Construit dynamiquement les 3 lignes (fixes : conge/rtt/teletravail,
   // aucun ajout/suppression possible, seulement activer/désactiver et
   // renommer) de la table de réglages des catégories.
-  function renderCategoriesTable(){
-    const tbody = document.getElementById('categoriesTableBody');
+  // userId : construit la table des catégories de CET utilisateur (chacun a
+  // son propre jeu de 3 catégories, voir data.settings.categories[userId]).
+  function renderCategoriesTable(userId){
+    const tbody = document.getElementById('categoriesTableBody_' + userId);
+    if(!tbody) return;
     tbody.innerHTML = '';
     CATEGORY_KEYS.forEach(catKey=>{
-      const cat = data.settings.categories[catKey];
+      const cat = data.settings.categories[userId][catKey];
       const tr = document.createElement('tr');
 
       const tdEnabled = document.createElement('td');
@@ -1967,12 +2317,14 @@
       tbody.appendChild(tr);
     });
   }
-  // Construit la table des calendriers (nom, couleur, suppression) —
-  // nombre libre, contrairement aux 3 catégories congé/RTT/télétravail.
-  function renderCalendarsTable(){
-    const tbody = document.getElementById('calendarsTableBody');
+  // Construit la table des calendriers de CET utilisateur (nom, couleur,
+  // suppression) — nombre libre par utilisateur, contrairement aux 3
+  // catégories congé/RTT/télétravail qui restent fixes.
+  function renderCalendarsTable(userId){
+    const tbody = document.getElementById('calendarsTableBody_' + userId);
+    if(!tbody) return;
     tbody.innerHTML = '';
-    const calendars = data.settings.calendars || [];
+    const calendars = data.settings.calendars[userId] || [];
     calendars.forEach(cal=>{
       const tr = document.createElement('tr');
 
@@ -2001,9 +2353,9 @@
       delBtn.title = calendars.length > 1 ? 'Supprimer ce calendrier' : 'Impossible de supprimer le dernier calendrier';
       delBtn.disabled = calendars.length <= 1;
       delBtn.addEventListener('click', ()=>{
-        if(data.settings.calendars.length <= 1) return;
+        if(data.settings.calendars[userId].length <= 1) return;
         if(!confirm('Supprimer le calendrier "' + (cal.name || '') + '" ? Ses évènements seront reportés sur un autre calendrier.')) return;
-        data.settings.calendars = data.settings.calendars.filter(c=>c.id !== cal.id);
+        data.settings.calendars[userId] = data.settings.calendars[userId].filter(c=>c.id !== cal.id);
         data.days = migrateEventsToCalendars(data.days, data.settings.calendars);
         save(); renderSettings(); renderYear();
       });
@@ -2014,8 +2366,28 @@
     });
   }
   function renderSettings(){
-    renderCalendarsTable();
-    renderCategoriesTable();
+    document.getElementById('userName1').value = userName('user1');
+    document.getElementById('userName2').value = userName('user2');
+    USER_KEYS.forEach(u=>{
+      const name = userName(u);
+      const calTitle = document.getElementById('userSectionCal_' + u);
+      const catTitle = document.getElementById('userSectionCat_' + u);
+      const recTitle = document.getElementById('userSectionRec_' + u);
+      if(calTitle) calTitle.textContent = 'Calendriers — ' + name;
+      if(catTitle) catTitle.textContent = 'Catégories — ' + name;
+      if(recTitle) recTitle.textContent = 'Récapitulatif des jours — ' + name;
+      renderCalendarsTable(u);
+      renderCategoriesTable(u);
+    });
+    document.getElementById('showUser1Label').textContent = userName('user1');
+    document.getElementById('showUser2Label').textContent = userName('user2');
+    document.getElementById('showUser1').checked = isUserVisible('user1');
+    document.getElementById('showUser2').checked = isUserVisible('user2');
+    const sel = document.getElementById('activeUserSelect');
+    if(sel){
+      Array.from(sel.options).forEach(opt=>{ opt.textContent = userName(opt.value); });
+      sel.value = activeUserId();
+    }
     document.getElementById('startYear').value = data.settings.startYear;
     document.getElementById('syncUrlInput').value = syncUrl;
     updateNotifsStatus();
@@ -2088,14 +2460,48 @@
     data.settings.holidayRules.push({type:'fixed', month:1, day:1, label:'Nouveau jour férié'});
     save(); renderSettings(); renderYear();
   });
-  document.getElementById('addCalendar').addEventListener('click', ()=>{
-    // Couleur de départ : la première preset pas encore utilisée par un
-    // calendrier existant, pour que les nouveaux calendriers se distinguent
-    // visuellement d'entrée sans avoir à y penser.
-    const usedColors = data.settings.calendars.map(c=>c.color);
-    const nextColor = PRESET_COLORS.filter(c=>usedColors.indexOf(c) === -1)[0] || PRESET_COLORS[data.settings.calendars.length % PRESET_COLORS.length];
-    data.settings.calendars.push({ id: makeCalendarId(), name: 'Nouveau calendrier', color: nextColor });
+  // Un bouton "+ Ajouter un calendrier" par utilisateur (voir le bloc de
+  // Paramètres dupliqué par utilisateur, Task 67).
+  USER_KEYS.forEach(userId=>{
+    const btn = document.getElementById('addCalendar_' + userId);
+    if(!btn) return;
+    btn.addEventListener('click', ()=>{
+      // Couleur de départ : la première preset pas encore utilisée par un
+      // calendrier existant DE CET UTILISATEUR, pour que ses nouveaux
+      // calendriers se distinguent visuellement d'entrée sans avoir à y penser.
+      const list = data.settings.calendars[userId];
+      const usedColors = list.map(c=>c.color);
+      const nextColor = PRESET_COLORS.filter(c=>usedColors.indexOf(c) === -1)[0] || PRESET_COLORS[list.length % PRESET_COLORS.length];
+      list.push({ id: makeCalendarId(), name: 'Nouveau calendrier', color: nextColor });
+      save(); renderSettings(); renderYear();
+    });
+  });
+  document.getElementById('userName1').addEventListener('input', (e)=>{
+    data.settings.users.user1.name = e.target.value;
     save(); renderSettings(); renderYear();
+  });
+  document.getElementById('userName2').addEventListener('input', (e)=>{
+    data.settings.users.user2.name = e.target.value;
+    save(); renderSettings(); renderYear();
+  });
+  // Utilisateur actif (pour qui on édite en cliquant sur une case/en créant
+  // un évènement) et visibilité de chaque utilisateur sur le calendrier :
+  // 2 contrôles bien séparés (voir le "user-bar" en haut de page), l'un
+  // n'affecte jamais l'autre.
+  document.getElementById('activeUserSelect').addEventListener('change', (e)=>{
+    uiState.activeUser = e.target.value === 'user2' ? 'user2' : 'user1';
+    saveUIState();
+    renderYear();
+  });
+  document.getElementById('showUser1').addEventListener('change', (e)=>{
+    uiState.visible.user1 = e.target.checked;
+    saveUIState();
+    renderYear();
+  });
+  document.getElementById('showUser2').addEventListener('change', (e)=>{
+    uiState.visible.user2 = e.target.checked;
+    saveUIState();
+    renderYear();
   });
   document.getElementById('toggleSettings').addEventListener('click', ()=>{
     document.getElementById('settingsPanel').classList.toggle('hidden');
@@ -2143,15 +2549,18 @@
   });
 
   // ---- Modale de création / édition d'évènement ----
-  let eventModalCtx = null; // { ds, id } — id est null pour une création
-  let lastUsedCalendarId = null; // mémorise le dernier calendrier choisi, pour le proposer par défaut à la prochaine création
-  // Remplit le <select> "Calendrier" avec la liste actuelle des calendriers
-  // (voir defaultCalendars/resolveCalendars) ; chaque option est teintée de
-  // la couleur du calendrier pour s'y retrouver facilement.
-  function populateEventCalendarSelect(selectedId){
+  let eventModalCtx = null; // { ds, id, owner } — id est null pour une création ; owner = propriétaire (user1|user2)
+  // Mémorise le dernier calendrier choisi PAR UTILISATEUR, pour le proposer
+  // par défaut à la prochaine création (chacun a ses propres calendriers).
+  let lastUsedCalendarId = { user1: null, user2: null };
+  // Remplit le <select> "Calendrier" avec les calendriers de l'utilisateur
+  // PROPRIÉTAIRE de l'évènement (ownerUserId) — pas nécessairement
+  // l'utilisateur actif : éditer un évènement de l'autre utilisateur montre
+  // ses calendriers à lui, pas les siens.
+  function populateEventCalendarSelect(ownerUserId, selectedId){
     const sel = document.getElementById('evCalendar');
     sel.innerHTML = '';
-    const calendars = data.settings.calendars || [];
+    const calendars = (data.settings.calendars && data.settings.calendars[ownerUserId]) || [];
     calendars.forEach(cal=>{
       const opt = document.createElement('option');
       opt.value = cal.id;
@@ -2160,14 +2569,23 @@
       sel.appendChild(opt);
     });
     const fallback = calendars[0] ? calendars[0].id : '';
-    sel.value = (selectedId && calendars.some(c=>c.id === selectedId)) ? selectedId : (lastUsedCalendarId && calendars.some(c=>c.id === lastUsedCalendarId) ? lastUsedCalendarId : fallback);
+    const lastUsed = lastUsedCalendarId[ownerUserId];
+    sel.value = (selectedId && calendars.some(c=>c.id === selectedId)) ? selectedId : (lastUsed && calendars.some(c=>c.id === lastUsed) ? lastUsed : fallback);
   }
-  function openEventModal(ds, eventId, defaults){
+  // ownerUserId : propriétaire de l'évènement — pour une création, l'appelant
+  // passe toujours l'utilisateur actif (activeUserId()) ; pour une édition,
+  // celui qui possède réellement l'évènement (ev._owner, propagé depuis
+  // getVisibleDayEvents jusqu'aux clics sur chips/blocs/bandeaux). On ne
+  // redemande pas explicitement "à qui appartient cet évènement" : le
+  // calendrier choisi (toujours celui d'UN utilisateur précis) suffit à le
+  // déterminer, pas besoin d'un second sélecteur redondant.
+  function openEventModal(ds, eventId, ownerUserId, defaults){
     defaults = defaults || {};
-    eventModalCtx = { ds, id: eventId || null };
+    ownerUserId = ownerUserId || activeUserId();
+    eventModalCtx = { ds, id: eventId || null, owner: ownerUserId };
     const isEdit = !!eventId;
-    const ev = isEdit ? (getDayEvents(ds).find(e=>e.id === eventId) || {}) : null;
-    document.getElementById('eventModalTitle').textContent = isEdit ? "Modifier l'évènement" : 'Nouvel évènement';
+    const ev = isEdit ? (getDayEvents(ds, ownerUserId).find(e=>e.id === eventId) || {}) : null;
+    document.getElementById('eventModalTitle').textContent = (isEdit ? "Modifier l'évènement" : 'Nouvel évènement') + ' — ' + userName(ownerUserId);
     document.getElementById('evTitle').value = ev ? (ev.title || '') : '';
     const allDay = ev ? !!ev.allDay : !!defaults.allDay;
     document.getElementById('evAllDay').checked = allDay;
@@ -2190,7 +2608,7 @@
     document.getElementById('evReminderLabel').style.display = allDay ? 'none' : 'block';
     document.getElementById('evReminder').style.display = allDay ? 'none' : 'block';
     document.getElementById('evDelete').style.display = isEdit ? 'inline-block' : 'none';
-    populateEventCalendarSelect(ev ? ev.calendarId : null);
+    populateEventCalendarSelect(ownerUserId, ev ? ev.calendarId : null);
     document.getElementById('eventModal').classList.remove('hidden');
     document.getElementById('evTitle').focus();
   }
@@ -2225,6 +2643,7 @@
   });
   document.getElementById('evSave').addEventListener('click', ()=>{
     if(!eventModalCtx) return;
+    const ownerUserId = eventModalCtx.owner || activeUserId();
     const title = document.getElementById('evTitle').value.trim();
     if(!title){ alert('Merci de renseigner un titre.'); return; }
     const allDay = document.getElementById('evAllDay').checked;
@@ -2232,7 +2651,7 @@
     const location = document.getElementById('evLocation').value.trim();
     const notes = document.getElementById('evNotes').value.trim();
     const calendarId = document.getElementById('evCalendar').value;
-    lastUsedCalendarId = calendarId;
+    lastUsedCalendarId[ownerUserId] = calendarId;
     const reminder = allDay ? '' : document.getElementById('evReminder').value;
     if(allDay){
       let dateStart = document.getElementById('evDateStart').value || eventModalCtx.ds;
@@ -2240,11 +2659,11 @@
       if(dateEnd < dateStart){ const tmp = dateStart; dateStart = dateEnd; dateEnd = tmp; }
       const spanDays = Math.round((new Date(dateEnd) - new Date(dateStart)) / 86400000) + 1;
       if(spanDays > 366){ alert('Cette période est trop longue (plus d\'un an).'); return; }
-      saveEvent({ id, title, allDay: true, dateStart, dateEnd, location, notes, calendarId, reminder: '' });
+      saveEvent({ id, title, allDay: true, dateStart, dateEnd, location, notes, calendarId, reminder: '' }, ownerUserId);
     } else {
       const start = document.getElementById('evStart').value || '00:00';
       const end = document.getElementById('evEnd').value || '';
-      saveEvent({ id, title, allDay: false, ds: eventModalCtx.ds, start, end, location, notes, calendarId, reminder });
+      saveEvent({ id, title, allDay: false, ds: eventModalCtx.ds, start, end, location, notes, calendarId, reminder }, ownerUserId);
     }
     closeEventModal();
     renderYear();
@@ -2252,7 +2671,7 @@
   document.getElementById('evDelete').addEventListener('click', ()=>{
     if(!eventModalCtx || !eventModalCtx.id) return;
     if(confirm('Supprimer cet évènement ?')){
-      deleteEventEverywhere(eventModalCtx.id);
+      deleteEventEverywhere(eventModalCtx.id, eventModalCtx.owner || activeUserId());
       save();
       closeEventModal();
       renderYear();
@@ -2340,24 +2759,29 @@
     const now = new Date();
     const todayStr = dateStr(now.getFullYear(), now.getMonth(), now.getDate());
     if(notifiedState.day !== todayStr) notifiedState = { day: todayStr, ids: [] };
-    getDayEvents(todayStr).filter(ev=>!ev.allDay && ev.reminder).forEach(ev=>{
-      const key = ev.id + ':' + ev.reminder;
-      if(notifiedState.ids.indexOf(key) !== -1) return;
-      const parts = String(ev.start || '00:00').split(':');
-      const startDt = new Date(now.getFullYear(), now.getMonth(), now.getDate(), Number(parts[0])||0, Number(parts[1])||0, 0);
-      const triggerDt = new Date(startDt.getTime() - Number(ev.reminder) * 60000);
-      const diffMs = now - triggerDt;
-      // Fenêtre de 60s : la vérification tourne toutes les 20s, une fenêtre
-      // plus large évite de rater le déclenchement entre deux vérifications.
-      if(diffMs >= 0 && diffMs < 60000){
-        try {
-          new Notification(ev.title, {
-            body: 'À ' + ev.start + (ev.location ? ' · ' + ev.location : ''),
-            tag: key
-          });
-        } catch(e){ /* ignore */ }
-        markNotified(key);
-      }
+    // Les rappels de CHAQUE utilisateur se déclenchent sur cet appareil quel
+    // que soit l'utilisateur actif ou les cases "Afficher" (un rappel n'a
+    // pas de raison de dépendre de la visibilité sur le calendrier partagé).
+    USER_KEYS.forEach(userId=>{
+      getDayEvents(todayStr, userId).filter(ev=>!ev.allDay && ev.reminder).forEach(ev=>{
+        const key = userId + ':' + ev.id + ':' + ev.reminder;
+        if(notifiedState.ids.indexOf(key) !== -1) return;
+        const parts = String(ev.start || '00:00').split(':');
+        const startDt = new Date(now.getFullYear(), now.getMonth(), now.getDate(), Number(parts[0])||0, Number(parts[1])||0, 0);
+        const triggerDt = new Date(startDt.getTime() - Number(ev.reminder) * 60000);
+        const diffMs = now - triggerDt;
+        // Fenêtre de 60s : la vérification tourne toutes les 20s, une fenêtre
+        // plus large évite de rater le déclenchement entre deux vérifications.
+        if(diffMs >= 0 && diffMs < 60000){
+          try {
+            new Notification(ev.title, {
+              body: 'À ' + ev.start + (ev.location ? ' · ' + ev.location : '') + ' · ' + userName(userId),
+              tag: key
+            });
+          } catch(e){ /* ignore */ }
+          markNotified(key);
+        }
+      });
     });
   }
   setInterval(checkReminders, 20000);
@@ -2391,12 +2815,13 @@
         const d = defaultData();
         const incoming = parsed.settings || {};
         d.settings = Object.assign(d.settings, incoming);
+        d.settings.users = resolveUsers(incoming);
         d.settings.categories = resolveCategories(incoming);
         d.settings.calendars = resolveCalendars(incoming);
         delete d.settings.congesParAn; delete d.settings.rttParAn;
         delete d.settings.capReportEnabled; delete d.settings.capReport;
         d.lastViewedYear = parsed.lastViewedYear || d.lastViewedYear;
-        d.days = migrateEventsToCalendars(migrateLegacyNotes(parsed.days || {}), d.settings.calendars);
+        d.days = migrateEventsToCalendars(migrateDaysToUsers(migrateLegacyNotes(parsed.days || {})), d.settings.calendars);
         data = d;
         save();
         renderSettings();
