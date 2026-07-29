@@ -1161,25 +1161,32 @@
     });
     return max;
   }
+  // Résout la vraie date (ds) d'une case de la grille Mois, y compris pour
+  // les cases hors-mois (jours du mois précédent/suivant affichés en
+  // bordure) : new Date(year, month, dayNum) normalise automatiquement les
+  // dayNum <1 ou >nombre de jours du mois vers le bon mois/année réel.
+  function dsAtGridIndex(year, month, firstDow, gridIndex){
+    const dayNum = gridIndex - firstDow + 1;
+    const d = new Date(year, month, dayNum);
+    return dateStr(d.getFullYear(), d.getMonth(), d.getDate());
+  }
   function computeAllDaySpans(year, month){
     const firstDow = (new Date(year, month, 1).getDay() + 6) % 7; // Monday=0
     const daysInMonth = new Date(year, month+1, 0).getDate();
-    // Construit une grille de lignes de 7 colonnes (comme l'affichage), avec
-    // des cases vides (sans évènements) avant le 1er et après le dernier jour.
-    const totalCells = firstDow + daysInMonth;
-    const totalRows = Math.ceil(totalCells / 7);
+    // Construit une grille de lignes de 7 colonnes (comme l'affichage). Les
+    // jours hors-mois affichés en bordure (mois précédent/suivant) ont leurs
+    // propres évènements pris en compte eux aussi, pour qu'un évènement
+    // journée entière reste visible même sur les jours affichés en dehors
+    // du mois courant.
+    const totalCells = Math.ceil((firstDow + daysInMonth) / 7) * 7;
+    const totalRows = totalCells / 7;
     const allSpans = [];
     for(let row=0; row<totalRows; row++){
       const rowCells = [];
       for(let col=0; col<7; col++){
         const gridIndex = row*7 + col;
-        const dayNum = gridIndex - firstDow + 1;
-        if(dayNum >= 1 && dayNum <= daysInMonth){
-          const ds = dateStr(year, month, dayNum);
-          rowCells.push({ ds, events: getDayEvents(ds).filter(e=>e.allDay) });
-        } else {
-          rowCells.push({ ds: null, events: [] });
-        }
+        const ds = dsAtGridIndex(year, month, firstDow, gridIndex);
+        rowCells.push({ ds, events: getDayEvents(ds).filter(e=>e.allDay) });
       }
       computeAllDaySpansForRow(rowCells).forEach(sp=>{
         sp.row = row;
@@ -1203,20 +1210,6 @@
   // renderYear) plutôt qu'ici, pour qu'elle ne fasse plus qu'un avec l'en-tête
   // et la barre congé/RTT/télétravail (un seul bloc immobile, sans étage
   // intermédiaire qui pourrait se décaler indépendamment).
-  // Case grisée pour un jour du mois précédent/suivant affiché en bordure de
-  // grille (juste pour le repère visuel et la navigation, comme dans la
-  // plupart des calendriers) : pas de statut/évènements affichés dessus, un
-  // clic ouvre sa vraie vue Jour où on peut poser un statut ou un évènement.
-  function buildAdjacentDayCell(ds, big){
-    const cell = document.createElement('div');
-    cell.className = 'day adjacent' + (big ? ' big' : '');
-    const num = document.createElement('div');
-    num.className = 'daynum';
-    num.textContent = Number(ds.slice(8, 10));
-    cell.appendChild(num);
-    cell.addEventListener('click', ()=>goToDayView(ds));
-    return cell;
-  }
   function renderMonth(year, month, big, skipWeekHeader){
     const wrap = document.createElement('div');
     wrap.className = 'month-block' + (big ? ' large' : '');
@@ -1252,25 +1245,21 @@
     spans.forEach(sp=>{
       for(let col=sp.colStart; col<=sp.colEnd; col++){
         const gridIndex = sp.row*7 + col;
-        const dayNum = gridIndex - firstDow + 1;
-        if(dayNum >= 1 && dayNum <= daysInMonth){
-          const ds = dateStr(year, month, dayNum);
-          laneCountByDs[ds] = Math.max(laneCountByDs[ds]||0, sp.lane+1);
-        }
+        const ds = dsAtGridIndex(year, month, firstDow, gridIndex);
+        laneCountByDs[ds] = Math.max(laneCountByDs[ds]||0, sp.lane+1);
       }
     });
     const cellByIndex = [];
     for(let gridIndex=0; gridIndex<totalCells; gridIndex++){
       const dayNum = gridIndex - firstDow + 1;
-      let cellEl;
-      if(dayNum < 1 || dayNum > daysInMonth){
-        const adjDate = new Date(year, month, dayNum);
-        const adjDs = dateStr(adjDate.getFullYear(), adjDate.getMonth(), adjDate.getDate());
-        cellEl = buildAdjacentDayCell(adjDs, big);
-      } else {
-        const ds = dateStr(year, month, dayNum);
-        cellEl = buildDayCell(ds, big, hiddenByDs[ds], laneCountByDs[ds] || 0);
-      }
+      const isAdjacent = dayNum < 1 || dayNum > daysInMonth;
+      const ds = dsAtGridIndex(year, month, firstDow, gridIndex);
+      // Les jours hors-mois (bordure de grille) réutilisent la même case
+      // que les jours normaux — statut, évènements/bandeaux et clic
+      // fonctionnent pareil — juste grisée (classe "adjacent") pour bien la
+      // distinguer visuellement du mois affiché.
+      const cellEl = buildDayCell(ds, big, hiddenByDs[ds], laneCountByDs[ds] || 0);
+      if(isAdjacent) cellEl.classList.add('adjacent');
       grid.appendChild(cellEl);
       cellByIndex.push(cellEl);
     }
