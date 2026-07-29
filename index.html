@@ -2814,22 +2814,30 @@
   }
   document.getElementById('prevPeriod').addEventListener('click', ()=>navigatePeriod(-1));
   document.getElementById('nextPeriod').addEventListener('click', ()=>navigatePeriod(1));
+  // Vue Année : fait défiler jusqu'au bloc du mois en cours (celui de
+  // viewDate) pour qu'il soit bien visible — un seul mois par ligne sur
+  // téléphone, plusieurs colonnes sur ordinateur. On positionne le HAUT du
+  // bloc juste sous le bandeau figé (+ une petite marge), plutôt que de le
+  // centrer dans l'écran : un centrage pur pouvait laisser le haut du bloc
+  // (avec le nom du mois) remonter sous le bandeau et se faire couper,
+  // surtout sur petit écran où le bandeau est plus haut (2 lignes).
+  function scrollToCurrentYearMonth(smooth){
+    if(viewMode !== 'year') return;
+    const targetMonth = viewDate.getMonth();
+    requestAnimationFrame(()=>{
+      const el = document.querySelector('#calendarGrid .month-block[data-month="' + targetMonth + '"]');
+      const stickyTop = document.getElementById('stickyTop');
+      if(!el || !stickyTop) return;
+      const stickyH = stickyTop.getBoundingClientRect().height;
+      const target = window.scrollY + el.getBoundingClientRect().top - stickyH - 12;
+      window.scrollTo({ top: Math.max(0, target), behavior: smooth === false ? 'auto' : 'smooth' });
+    });
+  }
   document.getElementById('todayBtn').addEventListener('click', ()=>{
     viewDate = new Date();
     viewDate.setHours(0, 0, 0, 0);
     renderYear();
-    // Vue Année : fait défiler jusqu'au bloc du mois en cours pour qu'il soit
-    // bien visible — un seul mois par ligne sur téléphone (défilement
-    // direct), plusieurs colonnes sur ordinateur (on centre la ligne du bon
-    // mois, ce qui revient à "descendre assez" pour qu'il ne soit pas juste
-    // à peine visible en haut de l'écran).
-    if(viewMode === 'year'){
-      const targetMonth = viewDate.getMonth();
-      requestAnimationFrame(()=>{
-        const el = document.querySelector('#calendarGrid .month-block[data-month="' + targetMonth + '"]');
-        if(el) el.scrollIntoView({ behavior:'smooth', block:'center' });
-      });
-    }
+    scrollToCurrentYearMonth();
   });
   document.querySelectorAll('.view-btn').forEach(btn=>{
     btn.addEventListener('click', ()=>{
@@ -3273,6 +3281,11 @@
   setInterval(autoPull, 10 * 60 * 1000);
   renderSettings();
   renderYear();
+  // Vue Année par défaut : directement positionné sur le mois en cours (pas
+  // besoin de cliquer sur "Aujourd'hui" au premier chargement) — sans
+  // animation ("smooth"=false), pour ne pas faire un défilement visible
+  // juste après l'ouverture de la page.
+  scrollToCurrentYearMonth(false);
   setSyncStatus(syncUrl ? 'ok' : 'none');
   if(syncUrl){ autoPull(); }
 })();
