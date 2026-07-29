@@ -117,14 +117,19 @@
   .sync-status.ok { background:#d1e7dd; color:#0f5132; }
   .sync-status.error { background:#f8d7da; color:#842029; }
   .hint { font-size:12px; color:#888; margin:-4px 0 12px; }
-  table#holidayTable, table#categoriesTable { width:100%; border-collapse:collapse; font-size:13px; margin-bottom:10px; }
-  table#holidayTable th, table#holidayTable td, table#categoriesTable th, table#categoriesTable td { border-bottom:1px solid var(--border); padding:6px 6px; text-align:left; }
-  table#holidayTable input[type=text], table#categoriesTable input[type=text] { width:100%; padding:4px 6px; border:1px solid var(--border); border-radius:5px; }
+  table#holidayTable, table#categoriesTable, table#calendarsTable { width:100%; border-collapse:collapse; font-size:13px; margin-bottom:10px; }
+  table#holidayTable th, table#holidayTable td, table#categoriesTable th, table#categoriesTable td, table#calendarsTable th, table#calendarsTable td { border-bottom:1px solid var(--border); padding:6px 6px; text-align:left; }
+  table#holidayTable input[type=text], table#categoriesTable input[type=text], table#calendarsTable input[type=text] { width:100%; padding:4px 6px; border:1px solid var(--border); border-radius:5px; }
   table#holidayTable input[type=number], table#categoriesTable input[type=number] { width:60px; padding:4px 6px; border:1px solid var(--border); border-radius:5px; }
   table#holidayTable select { padding:4px 6px; border:1px solid var(--border); border-radius:5px; }
   table#categoriesTable input[type=checkbox] { width:16px; height:16px; }
+  table#calendarsTable .color-picker { margin:0; }
+  table#calendarsTable .color-picker-swatches { gap:4px; }
+  table#calendarsTable .color-swatch-btn { width:18px; height:18px; }
+  table#calendarsTable .color-picker-advanced-toggle { font-size:10px; }
+  table#calendarsTable .color-picker-custom { width:26px; height:18px; }
   .del-btn { background:none; border:none; border-radius:0; color:#c0392b; cursor:pointer; font-size:15px; }
-  #addHoliday { margin-top:4px; border:1px dashed #aaa; background:#fff; padding:6px 12px; border-radius:10px; cursor:pointer; font-size:13px; }
+  #addHoliday, #addCalendar { margin-top:4px; border:1px dashed #aaa; background:#fff; padding:6px 12px; border-radius:10px; cursor:pointer; font-size:13px; }
   .settings-actions { display:flex; gap:10px; margin-top:16px; flex-wrap:wrap; }
   .months-grid {
     display:grid; grid-template-columns: repeat(3, 1fr); gap:16px;
@@ -215,10 +220,6 @@
     border-radius:8px; background:var(--card-bg); text-transform:capitalize;
   }
   .timegrid-daylabel.today { color:#e53935; background:#fdecea; }
-  .timegrid-daylabel .daylabel-badge {
-    display:inline-block; margin-left:5px; padding:1px 7px; border-radius:8px;
-    font-size:10px; font-weight:700; text-transform:none; color:#333; vertical-align:middle;
-  }
   .timegrid-allday-cell {
     border-radius:8px; background:var(--card-bg); min-height:30px; padding:4px 6px; cursor:pointer;
     display:flex; flex-direction:column; gap:3px;
@@ -361,6 +362,13 @@
     <div id="stickyExtra"></div>
   </div>
   <div id="settingsPanel" class="hidden">
+    <h3>Calendriers</h3>
+    <table id="calendarsTable">
+      <thead><tr><th>Nom</th><th>Couleur</th><th></th></tr></thead>
+      <tbody id="calendarsTableBody"></tbody>
+    </table>
+    <button id="addCalendar">+ Ajouter un calendrier</button>
+    <div class="hint">Chaque évènement appartient à un calendrier et prend sa couleur (voir la modale de création). Créez-en autant que nécessaire (perso, travail, projets...). Supprimer un calendrier reporte ses évènements sur le calendrier restant le plus ancien.</div>
     <h3>Catégories</h3>
     <table id="categoriesTable">
       <thead><tr><th>Activée</th><th>Nom</th><th>Couleur</th><th>Quota/an (j)</th><th>Report</th><th>Plafond report</th><th>Demi-journée</th></tr></thead>
@@ -436,9 +444,10 @@
     <h3>Notifications</h3>
     <div class="settings-row">
       <button id="enableNotifs">🔔 Activer les notifications</button>
+      <button id="testNotif">Tester la notification</button>
       <span id="notifsStatus" class="sync-status none"></span>
     </div>
-    <div class="hint">Déclenche une notification du navigateur au moment de l'alerte choisie sur un évènement (voir la modale de création). Ne fonctionne que si cet onglet reste ouvert dans le navigateur — pas de notification si le calendrier est fermé.</div>
+    <div class="hint">Déclenche une notification du navigateur au moment de l'alerte choisie sur un évènement (voir la modale de création). Ne fonctionne que si cet onglet reste ouvert et au premier plan dans le navigateur — pas de notification si le calendrier est fermé, en arrière-plan, ou sur iPhone/iPad hors PWA installée sur l'écran d'accueil (Safari mobile ne supporte pas les notifications web dans un onglet classique). Utilisez "Tester la notification" pour vérifier que ça fonctionne sur cet appareil, indépendamment de tout évènement.</div>
     <h3>Synchronisation Google Sheet</h3>
     <div class="settings-row">
       <label for="syncUrlInput">URL du script (Apps Script Web App)</label>
@@ -510,8 +519,8 @@
       <option value="60">1 h avant</option>
       <option value="120">2 h avant</option>
     </select>
-    <div class="ev-field-label">Couleur</div>
-    <div id="evColorPicker"></div>
+    <div class="ev-field-label">Calendrier</div>
+    <select id="evCalendar" class="ev-select"></select>
     <div class="modal-actions">
       <button id="evDelete" class="btn btn-danger-ghost">Supprimer</button>
       <div class="modal-actions-right">
@@ -661,16 +670,71 @@
     }
     return def;
   }
+  // "Calendriers" : regroupements libres d'évènements (illimités, contrairement
+  // aux 3 catégories congé/RTT/télétravail qui restent fixes) — chaque
+  // évènement appartient à un calendrier et prend sa couleur, plutôt que
+  // d'avoir sa propre couleur individuelle. Il y a toujours au moins un
+  // calendrier (celui par défaut, créé à l'installation).
+  function defaultCalendars(){
+    return [ { id: 'cal-default', name: 'Calendrier', color: DEFAULT_EVENT_COLOR } ];
+  }
+  function makeCalendarId(){
+    return 'cal' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+  }
+  // Reprend la liste de calendriers déjà enregistrée si elle existe (en
+  // s'assurant que chaque entrée a bien un id/nom/couleur), sinon crée le
+  // calendrier par défaut — pour les données antérieures à cette fonctionnalité.
+  function resolveCalendars(incoming){
+    if(incoming && Array.isArray(incoming.calendars) && incoming.calendars.length){
+      return incoming.calendars.map(c=>({
+        id: c.id || makeCalendarId(),
+        name: c.name || 'Calendrier',
+        color: c.color || DEFAULT_EVENT_COLOR
+      }));
+    }
+    return defaultCalendars();
+  }
+  // S'assure que chaque évènement (dans days) a un calendarId valide, en
+  // rattachant au calendrier par défaut ceux créés avant cette fonctionnalité
+  // (qui n'avaient qu'une couleur individuelle "ev.color") — sans rien
+  // perdre visuellement, le calendrier par défaut reprenant la même couleur
+  // bleue qui était utilisée par défaut auparavant.
+  function migrateEventsToCalendars(days, calendars){
+    const validIds = {};
+    calendars.forEach(c=>{ validIds[c.id] = true; });
+    const fallbackId = calendars[0].id;
+    Object.keys(days || {}).forEach(ds=>{
+      const evs = days[ds] && days[ds].events;
+      if(!evs) return;
+      evs.forEach(ev=>{
+        if(!ev.calendarId || !validIds[ev.calendarId]) ev.calendarId = fallbackId;
+      });
+    });
+    return days;
+  }
+  function findCalendar(calendarId){
+    return (data.settings.calendars || []).filter(c=>c.id === calendarId)[0];
+  }
+  // Couleur effective d'un évènement : celle de son calendrier (la source de
+  // vérité désormais) ; repli sur l'ancienne couleur individuelle ev.color
+  // pour un très bref instant avant que migrateEventsToCalendars() ne
+  // s'exécute, ou sur la couleur par défaut si tout manque.
+  function eventColor(ev){
+    const cal = findCalendar(ev.calendarId);
+    if(cal) return cal.color;
+    return ev.color || DEFAULT_EVENT_COLOR;
+  }
   function defaultData(){
     const y = new Date().getFullYear();
     return {
       settings: {
         categories: defaultCategories(),
+        calendars: defaultCalendars(),
         startYear: y,
         holidayRules: defaultHolidayRules()
       },
       lastViewedYear: y,
-      days: {} // "YYYY-MM-DD": {status:'conge'|'rtt'|'teletravail'|'', events:[{id,title,allDay,start,end}]}
+      days: {} // "YYYY-MM-DD": {status:'conge'|'rtt'|'teletravail'|'', events:[{id,title,allDay,start,end,calendarId}]}
     };
   }
   function makeEventId(){
@@ -698,10 +762,11 @@
       const incoming = parsed.settings || {};
       d.settings = Object.assign(d.settings, incoming);
       d.settings.categories = resolveCategories(incoming);
+      d.settings.calendars = resolveCalendars(incoming);
       delete d.settings.congesParAn; delete d.settings.rttParAn;
       delete d.settings.capReportEnabled; delete d.settings.capReport;
       d.lastViewedYear = parsed.lastViewedYear || d.lastViewedYear;
-      d.days = migrateLegacyNotes(parsed.days || {});
+      d.days = migrateEventsToCalendars(migrateLegacyNotes(parsed.days || {}), d.settings.calendars);
       return d;
     }catch(e){
       console.error('Erreur chargement', e);
@@ -783,6 +848,7 @@
     const incoming = remote.settings || {};
     merged.settings = Object.assign(merged.settings, incoming);
     merged.settings.categories = resolveCategories(incoming);
+    merged.settings.calendars = resolveCalendars(incoming);
     delete merged.settings.congesParAn; delete merged.settings.rttParAn;
     delete merged.settings.capReportEnabled; delete merged.settings.capReport;
     if(!(remote.settings && remote.settings.holidayRules && remote.settings.holidayRules.length)){
@@ -792,7 +858,7 @@
     // doit jamais être écrasée par une valeur venue du Sheet (sinon chaque
     // rafraîchissement automatique ramène tout le monde sur la même année).
     merged.lastViewedYear = currentYear || merged.lastViewedYear;
-    merged.days = migrateLegacyNotes(remote.days || {});
+    merged.days = migrateEventsToCalendars(migrateLegacyNotes(remote.days || {}), merged.settings.calendars);
     data = merged;
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
     renderSettings();
@@ -1018,7 +1084,7 @@
         if(!data.days[ds2].events) data.days[ds2].events = [];
         data.days[ds2].events.push({
           id: ev.id, title: ev.title, allDay: true, dateStart, dateEnd,
-          color: ev.color || DEFAULT_EVENT_COLOR, location: ev.location || '', notes: ev.notes || ''
+          calendarId: ev.calendarId, location: ev.location || '', notes: ev.notes || ''
         });
         d.setDate(d.getDate() + 1);
       }
@@ -1028,7 +1094,7 @@
       if(!data.days[ds2].events) data.days[ds2].events = [];
       data.days[ds2].events.push({
         id: ev.id, title: ev.title, allDay: false, start: ev.start, end: ev.end,
-        color: ev.color || DEFAULT_EVENT_COLOR, location: ev.location || '', notes: ev.notes || '',
+        calendarId: ev.calendarId, location: ev.location || '', notes: ev.notes || '',
         reminder: ev.reminder || ''
       });
     }
@@ -1207,7 +1273,7 @@
     chip.className = 'event-chip';
     chip.textContent = ev.title;
     chip.title = ev.title + (ev.location ? ' · ' + ev.location : '');
-    const color = ev.color || DEFAULT_EVENT_COLOR;
+    const color = eventColor(ev);
     chip.style.background = pastelOf(color);
     chip.style.color = darkOf(color);
     chip.addEventListener('click', (e)=>{ e.stopPropagation(); openEventModal(ds, ev.id); });
@@ -1329,7 +1395,7 @@
         } else {
           openSpans.set(key, {
             colStart: col, colEnd: col, title: ev.title, ds: cell.ds, id: ev.id,
-            color: ev.color || DEFAULT_EVENT_COLOR, location: ev.location || '',
+            color: eventColor(ev), location: ev.location || '',
             hiddenIds: [{ ds: cell.ds, id: ev.id }]
           });
         }
@@ -1531,7 +1597,7 @@
     if(endMin <= startMin) endMin = startMin + 30;
     const block = document.createElement('div');
     block.className = 'event-block';
-    const color = ev.color || DEFAULT_EVENT_COLOR;
+    const color = eventColor(ev);
     block.style.background = pastelOf(color);
     block.style.color = darkOf(color);
     block.style.top = ((startMin/60) * HOUR_H) + 'px';
@@ -1583,13 +1649,20 @@
         const lbl = document.createElement('div');
         lbl.className = 'timegrid-daylabel' + (ds === todayStr ? ' today' : '');
         lbl.appendChild(document.createTextNode(JOURS[(d.getDay()+6)%7] + ' ' + d.getDate()));
+        // Statut du jour (congé/RTT/télétravail/autre) : surbrillance de la
+        // case elle-même (comme en vue Mois), pas un badge texte à côté qui
+        // prenait trop de place et décalait tout sur petit écran.
         const info = describeStatus(data.days[ds] && data.days[ds].status);
         if(info){
-          const badge = document.createElement('span');
-          badge.className = 'daylabel-badge';
-          badge.style.background = pastelOf(info.color);
-          badge.textContent = info.label + (info.half ? (info.half === 'am' ? ' (matin)' : ' (après-midi)') : '');
-          lbl.appendChild(badge);
+          const pastel = pastelOf(info.color);
+          lbl.title = info.label + (info.half === 'am' ? ' (matin)' : info.half === 'pm' ? ' (après-midi)' : ' (journée)');
+          if(!info.half){
+            lbl.style.background = pastel;
+          } else if(info.half === 'am'){
+            lbl.style.background = 'linear-gradient(to bottom, ' + pastel + ' 50%, #fff 50%)';
+          } else {
+            lbl.style.background = 'linear-gradient(to bottom, #fff 50%, ' + pastel + ' 50%)';
+          }
         }
         header.appendChild(lbl);
       });
@@ -1894,7 +1967,54 @@
       tbody.appendChild(tr);
     });
   }
+  // Construit la table des calendriers (nom, couleur, suppression) —
+  // nombre libre, contrairement aux 3 catégories congé/RTT/télétravail.
+  function renderCalendarsTable(){
+    const tbody = document.getElementById('calendarsTableBody');
+    tbody.innerHTML = '';
+    const calendars = data.settings.calendars || [];
+    calendars.forEach(cal=>{
+      const tr = document.createElement('tr');
+
+      const tdName = document.createElement('td');
+      const inName = document.createElement('input');
+      inName.type = 'text';
+      inName.value = cal.name || '';
+      inName.addEventListener('input', ()=>{
+        cal.name = inName.value;
+        save(); renderYear();
+      });
+      tdName.appendChild(inName);
+      tr.appendChild(tdName);
+
+      const tdColor = document.createElement('td');
+      tdColor.appendChild(buildColorPicker(cal.color, (hex)=>{
+        cal.color = hex;
+        save(); renderYear();
+      }));
+      tr.appendChild(tdColor);
+
+      const tdDel = document.createElement('td');
+      const delBtn = document.createElement('button');
+      delBtn.className = 'del-btn';
+      delBtn.textContent = '✕';
+      delBtn.title = calendars.length > 1 ? 'Supprimer ce calendrier' : 'Impossible de supprimer le dernier calendrier';
+      delBtn.disabled = calendars.length <= 1;
+      delBtn.addEventListener('click', ()=>{
+        if(data.settings.calendars.length <= 1) return;
+        if(!confirm('Supprimer le calendrier "' + (cal.name || '') + '" ? Ses évènements seront reportés sur un autre calendrier.')) return;
+        data.settings.calendars = data.settings.calendars.filter(c=>c.id !== cal.id);
+        data.days = migrateEventsToCalendars(data.days, data.settings.calendars);
+        save(); renderSettings(); renderYear();
+      });
+      tdDel.appendChild(delBtn);
+      tr.appendChild(tdDel);
+
+      tbody.appendChild(tr);
+    });
+  }
   function renderSettings(){
+    renderCalendarsTable();
     renderCategoriesTable();
     document.getElementById('startYear').value = data.settings.startYear;
     document.getElementById('syncUrlInput').value = syncUrl;
@@ -1968,6 +2088,15 @@
     data.settings.holidayRules.push({type:'fixed', month:1, day:1, label:'Nouveau jour férié'});
     save(); renderSettings(); renderYear();
   });
+  document.getElementById('addCalendar').addEventListener('click', ()=>{
+    // Couleur de départ : la première preset pas encore utilisée par un
+    // calendrier existant, pour que les nouveaux calendriers se distinguent
+    // visuellement d'entrée sans avoir à y penser.
+    const usedColors = data.settings.calendars.map(c=>c.color);
+    const nextColor = PRESET_COLORS.filter(c=>usedColors.indexOf(c) === -1)[0] || PRESET_COLORS[data.settings.calendars.length % PRESET_COLORS.length];
+    data.settings.calendars.push({ id: makeCalendarId(), name: 'Nouveau calendrier', color: nextColor });
+    save(); renderSettings(); renderYear();
+  });
   document.getElementById('toggleSettings').addEventListener('click', ()=>{
     document.getElementById('settingsPanel').classList.toggle('hidden');
   });
@@ -2015,7 +2144,24 @@
 
   // ---- Modale de création / édition d'évènement ----
   let eventModalCtx = null; // { ds, id } — id est null pour une création
-  let evCurrentColor = DEFAULT_EVENT_COLOR; // couleur choisie dans le sélecteur (voir buildColorPicker)
+  let lastUsedCalendarId = null; // mémorise le dernier calendrier choisi, pour le proposer par défaut à la prochaine création
+  // Remplit le <select> "Calendrier" avec la liste actuelle des calendriers
+  // (voir defaultCalendars/resolveCalendars) ; chaque option est teintée de
+  // la couleur du calendrier pour s'y retrouver facilement.
+  function populateEventCalendarSelect(selectedId){
+    const sel = document.getElementById('evCalendar');
+    sel.innerHTML = '';
+    const calendars = data.settings.calendars || [];
+    calendars.forEach(cal=>{
+      const opt = document.createElement('option');
+      opt.value = cal.id;
+      opt.textContent = '● ' + cal.name;
+      opt.style.color = darkOf(cal.color);
+      sel.appendChild(opt);
+    });
+    const fallback = calendars[0] ? calendars[0].id : '';
+    sel.value = (selectedId && calendars.some(c=>c.id === selectedId)) ? selectedId : (lastUsedCalendarId && calendars.some(c=>c.id === lastUsedCalendarId) ? lastUsedCalendarId : fallback);
+  }
   function openEventModal(ds, eventId, defaults){
     defaults = defaults || {};
     eventModalCtx = { ds, id: eventId || null };
@@ -2044,10 +2190,7 @@
     document.getElementById('evReminderLabel').style.display = allDay ? 'none' : 'block';
     document.getElementById('evReminder').style.display = allDay ? 'none' : 'block';
     document.getElementById('evDelete').style.display = isEdit ? 'inline-block' : 'none';
-    evCurrentColor = ev ? (ev.color || DEFAULT_EVENT_COLOR) : DEFAULT_EVENT_COLOR;
-    const colorHost = document.getElementById('evColorPicker');
-    colorHost.innerHTML = '';
-    colorHost.appendChild(buildColorPicker(evCurrentColor, (hex)=>{ evCurrentColor = hex; }));
+    populateEventCalendarSelect(ev ? ev.calendarId : null);
     document.getElementById('eventModal').classList.remove('hidden');
     document.getElementById('evTitle').focus();
   }
@@ -2088,7 +2231,8 @@
     const id = eventModalCtx.id || makeEventId();
     const location = document.getElementById('evLocation').value.trim();
     const notes = document.getElementById('evNotes').value.trim();
-    const color = evCurrentColor;
+    const calendarId = document.getElementById('evCalendar').value;
+    lastUsedCalendarId = calendarId;
     const reminder = allDay ? '' : document.getElementById('evReminder').value;
     if(allDay){
       let dateStart = document.getElementById('evDateStart').value || eventModalCtx.ds;
@@ -2096,11 +2240,11 @@
       if(dateEnd < dateStart){ const tmp = dateStart; dateStart = dateEnd; dateEnd = tmp; }
       const spanDays = Math.round((new Date(dateEnd) - new Date(dateStart)) / 86400000) + 1;
       if(spanDays > 366){ alert('Cette période est trop longue (plus d\'un an).'); return; }
-      saveEvent({ id, title, allDay: true, dateStart, dateEnd, location, notes, color, reminder: '' });
+      saveEvent({ id, title, allDay: true, dateStart, dateEnd, location, notes, calendarId, reminder: '' });
     } else {
       const start = document.getElementById('evStart').value || '00:00';
       const end = document.getElementById('evEnd').value || '';
-      saveEvent({ id, title, allDay: false, ds: eventModalCtx.ds, start, end, location, notes, color, reminder });
+      saveEvent({ id, title, allDay: false, ds: eventModalCtx.ds, start, end, location, notes, calendarId, reminder });
     }
     closeEventModal();
     renderYear();
@@ -2162,6 +2306,35 @@
     if(!('Notification' in window)) return;
     Notification.requestPermission().then(()=>updateNotifsStatus());
   });
+  // Bouton de diagnostic : déclenche une notification immédiate, sans
+  // dépendre d'un évènement ni d'une heure précise, pour vérifier que les
+  // notifications marchent vraiment sur cet appareil/navigateur (utile car
+  // le support est très inégal, notamment sur mobile — voir le message
+  // affiché si ça échoue).
+  document.getElementById('testNotif').addEventListener('click', ()=>{
+    if(!('Notification' in window)){
+      alert("Ce navigateur ne supporte pas les notifications web (courant sur Safari iPhone/iPad hors PWA installée sur l'écran d'accueil).");
+      return;
+    }
+    if(Notification.permission === 'granted'){
+      try {
+        new Notification('Test de notification', { body: 'Si vous voyez ceci, les notifications fonctionnent sur cet appareil.' });
+      } catch(e){
+        alert('Échec de l\'affichage de la notification : ' + e.message);
+      }
+    } else if(Notification.permission === 'denied'){
+      alert('Les notifications sont bloquées pour ce site. Il faut les réactiver dans les réglages du navigateur (ou du système) puis recharger la page.');
+    } else {
+      Notification.requestPermission().then(perm=>{
+        updateNotifsStatus();
+        if(perm === 'granted'){
+          new Notification('Test de notification', { body: 'Si vous voyez ceci, les notifications fonctionnent sur cet appareil.' });
+        } else {
+          alert('Permission refusée : aucune notification ne pourra s\'afficher.');
+        }
+      });
+    }
+  });
   function checkReminders(){
     if(!('Notification' in window) || Notification.permission !== 'granted') return;
     const now = new Date();
@@ -2219,10 +2392,11 @@
         const incoming = parsed.settings || {};
         d.settings = Object.assign(d.settings, incoming);
         d.settings.categories = resolveCategories(incoming);
+        d.settings.calendars = resolveCalendars(incoming);
         delete d.settings.congesParAn; delete d.settings.rttParAn;
         delete d.settings.capReportEnabled; delete d.settings.capReport;
         d.lastViewedYear = parsed.lastViewedYear || d.lastViewedYear;
-        d.days = migrateLegacyNotes(parsed.days || {});
+        d.days = migrateEventsToCalendars(migrateLegacyNotes(parsed.days || {}), d.settings.calendars);
         data = d;
         save();
         renderSettings();
