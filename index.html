@@ -56,14 +56,16 @@
      justify-content:space-between, les colonnes de gauche/droite gardent
      leur largeur (1fr chacune) même quand la colonne du milieu est masquée
      (Paramètres ouverts) — #todayBtn et #toggleSettings ne bougent donc
-     jamais, qu'ils soient seuls ou entourés du sélecteur de vue. */
+     jamais, qu'ils soient seuls ou entourés du sélecteur de vue. Zones
+     nommées (plutôt que l'ordre des colonnes) pour pouvoir réorganiser
+     facilement en 2 lignes sur petit écran (voir media query plus bas). */
   header {
-    display:grid; grid-template-columns:1fr auto 1fr; align-items:center; gap:12px;
-    margin-bottom:16px;
+    display:grid; grid-template-columns:1fr auto 1fr; grid-template-areas:"today view settings";
+    align-items:center; gap:12px; margin-bottom:16px;
   }
-  #todayBtn { justify-self:start; }
-  .view-switch { justify-self:center; }
-  #toggleSettings { justify-self:end; }
+  #todayBtn { grid-area:today; justify-self:start; }
+  .view-switch { grid-area:view; justify-self:center; }
+  #toggleSettings { grid-area:settings; justify-self:end; }
   /* Ligne du mois/année (retirée de <header>, sur sa propre ligne) : centrée
      sur toute la largeur — un <div> en display:flex est de toute façon un
      bloc pleine largeur, justify-content:center centre donc son contenu. */
@@ -183,6 +185,15 @@
        le bandeau du haut (avec tous ses boutons/menus) débordait de 14px de
        chaque côté de l'écran. On aligne les deux valeurs ici. */
     #stickyTop { margin:-10px -10px 16px; padding:10px 10px 12px; }
+    /* Sur petit écran, les 3 colonnes (Aujourd'hui / vue / Paramètres) sur
+       une seule ligne ne tiennent plus toutes (le bouton Paramètres finit
+       coupé/invisible, capturé par overflow-x:clip). On passe à 2 lignes :
+       le choix de vue seul en haut (centré, pleine largeur), puis
+       Aujourd'hui à gauche et Paramètres à droite en dessous. */
+    header {
+      grid-template-columns:1fr 1fr; grid-template-areas:"view view" "today settings";
+      row-gap:10px;
+    }
   }
   /* iPhone / petits écrans : les libellés larges (min-width:220px) de
      Paramètres passaient au-dessus du contenu utile et poussaient tout à
