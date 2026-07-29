@@ -651,20 +651,17 @@
     box-shadow:0 0 0 1px rgba(0,0,0,0.08);
   }
   .color-swatch-btn.selected { border-color:#333; box-shadow:0 0 0 2px #fff inset, 0 0 0 1px #333; }
-  /* Ligne "Plus" façon menu Apple : après deux essais qui ne fonctionnaient
-     pas de façon fiable dans l'app Xcode (advInput.click() par programme, ou
-     input superposé en opacity:0), retour à un principe plus sûr — l'input
-     couleur natif reste RÉELLEMENT VISIBLE (petit rond, à droite du texte
-     "Plus"), exactement comme l'ancien input "Couleur personnalisée" qui,
-     lui, fonctionnait toujours (l'utilisateur le confirme). On ne fait que
-     fusionner les 2 anciennes étapes (révéler puis cliquer) en une seule
-     ligne toujours visible, sans jamais déclencher le picker par JS ni le
-     cacher visuellement — seul un tap direct et réel sur ce rond ouvre le
-     sélecteur système, ce qui est fiable sur WKWebView. */
+  /* Ligne "Plus" façon menu Apple : un <label> (pas un div/bouton) qui
+     CONTIENT l'input couleur natif — activer un <label> qui englobe son
+     input est un mécanisme natif du navigateur, traité comme un contact
+     direct sur l'input pour ouvrir le sélecteur système (fiable sur
+     WKWebView, contrairement aux 2 essais précédents : .click() déclenché
+     par notre JS, puis input superposé en opacity:0, aucun des deux ne
+     marchait). Toute la ligne est cliquable, pas seulement le petit rond. */
   .color-picker-more-row {
     display:flex; align-items:center; justify-content:space-between; width:100%;
     border-top:1px solid #eee; margin-top:6px; padding:10px 2px 2px;
-    font-size:14px; color:var(--text);
+    font-size:14px; color:var(--text); cursor:pointer;
   }
   .color-picker-more-swatch {
     width:26px; height:26px; border-radius:50%; border:2px solid #fff; padding:0; cursor:pointer;
@@ -1272,12 +1269,15 @@
       swatchRow.appendChild(btn);
     });
     panel.appendChild(swatchRow);
-    // Ligne "Plus" façon menu Apple : le rond de couleur à droite EST l'input
-    // natif réel, toujours visible (voir commentaire CSS .color-picker-more-
-    // swatch) — un tap direct dessus ouvre le sélecteur système, de façon
-    // fiable sur WKWebView (contrairement à .click() par programme ou à un
-    // input caché en opacity:0, testés avant et qui ne marchaient pas).
-    const advLabelRow = document.createElement('div');
+    // Ligne "Plus" façon menu Apple : un vrai <label> englobant l'input
+    // couleur (et non un bouton séparé qui déclenche .click() par
+    // programme, ni un input superposé en opacity:0 — les 2 précédents
+    // essais, qui échouaient sur WKWebView). Un <label> qui CONTIENT son
+    // input est un mécanisme natif du navigateur (comme pour une case à
+    // cocher) : taper n'importe où dans la ligne compte comme un contact
+    // direct sur l'input, ce qui est fiable pour ouvrir le sélecteur système
+    // — contrairement à un déclenchement fait depuis notre propre JS.
+    const advLabelRow = document.createElement('label');
     advLabelRow.className = 'color-picker-more-row';
     const advToggleLabel = document.createElement('span');
     advToggleLabel.textContent = 'Plus…';
