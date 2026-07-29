@@ -400,8 +400,29 @@
   }
   .maps-choice-menu button:hover { background:#f0f1f3; }
 </style>
+<style>
+  /* Mode compact (ajouté pour affichage en widget intégré) : activé via ?widget=1
+     dans l'URL. Ne masque que la barre d'outils et le pied de page ; la grille
+     du calendrier elle-même n'est jamais touchée. */
+  body.widget-mode .user-bar,
+  body.widget-mode .brush-bar,
+  body.widget-mode #stickyExtra,
+  body.widget-mode #todayBtn,
+  body.widget-mode #toggleSettings,
+  body.widget-mode footer{
+    display:none !important;
+  }
+  body.widget-mode h1{ font-size:16px; }
+  body.widget-mode #stickyTop{ padding:14px 14px 6px; margin:-14px -14px 10px; }
+  body.widget-mode header{ margin-bottom:6px; }
+</style>
 </head>
 <body>
+<script>
+  if(new URLSearchParams(location.search).get('widget') === '1'){
+    document.body.classList.add('widget-mode');
+  }
+</script>
 <div id="app">
   <div id="stickyTop">
     <header>
