@@ -903,6 +903,11 @@
       <span id="notifsStatus" class="sync-status none"></span>
     </div>
     <div class="hint">Déclenche une notification du navigateur au moment de l'alerte choisie sur un évènement (voir la modale de création). Ne fonctionne que si cet onglet reste ouvert et au premier plan dans le navigateur — pas de notification si le calendrier est fermé, en arrière-plan, ou sur iPhone/iPad hors PWA installée sur l'écran d'accueil (Safari mobile ne supporte pas les notifications web dans un onglet classique). Utilisez "Tester la notification" pour vérifier que ça fonctionne sur cet appareil, indépendamment de tout évènement.</div>
+    <div class="settings-row">
+      <span id="nativeBridgeStatus" class="sync-status none"></span>
+      <button id="testNativeReminder">Tester le pont natif (notif dans 10s)</button>
+    </div>
+    <div class="hint">"Pont natif" = code ajouté dans le projet Xcode qui reçoit les rappels et programme de vraies notifications iOS, déclenchées par le système même si l'app est complètement fermée. Sans ce code côté Xcode, ce statut reste "Non détecté" et seule la notification web ci-dessus (app ouverte) fonctionne.</div>
     <h3>Synchronisation Google Sheet</h3>
     <div class="settings-field">
       <label for="syncUrlInput">URL du script (Apps Script Web App)</label>
@@ -3245,6 +3250,7 @@
     document.getElementById('startYear').value = data.settings.startYear;
     document.getElementById('syncUrlInput').value = syncUrl;
     updateNotifsStatus();
+    updateNativeBridgeStatus();
     const tbody = document.getElementById('holidayTableBody');
     tbody.innerHTML = '';
     (data.settings.holidayRules||[]).forEach((rule, idx)=>{
@@ -3626,6 +3632,11 @@
     const calendarId = document.getElementById('evCalendar').value;
     lastUsedCalendarId[ownerUserId] = calendarId;
     const reminder = allDay ? '' : document.getElementById('evReminder').value;
+    // On annule d'abord toute notification native déjà programmée pour cet
+    // id (utile en édition : heure changée, rappel retiré, ou passage en
+    // journée entière), puis on reprogramme si un rappel est toujours actif
+    // — voir plus bas, section "Pont notifications natif".
+    cancelNativeReminder(ownerUserId, id);
     if(allDay){
       let dateStart = document.getElementById('evDateStart').value || eventModalCtx.ds;
       let dateEnd = document.getElementById('evDateEnd').value || dateStart;
@@ -3637,6 +3648,9 @@
       const start = document.getElementById('evStart').value || '00:00';
       const end = document.getElementById('evEnd').value || '';
       saveEvent({ id, title, allDay: false, ds: eventModalCtx.ds, start, end, location, notes, calendarId, reminder }, ownerUserId);
+      if(reminder){
+        scheduleNativeReminder(ownerUserId, { id, ds: eventModalCtx.ds, start, title, location, reminder });
+      }
     }
     closeEventModal();
     renderYear();
@@ -3644,18 +3658,59 @@
   document.getElementById('evDelete').addEventListener('click', ()=>{
     if(!eventModalCtx || !eventModalCtx.id) return;
     if(confirm('Supprimer cet évènement ?')){
+      cancelNativeReminder(eventModalCtx.owner || activeUserId(), eventModalCtx.id);
       deleteEventEverywhere(eventModalCtx.id, eventModalCtx.owner || activeUserId());
       save();
       closeEventModal();
       renderYear();
     }
   });
-  // ---- Rappels / notifications ----
+  // ---- Pont notifications natif (app iOS encapsulée via Xcode/WKWebView) ----
+  // Le mécanisme web plus bas (checkReminders) ne fonctionne QUE tant que
+  // cette page tourne réellement (onglet/app au premier plan) : iOS suspend
+  // tout le JavaScript d'une WKWebView dès que l'app passe en arrière-plan
+  // ou est fermée, donc plus aucune vérification ne peut avoir lieu. Si
+  // l'app est chargée dans un WKWebView natif dont le code Swift a
+  // enregistré des gestionnaires de message "scheduleReminder"/
+  // "cancelReminder" (voir window.webkit.messageHandlers), chaque rappel
+  // est EN PLUS relayé à ce pont : le natif programme alors une vraie
+  // notification locale iOS (UNUserNotificationCenter), que le système
+  // déclenche lui-même à l'heure prévue même si l'app est totalement
+  // fermée. Sans wrapper natif (navigateur classique), ces appels sont
+  // simplement ignorés et seul le mécanisme web ci-dessous s'applique.
+  function hasNativeReminderBridge(){
+    return !!(window.webkit && window.webkit.messageHandlers &&
+      window.webkit.messageHandlers.scheduleReminder && window.webkit.messageHandlers.cancelReminder);
+  }
+  function reminderNotifId(userId, evId){ return userId + ':' + evId; }
+  function scheduleNativeReminder(userId, ev){
+    if(!hasNativeReminderBridge() || !ev.ds || !ev.start || !ev.reminder) return;
+    const parts = ev.ds.split('-').map(Number);
+    const hm = String(ev.start).split(':');
+    const startDt = new Date(parts[0], parts[1] - 1, parts[2], Number(hm[0]) || 0, Number(hm[1]) || 0, 0);
+    const triggerDt = new Date(startDt.getTime() - Number(ev.reminder) * 60000);
+    if(triggerDt <= new Date()) return; // déjà passé : rien à programmer
+    try {
+      window.webkit.messageHandlers.scheduleReminder.postMessage({
+        id: reminderNotifId(userId, ev.id),
+        title: ev.title,
+        body: 'À ' + ev.start + (ev.location ? ' · ' + ev.location : '') + ' · ' + userName(userId),
+        fireDate: triggerDt.toISOString()
+      });
+    } catch(e){ /* ignore */ }
+  }
+  function cancelNativeReminder(userId, evId){
+    if(!hasNativeReminderBridge()) return;
+    try { window.webkit.messageHandlers.cancelReminder.postMessage({ id: reminderNotifId(userId, evId) }); }
+    catch(e){ /* ignore */ }
+  }
+  // ---- Rappels / notifications (mécanisme web, secours/aperçu) ----
   // Limite importante : sans backend de push ni service worker, une
   // notification ne peut se déclencher que si cet onglet reste ouvert dans
   // le navigateur — on vérifie donc périodiquement (toutes les 20s) si un
   // évènement du jour avec une alerte configurée atteint son heure de
-  // déclenchement, tant que la page est chargée.
+  // déclenchement, tant que la page est chargée. Le pont natif ci-dessus
+  // prend le relais pour les rappels quand l'app est fermée.
   const NOTIFIED_KEY = 'congesCalendarNotified_v1';
   function loadNotifiedState(){
     const todayStr = dateStr(new Date().getFullYear(), new Date().getMonth(), new Date().getDate());
@@ -3725,6 +3780,32 @@
           alert('Permission refusée : aucune notification ne pourra s\'afficher.');
         }
       });
+    }
+  });
+  // Statut du pont natif (voir "Pont notifications natif" plus haut) : permet
+  // de vérifier depuis les Réglages, sans ouvrir Xcode, si le code Swift a
+  // bien enregistré les gestionnaires de message attendus.
+  function updateNativeBridgeStatus(){
+    const el = document.getElementById('nativeBridgeStatus');
+    const btn = document.getElementById('testNativeReminder');
+    if(!el) return;
+    const ok = hasNativeReminderBridge();
+    el.textContent = ok ? 'Pont natif détecté' : 'Non détecté (app web classique)';
+    el.className = ok ? 'sync-status ok' : 'sync-status none';
+    if(btn) btn.disabled = !ok;
+  }
+  document.getElementById('testNativeReminder').addEventListener('click', ()=>{
+    if(!hasNativeReminderBridge()) return;
+    try {
+      window.webkit.messageHandlers.scheduleReminder.postMessage({
+        id: 'test-native-' + Date.now(),
+        title: 'Test notification native',
+        body: 'Si vous voyez ceci app fermée, le pont natif fonctionne.',
+        fireDate: new Date(Date.now() + 10000).toISOString()
+      });
+      alert('Notification de test programmée dans 10s — vous pouvez fermer l\'app.');
+    } catch(e){
+      alert('Échec de l\'envoi au pont natif : ' + e.message);
     }
   });
   function checkReminders(){
