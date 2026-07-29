@@ -118,6 +118,15 @@
   .settings-row input[type=number] { width:90px; padding:5px 8px; border:1px solid var(--border); border-radius:8px; }
   .settings-row input[type=checkbox] { width:16px; height:16px; }
   .settings-row input[type=text] { padding:5px 8px; border:1px solid var(--border); border-radius:8px; }
+  /* Champ "en colonne" (libellé au-dessus, champ pleine largeur en dessous) :
+     utilisé pour les réglages texte/nombre (noms d'utilisateurs, année de
+     départ, URL de synchronisation...), par opposition à .settings-row qui
+     reste en ligne pour les groupes de boutons et les cases à cocher. */
+  .settings-field { display:flex; flex-direction:column; align-items:flex-start; gap:6px; margin-bottom:14px; }
+  .settings-field label { font-size:13px; font-weight:600; }
+  .settings-field input[type=text], .settings-field input[type=number] {
+    width:100%; max-width:420px; padding:9px 10px; border:1px solid var(--border); border-radius:8px; box-sizing:border-box; font-size:14px;
+  }
   .sync-status { font-size:12px; padding:4px 10px; border-radius:12px; background:#eee; color:#666; }
   .sync-status.pending { background:#fff3cd; color:#8a6d3b; }
   .sync-status.syncing { background:#cfe2ff; color:#084298; }
@@ -130,11 +139,6 @@
   table#holidayTable input[type=number], table.categories-table input[type=number] { width:60px; padding:4px 6px; border:1px solid var(--border); border-radius:5px; }
   table#holidayTable select { padding:4px 6px; border:1px solid var(--border); border-radius:5px; }
   table.categories-table input[type=checkbox] { width:16px; height:16px; }
-  table.calendars-table .color-picker { margin:0; }
-  table.calendars-table .color-picker-swatches { gap:4px; }
-  table.calendars-table .color-swatch-btn { width:18px; height:18px; }
-  table.calendars-table .color-picker-advanced-toggle { font-size:10px; }
-  table.calendars-table .color-picker-custom { width:26px; height:18px; }
   .user-bar {
     display:flex; align-items:center; gap:16px; flex-wrap:wrap; margin-bottom:12px;
     background:var(--card-bg); border:1px solid var(--border); border-radius:10px; padding:8px 14px; font-size:13px;
@@ -322,9 +326,20 @@
   .btn-danger-ghost { background:transparent; color:#c0392b; }
   .btn-danger-ghost:hover { background:#fdecea; }
 
-  /* Sélecteur de couleur (8 pastilles + mode avancé) — évènements et
-     catégories congé/RTT/télétravail. */
-  .color-picker { margin:6px 0 14px; }
+  /* Sélecteur de couleur — évènements, calendriers et catégories. N'affiche
+     que le rond de la couleur actuelle ; cliquer dessus ouvre un petit
+     panneau flottant avec les 8 couleurs suggérées + le mode avancé, qui se
+     referme dès qu'on choisit une couleur ou qu'on clique ailleurs. */
+  .color-picker { position:relative; display:inline-block; }
+  .color-picker-current {
+    width:26px; height:26px; border-radius:50%; border:2px solid #fff; cursor:pointer; padding:0;
+    box-shadow:0 0 0 1px rgba(0,0,0,0.15); flex-shrink:0;
+  }
+  .color-picker-panel {
+    position:absolute; top:calc(100% + 6px); left:0; background:#fff; border-radius:12px;
+    box-shadow:0 8px 24px rgba(0,0,0,0.2); padding:10px; z-index:60; width:184px;
+  }
+  .color-picker-panel.hidden { display:none; }
   .color-picker-swatches { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:6px; }
   .color-swatch-btn {
     width:26px; height:26px; border-radius:50%; border:2px solid transparent; cursor:pointer; padding:0;
@@ -337,12 +352,19 @@
     padding:2px 0; text-decoration:underline;
   }
   .color-picker-custom { width:36px; height:26px; border:1px solid var(--border); border-radius:6px; padding:0; cursor:pointer; }
-  /* Table des catégories (Paramètres) : cellule couleur compacte. */
-  table#categoriesTable .color-picker { margin:0; }
-  table#categoriesTable .color-picker-swatches { gap:4px; }
-  table#categoriesTable .color-swatch-btn { width:18px; height:18px; }
-  table#categoriesTable .color-picker-advanced-toggle { font-size:10px; }
-  table#categoriesTable .color-picker-custom { width:26px; height:18px; }
+  /* Cartes de catégorie (Paramètres > Catégories) : une carte par catégorie,
+     tout empilé en colonne plutôt qu'une table à 7 colonnes illisible sur
+     petit écran. 1ère ligne = activée + nom + couleur ; en dessous, empilés,
+     quota/an, report, plafond, demi-journée. */
+  .category-cards { display:flex; flex-direction:column; gap:12px; margin-bottom:10px; }
+  .category-card { border:1px solid var(--border); border-radius:10px; padding:12px 14px; background:var(--card-bg); }
+  .category-card-top { display:flex; align-items:center; gap:10px; margin-bottom:10px; }
+  .category-card-top input[type=checkbox] { width:16px; height:16px; flex-shrink:0; }
+  .category-name-input { flex:1; padding:7px 10px; border:1px solid var(--border); border-radius:8px; font-size:14px; font-weight:600; min-width:0; }
+  .category-card-details { display:flex; flex-direction:column; gap:8px; font-size:13px; color:#444; padding-left:2px; }
+  .category-card-details .detail-row { display:flex; align-items:center; gap:8px; flex-wrap:wrap; cursor:pointer; }
+  .category-card-details input[type=checkbox] { width:16px; height:16px; flex-shrink:0; cursor:pointer; }
+  .category-card-details input[type=number] { width:80px; padding:5px 8px; border:1px solid var(--border); border-radius:8px; cursor:auto; }
   /* Modale évènement : champs lieu/notes/rappel */
   .ev-field-label { font-size:12px; color:#888; margin:8px 0 4px; }
   .ev-text-input, .ev-select {
@@ -416,38 +438,31 @@
       <input type="checkbox" id="multiUserToggle">
     </div>
     <div class="hint">Désactivé : le calendrier redevient mono-utilisateur (Utilisateur 1 uniquement, plus de sélecteur ni de cases "Afficher" en haut de page). Rien n'est supprimé — les données de l'Utilisateur 2 restent enregistrées et réapparaissent si vous réactivez le mode plus tard.</div>
-    <div class="settings-row" id="userName1Row">
+    <div class="settings-field" id="userName1Row">
       <label for="userName1">Nom utilisateur 1</label>
       <input type="text" id="userName1">
     </div>
-    <div class="settings-row" id="userName2Row">
+    <div class="settings-field" id="userName2Row">
       <label for="userName2">Nom utilisateur 2</label>
       <input type="text" id="userName2">
     </div>
     <div class="hint">2 utilisateurs fixes, partageant ce même calendrier : chacun a ses propres catégories (congé/RTT/télétravail), ses propres calendriers d'évènements et son propre récapitulatif ci-dessous. Choisissez en haut de page qui édite (statuts/évènements posés en cliquant sur une case) et qui est affiché.</div>
-    <div class="settings-row">
+    <div class="settings-field">
       <label for="startYear">Année de départ (pas de report avant)</label>
       <input type="number" id="startYear" min="2000" max="2100">
     </div>
 
     <div class="user-settings-block" id="userSettingsBlock_user1">
       <h3 id="userSectionCal_user1">Calendriers — Utilisateur 1</h3>
-      <div class="table-scroll">
       <table class="calendars-table" id="calendarsTable_user1">
         <thead><tr><th>Nom</th><th>Couleur</th><th></th></tr></thead>
         <tbody id="calendarsTableBody_user1"></tbody>
       </table>
-      </div>
       <button class="add-calendar-btn" id="addCalendar_user1">+ Ajouter un calendrier</button>
       <div class="hint">Chaque évènement de cet utilisateur appartient à un de ses calendriers et prend sa couleur (voir la modale de création). Supprimer un calendrier reporte ses évènements sur le calendrier restant le plus ancien.</div>
 
       <h3 id="userSectionCat_user1">Catégories — Utilisateur 1</h3>
-      <div class="table-scroll">
-      <table class="categories-table" id="categoriesTable_user1">
-        <thead><tr><th>Activée</th><th>Nom</th><th>Couleur</th><th>Quota/an (j)</th><th>Report</th><th>Plafond report</th><th>Demi-journée</th></tr></thead>
-        <tbody id="categoriesTableBody_user1"></tbody>
-      </table>
-      </div>
+      <div id="categoriesCards_user1" class="category-cards"></div>
       <div class="hint">3 catégories maximum, déjà toutes présentes ci-dessus : renommez-les et désactivez celles que vous n'utilisez pas. Quota à 0 = simple compteur sans suivi de solde. Le report permet de garder les jours non pris pour l'année suivante (avec un plafond optionnel).</div>
 
       <h3 id="userSectionRec_user1">Récapitulatif des jours — Utilisateur 1</h3>
@@ -507,22 +522,15 @@
 
     <div class="user-settings-block" id="userSettingsBlock_user2">
       <h3 id="userSectionCal_user2">Calendriers — Utilisateur 2</h3>
-      <div class="table-scroll">
       <table class="calendars-table" id="calendarsTable_user2">
         <thead><tr><th>Nom</th><th>Couleur</th><th></th></tr></thead>
         <tbody id="calendarsTableBody_user2"></tbody>
       </table>
-      </div>
       <button class="add-calendar-btn" id="addCalendar_user2">+ Ajouter un calendrier</button>
       <div class="hint">Chaque évènement de cet utilisateur appartient à un de ses calendriers et prend sa couleur (voir la modale de création). Supprimer un calendrier reporte ses évènements sur le calendrier restant le plus ancien.</div>
 
       <h3 id="userSectionCat_user2">Catégories — Utilisateur 2</h3>
-      <div class="table-scroll">
-      <table class="categories-table" id="categoriesTable_user2">
-        <thead><tr><th>Activée</th><th>Nom</th><th>Couleur</th><th>Quota/an (j)</th><th>Report</th><th>Plafond report</th><th>Demi-journée</th></tr></thead>
-        <tbody id="categoriesTableBody_user2"></tbody>
-      </table>
-      </div>
+      <div id="categoriesCards_user2" class="category-cards"></div>
       <div class="hint">3 catégories maximum, déjà toutes présentes ci-dessus : renommez-les et désactivez celles que vous n'utilisez pas. Quota à 0 = simple compteur sans suivi de solde. Le report permet de garder les jours non pris pour l'année suivante (avec un plafond optionnel).</div>
 
       <h3 id="userSectionRec_user2">Récapitulatif des jours — Utilisateur 2</h3>
@@ -601,9 +609,9 @@
     </div>
     <div class="hint">Déclenche une notification du navigateur au moment de l'alerte choisie sur un évènement (voir la modale de création). Ne fonctionne que si cet onglet reste ouvert et au premier plan dans le navigateur — pas de notification si le calendrier est fermé, en arrière-plan, ou sur iPhone/iPad hors PWA installée sur l'écran d'accueil (Safari mobile ne supporte pas les notifications web dans un onglet classique). Utilisez "Tester la notification" pour vérifier que ça fonctionne sur cet appareil, indépendamment de tout évènement.</div>
     <h3>Synchronisation Google Sheet</h3>
-    <div class="settings-row">
+    <div class="settings-field">
       <label for="syncUrlInput">URL du script (Apps Script Web App)</label>
-      <input type="text" id="syncUrlInput" placeholder="https://script.google.com/macros/s/AKfycb.../exec" style="flex:1;min-width:280px;">
+      <input type="text" id="syncUrlInput" placeholder="https://script.google.com/macros/s/AKfycb.../exec">
     </div>
     <div class="settings-row">
       <button id="testSync">Tester la connexion</button>
@@ -619,7 +627,9 @@
       <button id="resetData">🗑 Réinitialiser toutes les données</button>
     </div>
   </div>
-  <div id="calendarGrid" class="months-grid"></div>
+  <div id="calendarGridWrap">
+    <div id="calendarGrid" class="months-grid"></div>
+  </div>
   <footer>Les données sont enregistrées automatiquement dans le stockage local de ce navigateur. Si une synchronisation Google Sheet est configurée (Paramètres), elles sont aussi envoyées vers le Sheet pour être accessibles depuis tes autres appareils. Pensez à exporter régulièrement une sauvegarde JSON.</footer>
 </div>
 <div id="statusMenu" class="status-menu hidden"></div>
@@ -758,26 +768,54 @@
     const cat = cats && cats[catKey];
     return (cat && cat.color) || '#1976d2';
   }
-  // Sélecteur de couleur réutilisable : 8 pastilles présélectionnées (voir
-  // PRESET_COLORS) + un mode avancé (input color natif) pour une couleur
-  // libre. Utilisé pour la couleur d'un évènement et celle de chaque
-  // catégorie (congé/RTT/télétravail). currentColor : couleur hex de départ.
-  // onChange(hex) : appelé à chaque changement de sélection.
+  // Ferme tout panneau de couleur actuellement ouvert (utilisé au clic
+  // ailleurs sur la page, et avant d'en ouvrir un autre pour n'en garder
+  // qu'un seul ouvert à la fois).
+  function closeAllColorPickerPanels(){
+    document.querySelectorAll('.color-picker-panel').forEach(p=>p.classList.add('hidden'));
+  }
+  document.addEventListener('click', (e)=>{
+    if(!e.target.closest('.color-picker')) closeAllColorPickerPanels();
+  });
+  // Sélecteur de couleur réutilisable : n'affiche que le rond de la couleur
+  // actuelle ; cliquer dessus ouvre un petit panneau avec les 8 couleurs
+  // suggérées (voir PRESET_COLORS) + un mode avancé (input color natif) pour
+  // une couleur libre — le panneau se referme dès qu'une couleur est
+  // choisie, ou si on clique ailleurs. Utilisé pour les calendriers et les
+  // 3 catégories (congé/RTT/télétravail). currentColor : couleur hex de
+  // départ. onChange(hex) : appelé à chaque changement de sélection.
   function buildColorPicker(currentColor, onChange){
     const wrap = document.createElement('div');
     wrap.className = 'color-picker';
+    let selected = currentColor || DEFAULT_EVENT_COLOR;
+
+    const swatchBtn = document.createElement('button');
+    swatchBtn.type = 'button';
+    swatchBtn.className = 'color-picker-current';
+    swatchBtn.title = 'Changer la couleur';
+
+    const panel = document.createElement('div');
+    panel.className = 'color-picker-panel hidden';
+
     const swatchRow = document.createElement('div');
     swatchRow.className = 'color-picker-swatches';
-    let selected = currentColor || DEFAULT_EVENT_COLOR;
     const advInput = document.createElement('input');
     advInput.type = 'color';
     advInput.className = 'color-picker-custom hidden';
+
     function refresh(){
+      swatchBtn.style.background = selected;
       swatchRow.querySelectorAll('.color-swatch-btn').forEach(btn=>{
         btn.classList.toggle('selected', btn.dataset.color.toLowerCase() === selected.toLowerCase());
       });
       advInput.value = /^#[0-9a-fA-F]{6}$/.test(selected) ? selected : '#000000';
     }
+    swatchBtn.addEventListener('click', (e)=>{
+      e.stopPropagation();
+      const willOpen = panel.classList.contains('hidden');
+      closeAllColorPickerPanels();
+      panel.classList.toggle('hidden', !willOpen);
+    });
     PRESET_COLORS.forEach(c=>{
       const btn = document.createElement('button');
       btn.type = 'button';
@@ -785,21 +823,24 @@
       btn.style.background = c;
       btn.dataset.color = c;
       btn.title = c;
-      btn.addEventListener('click', ()=>{
+      btn.addEventListener('click', (e)=>{
+        e.stopPropagation();
         selected = c;
         refresh();
         onChange(selected);
+        panel.classList.add('hidden');
       });
       swatchRow.appendChild(btn);
     });
-    wrap.appendChild(swatchRow);
+    panel.appendChild(swatchRow);
     const advRow = document.createElement('div');
     advRow.className = 'color-picker-advanced';
     const advToggle = document.createElement('button');
     advToggle.type = 'button';
     advToggle.className = 'color-picker-advanced-toggle';
     advToggle.textContent = 'Couleur personnalisée…';
-    advToggle.addEventListener('click', ()=>{
+    advToggle.addEventListener('click', (e)=>{
+      e.stopPropagation();
       advInput.classList.toggle('hidden');
     });
     advInput.addEventListener('input', ()=>{
@@ -807,9 +848,15 @@
       refresh();
       onChange(selected);
     });
+    // Ferme le panneau une fois le choix confirmé (change se déclenche à la
+    // fermeture du sélecteur natif), pas à chaque valeur survolée pendant
+    // qu'on fait glisser le curseur (input, géré au-dessus).
+    advInput.addEventListener('change', (e)=>{ e.stopPropagation(); panel.classList.add('hidden'); });
     advRow.appendChild(advToggle);
     advRow.appendChild(advInput);
-    wrap.appendChild(advRow);
+    panel.appendChild(advRow);
+    wrap.appendChild(swatchBtn);
+    wrap.appendChild(panel);
     refresh();
     return wrap;
   }
@@ -1667,8 +1714,34 @@
   // (les enfants absolus avec une hauteur en % dans une case dont la
   // hauteur dépend du contenu ne s'affichaient pas de façon garantie selon
   // les navigateurs — un gradient sur la case n'a pas ce problème).
-  function twoUserSplitBackground(infoTop, infoBottom){
-    return 'linear-gradient(to bottom, ' + pastelOf(infoTop.color) + ' 50%, ' + pastelOf(infoBottom.color) + ' 50%)';
+  // Fragment "stop1 X%, stop2 X%" (pour linear-gradient(to bottom, ...))
+  // représentant un statut : couleur pleine si journée entière, dégradé
+  // haut/bas (matin/après-midi) coupé à 50% sinon — même logique que
+  // applyStatusBackground, réutilisée ici pour le détail demi-journée à
+  // l'intérieur de la moitié de chaque utilisateur (voir applyTwoUserSplitBackground).
+  function statusGradientStops(info){
+    const pastel = pastelOf(info.color);
+    if(!info.half) return pastel + ' 0%, ' + pastel + ' 100%';
+    if(info.half === 'am') return pastel + ' 50%, #fff 50%';
+    return '#fff 50%, ' + pastel + ' 50%';
+  }
+  // Case coupée en 2 verticalement (gauche = 1er utilisateur, droite = 2e)
+  // quand les 2 sont visibles et ont chacun un statut posé le même jour.
+  // Chaque moitié garde SON PROPRE dégradé matin/après-midi si l'utilisateur
+  // a posé une demi-journée (donc jusqu'à 4 zones visibles : matin/après-midi
+  // x gauche/droite). Technique : 2 linear-gradient (un par moitié) posés en
+  // arrière-plans superposés, chacun réduit à 50% de largeur et casé à
+  // gauche/droite via background-size/position, directement sur la case
+  // elle-même (comme le dégradé matin/après-midi à un seul utilisateur) —
+  // sans élément enfant positionné en absolu, donc rien qui dépende de
+  // subtilités de rendu du navigateur (z-index, hauteur en %...).
+  function applyTwoUserSplitBackground(el, infoLeft, infoRight){
+    const gLeft = 'linear-gradient(to bottom, ' + statusGradientStops(infoLeft) + ')';
+    const gRight = 'linear-gradient(to bottom, ' + statusGradientStops(infoRight) + ')';
+    el.style.backgroundImage = gLeft + ', ' + gRight;
+    el.style.backgroundSize = '50% 100%, 50% 100%';
+    el.style.backgroundPosition = 'left top, right top';
+    el.style.backgroundRepeat = 'no-repeat, no-repeat';
   }
   // Construit une case-jour complète (utilisée par les vues mois et année).
   // hiddenIds : Set optionnel d'ids d'évènements à ne pas afficher en chip
@@ -1694,7 +1767,7 @@
     if(activeStatuses.length === 1){
       applyStatusBackground(cell, activeStatuses[0]);
     } else if(activeStatuses.length === 2){
-      cell.style.background = twoUserSplitBackground(statusByUser[0], statusByUser[1]);
+      applyTwoUserSplitBackground(cell, statusByUser[0], statusByUser[1]);
     }
     const titleParts = [];
     if(holidayLabel) titleParts.push(holidayLabel);
@@ -2052,7 +2125,7 @@
         if(activeStatuses.length === 1){
           applyStatusBackground(lbl, activeStatuses[0]);
         } else if(activeStatuses.length === 2){
-          lbl.style.background = twoUserSplitBackground(statusByUser[0], statusByUser[1]);
+          applyTwoUserSplitBackground(lbl, statusByUser[0], statusByUser[1]);
         }
         const titleParts = [];
         USER_KEYS.forEach((u, idx)=>{
@@ -2270,29 +2343,35 @@
   // renommer) de la table de réglages des catégories.
   // userId : construit la table des catégories de CET utilisateur (chacun a
   // son propre jeu de 3 catégories, voir data.settings.categories[userId]).
+  // Une carte par catégorie (plutôt qu'une table à 7 colonnes, illisible en
+  // colonne/mobile) : 1ère ligne = nom + activée + couleur (rond, cliquer
+  // pour choisir — voir buildColorPicker) ; en dessous, empilés : quota/an,
+  // report, plafond de report, autorisation de demi-journée.
   function renderCategoriesTable(userId){
-    const tbody = document.getElementById('categoriesTableBody_' + userId);
-    if(!tbody) return;
-    tbody.innerHTML = '';
+    const container = document.getElementById('categoriesCards_' + userId);
+    if(!container) return;
+    container.innerHTML = '';
     CATEGORY_KEYS.forEach(catKey=>{
       const cat = data.settings.categories[userId][catKey];
-      const tr = document.createElement('tr');
+      const card = document.createElement('div');
+      card.className = 'category-card';
 
-      const tdEnabled = document.createElement('td');
+      const top = document.createElement('div');
+      top.className = 'category-card-top';
+
       const inEnabled = document.createElement('input');
       inEnabled.type = 'checkbox';
       inEnabled.checked = !!cat.enabled;
-      inEnabled.title = 'Activer/désactiver cette catégorie';
+      inEnabled.title = 'Utiliser cette catégorie';
       inEnabled.addEventListener('change', ()=>{
         cat.enabled = inEnabled.checked;
         save(); renderSettings(); renderYear();
       });
-      tdEnabled.appendChild(inEnabled);
-      tr.appendChild(tdEnabled);
+      top.appendChild(inEnabled);
 
-      const tdLabel = document.createElement('td');
       const inLabel = document.createElement('input');
       inLabel.type = 'text';
+      inLabel.className = 'category-name-input';
       // Valeur réelle (peut être vide) + placeholder grisé montrant le nom
       // par défaut : vider le champ ne remet pas de force "Congé"/"RTT"/
       // "Télétravail" dedans, on peut retaper directement par-dessus.
@@ -2302,17 +2381,21 @@
         cat.label = inLabel.value;
         save(); renderYear();
       });
-      tdLabel.appendChild(inLabel);
-      tr.appendChild(tdLabel);
+      top.appendChild(inLabel);
 
-      const tdColor = document.createElement('td');
-      tdColor.appendChild(buildColorPicker(cat.color, (hex)=>{
+      top.appendChild(buildColorPicker(cat.color, (hex)=>{
         cat.color = hex;
         save(); renderYear();
       }));
-      tr.appendChild(tdColor);
 
-      const tdQuota = document.createElement('td');
+      card.appendChild(top);
+
+      const details = document.createElement('div');
+      details.className = 'category-card-details';
+
+      const quotaRow = document.createElement('label');
+      quotaRow.className = 'detail-row';
+      quotaRow.appendChild(document.createTextNode('Quota/an (j)'));
       const inQuota = document.createElement('input');
       inQuota.type = 'number'; inQuota.min = 0; inQuota.step = 0.5;
       inQuota.value = cat.quotaParAn;
@@ -2320,57 +2403,63 @@
         cat.quotaParAn = Number(inQuota.value)||0;
         save(); renderYear();
       });
-      tdQuota.appendChild(inQuota);
-      tr.appendChild(tdQuota);
+      quotaRow.appendChild(inQuota);
+      details.appendChild(quotaRow);
 
-      const tdCarry = document.createElement('td');
+      const carryRow = document.createElement('label');
+      carryRow.className = 'detail-row';
       const inCarry = document.createElement('input');
       inCarry.type = 'checkbox';
       inCarry.checked = !!cat.carryoverEnabled;
-      inCarry.title = 'Reporter les jours non pris sur l\'année suivante';
       inCarry.addEventListener('change', ()=>{
         cat.carryoverEnabled = inCarry.checked;
         save(); renderSettings(); renderYear();
       });
-      tdCarry.appendChild(inCarry);
-      tr.appendChild(tdCarry);
+      carryRow.appendChild(inCarry);
+      carryRow.appendChild(document.createTextNode('Reporter les jours non pris sur l\'année suivante'));
+      details.appendChild(carryRow);
 
-      const tdCap = document.createElement('td');
+      const capRow = document.createElement('label');
+      capRow.className = 'detail-row';
       const inCapEnabled = document.createElement('input');
       inCapEnabled.type = 'checkbox';
       inCapEnabled.checked = !!cat.carryoverCapEnabled;
       inCapEnabled.disabled = !cat.carryoverEnabled;
-      inCapEnabled.title = 'Plafonner le report';
       inCapEnabled.addEventListener('change', ()=>{
         cat.carryoverCapEnabled = inCapEnabled.checked;
         save(); renderSettings(); renderYear();
       });
+      capRow.appendChild(inCapEnabled);
+      capRow.appendChild(document.createTextNode('Plafonner le report à'));
       const inCap = document.createElement('input');
       inCap.type = 'number'; inCap.min = 0; inCap.step = 0.5;
       inCap.value = cat.carryoverCap;
-      inCap.placeholder = 'nb de jours max';
+      inCap.placeholder = 'nb de jours';
       inCap.disabled = !cat.carryoverEnabled || !cat.carryoverCapEnabled;
+      inCap.addEventListener('click', (e)=>e.stopPropagation());
       inCap.addEventListener('input', ()=>{
         cat.carryoverCap = Number(inCap.value)||0;
         save(); renderYear();
       });
-      tdCap.appendChild(inCapEnabled);
-      tdCap.appendChild(inCap);
-      tr.appendChild(tdCap);
+      capRow.appendChild(inCap);
+      capRow.appendChild(document.createTextNode('j'));
+      details.appendChild(capRow);
 
-      const tdHalf = document.createElement('td');
+      const halfRow = document.createElement('label');
+      halfRow.className = 'detail-row';
       const inHalf = document.createElement('input');
       inHalf.type = 'checkbox';
       inHalf.checked = !!cat.halfDayAllowed;
-      inHalf.title = 'Autoriser la pose en demi-journée (matin/après-midi)';
       inHalf.addEventListener('change', ()=>{
         cat.halfDayAllowed = inHalf.checked;
         save();
       });
-      tdHalf.appendChild(inHalf);
-      tr.appendChild(tdHalf);
+      halfRow.appendChild(inHalf);
+      halfRow.appendChild(document.createTextNode('Autoriser la pose en demi-journée (matin/après-midi)'));
+      details.appendChild(halfRow);
 
-      tbody.appendChild(tr);
+      card.appendChild(details);
+      container.appendChild(card);
     });
   }
   // Construit la table des calendriers de CET utilisateur (nom, couleur,
@@ -2425,11 +2514,15 @@
   // "user-bar" en haut de page (sélecteur d'utilisateur actif + cases
   // "Afficher"), le bloc de réglages complet de l'Utilisateur 2 et son champ
   // de renommage. Rien n'est jamais supprimé, seulement masqué.
+  // Vrai tant que Paramètres (vue "page à part") est affiché : le user-bar
+  // doit alors rester masqué même si le mode multi-utilisateur est activé
+  // (voir toggleSettings et updateMultiUserUI, qui combinent les 2 conditions).
+  let settingsPageOpen = false;
   function updateMultiUserUI(){
     const enabled = isMultiUserEnabled();
     document.getElementById('multiUserToggle').checked = enabled;
     const bar = document.querySelector('.user-bar');
-    if(bar) bar.classList.toggle('hidden', !enabled);
+    if(bar) bar.classList.toggle('hidden', !enabled || settingsPageOpen);
     const block2 = document.getElementById('userSettingsBlock_user2');
     if(block2) block2.classList.toggle('hidden', !enabled);
     const row2 = document.getElementById('userName2Row');
@@ -2588,8 +2681,31 @@
     saveUIState();
     renderYear();
   });
+  // Les Paramètres s'affichent comme une page à part : le calendrier (grille
+  // du bas) est masqué tant qu'ils sont ouverts, plutôt que de rester
+  // affiché en dessous.
   document.getElementById('toggleSettings').addEventListener('click', ()=>{
-    document.getElementById('settingsPanel').classList.toggle('hidden');
+    const panel = document.getElementById('settingsPanel');
+    const opening = panel.classList.contains('hidden');
+    panel.classList.toggle('hidden');
+    settingsPageOpen = opening;
+    // Le wrapper (et non #calendarGrid lui-même) : renderYear() réécrit la
+    // classe de #calendarGrid à chaque rendu (vue mois/semaine/jour/année),
+    // ce qui effacerait un "hidden" posé directement dessus.
+    document.getElementById('calendarGridWrap').classList.toggle('hidden', opening);
+    // Paramètres = une page à part : on masque tout ce qui ne concerne que
+    // le calendrier (sélection congé/RTT/télétravail, choix de vue
+    // jour/semaine/mois/année), pas seulement la grille — ça revient dès
+    // qu'on referme les Paramètres.
+    const toHide = ['.brush-bar', '.view-switch'];
+    toHide.forEach(sel=>{
+      const el = document.querySelector(sel);
+      if(el) el.classList.toggle('hidden', opening);
+    });
+    // Le user-bar a sa propre logique (aussi masqué si le mode multi-
+    // utilisateur est désactivé) : on la relance pour qu'elle tienne compte
+    // à la fois de settingsPageOpen et de ce réglage.
+    updateMultiUserUI();
   });
   document.querySelectorAll('.brush-btn').forEach(btn=>{
     btn.addEventListener('click', ()=>{
