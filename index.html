@@ -294,7 +294,14 @@
        une hauteur trop juste. On reste sur UNE seule vue Année (Mois a été
        retiré), donc l'agrandissement ne fait qu'allonger le défilement d'un
        même mois, jamais en montrer deux à la fois. */
-    min-height:96px; border-radius:0; background:transparent; border:none;
+    min-height:96px; border-radius:0; background:transparent;
+    /* Fine ligne au-dessus de chaque case "réelle" du mois (jamais sur une
+       case .day.empty, voir sa règle plus bas qui remet border:none) : posée
+       par cellule plutôt que via une ligne globale sur la ligne de grille,
+       elle s'arrête donc naturellement aux vrais jours du mois quand une
+       semaine de début/fin de mois est incomplète (ex : 1er août un samedi
+       → la ligne ne couvre que le 1er et le 2, pas les 5 jours vides avant). */
+    border:none; border-top:1px solid #e5e5ea;
     display:flex; flex-direction:column; overflow:hidden; position:relative; z-index:0; cursor:pointer;
   }
   .day.big { min-height:110px; cursor:pointer; }
@@ -597,6 +604,20 @@
   }
   .cal-add-row { color:var(--bleu-conge-dark); font-weight:600; cursor:pointer; }
 
+  /* Résultats de recherche (voir renderSearchResults) : liste simple, un
+     résultat par ligne — pastille de couleur du calendrier, titre, date/
+     heure formatée, lieu en second si présent. */
+  .search-result-row {
+    display:flex; align-items:center; gap:10px; padding:10px 4px; border-bottom:1px solid #f0f0f2;
+    cursor:pointer; text-align:left; width:100%; background:none; border-left:none; border-right:none; border-top:none;
+  }
+  .search-result-row:hover { background:#f7f7f9; }
+  .search-result-dot { width:10px; height:10px; border-radius:50%; flex-shrink:0; }
+  .search-result-text { flex:1; min-width:0; }
+  .search-result-title { font-size:14px; font-weight:600; color:var(--text); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .search-result-meta { font-size:12px; color:#8e8e93; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .search-empty { font-size:13px; color:#8e8e93; text-align:center; padding:24px 8px; }
+
   /* Sélecteur de couleur — évènements, calendriers et catégories. N'affiche
      que le rond de la couleur actuelle ; cliquer dessus ouvre un panneau
      centré au milieu de l'écran (et non collé à la pastille : sur mobile
@@ -630,12 +651,34 @@
     box-shadow:0 0 0 1px rgba(0,0,0,0.08);
   }
   .color-swatch-btn.selected { border-color:#333; box-shadow:0 0 0 2px #fff inset, 0 0 0 1px #333; }
-  .color-picker-advanced { display:flex; align-items:center; gap:8px; }
-  .color-picker-advanced-toggle {
-    background:none; border:none; color:var(--bleu-conge-dark); font-size:12px; cursor:pointer;
-    padding:2px 0; text-decoration:underline;
+  /* Ligne "Plus ›" façon menu Apple (Réglages iOS) : remplace l'ancien lien
+     "Couleur personnalisée…" qu'il fallait cliquer pour RÉVÉLER l'input
+     couleur natif, lui-même à cliquer une 2e fois pour ouvrir le vrai
+     sélecteur — ici un seul clic ouvre directement le sélecteur système
+     (voir son handler : il déclenche advInput.click() immédiatement). */
+  .color-picker-more-row {
+    display:flex; align-items:center; justify-content:space-between; width:100%;
+    background:none; border:none; border-top:1px solid #eee; margin-top:6px; padding:10px 2px 2px;
+    font-size:14px; color:var(--text); cursor:pointer;
   }
-  .color-picker-custom { width:36px; height:26px; border:1px solid var(--border); border-radius:6px; padding:0; cursor:pointer; }
+  .color-picker-more-row:hover { color:#000; }
+  .color-picker-more-chevron { color:#c7c7cc; font-size:16px; }
+  /* Input couleur natif : jamais affiché directement (on le déclenche par
+     programme via .click() depuis la ligne "Plus ›" ci-dessus) — gardé HORS
+     de display:none (qui empêcherait .click() d'ouvrir fiablement le
+     sélecteur système sur certains navigateurs/WKWebView), juste rendu
+     invisible et non cliquable directement. */
+  .color-picker-custom-hidden { position:absolute; width:1px; height:1px; opacity:0; pointer-events:none; }
+  /* Bouton OK : seul moyen de refermer le panneau une fois qu'on a touché au
+     sélecteur de couleur avancé — demande explicite, car sur iPhone le
+     sélecteur système déclenche un évènement dès le premier contact avec une
+     teinte (pas seulement à la fermeture), ce qui refermait le panneau
+     avant d'avoir fini d'ajuster. */
+  .color-picker-ok-btn {
+    display:block; width:100%; margin-top:10px; padding:8px; border:none; border-radius:8px;
+    background:#1c1c1e; color:#fff; font-size:14px; font-weight:600; cursor:pointer;
+  }
+  .color-picker-ok-btn:hover { background:#000; }
   /* Cartes de catégorie (Paramètres > Catégories) : une carte par catégorie,
      tout empilé en colonne plutôt qu'une table à 7 colonnes illisible sur
      petit écran. 1ère ligne = activée + nom + couleur ; en dessous, empilés,
@@ -708,6 +751,7 @@
         <button id="nextPeriod">›</button>
       </div>
       <div class="pill-nav-icons">
+        <button id="searchBtn" title="Rechercher un évènement">🔍</button>
         <button id="addEventBtn" title="Nouvel évènement">+</button>
         <button id="toggleSettings" title="Paramètres">⚙</button>
       </div>
@@ -1050,6 +1094,27 @@
     <button id="calEditDelete" class="ev-delete-row">Supprimer le calendrier</button>
   </div>
 </div>
+
+<!-- Recherche d'évènements : champ texte façon barre de recherche iOS, en
+     haut d'une modale plein écran (même gabarit .modal-overlay/.modal-box
+     que les autres écrans) — les résultats s'affichent en liste au fur et à
+     mesure de la frappe (voir renderSearchResults), un par correspondance
+     (titre/lieu/notes), triés par date. Cliquer sur un résultat ferme la
+     recherche, bascule en vue Jour sur sa date et ouvre directement sa
+     modale d'édition. -->
+<div id="searchModal" class="modal-overlay hidden">
+  <div class="modal-box">
+    <div class="modal-head">
+      <button id="searchClose" class="modal-close" aria-label="Fermer">✕</button>
+      <h3>Rechercher</h3>
+      <span style="width:32px"></span>
+    </div>
+    <div class="ev-card">
+      <input type="text" id="searchInput" class="ev-card-input" placeholder="Titre, lieu, notes…">
+    </div>
+    <div id="searchResultsBody"></div>
+  </div>
+</div>
 <script>
 (function(){
   const STORAGE_KEY = 'congesCalendarData_v1';
@@ -1173,7 +1238,7 @@
     swatchRow.className = 'color-picker-swatches';
     const advInput = document.createElement('input');
     advInput.type = 'color';
-    advInput.className = 'color-picker-custom hidden';
+    advInput.className = 'color-picker-custom-hidden';
 
     function refresh(){
       swatchBtn.style.background = selected;
@@ -1206,28 +1271,52 @@
       swatchRow.appendChild(btn);
     });
     panel.appendChild(swatchRow);
-    const advRow = document.createElement('div');
-    advRow.className = 'color-picker-advanced';
+    // Ligne "Plus ›" façon menu Apple : UN SEUL clic ouvre directement le
+    // sélecteur de couleur système (advInput.click(), déclenché depuis un
+    // vrai geste utilisateur donc autorisé par le navigateur/WKWebView),
+    // plus besoin de d'abord révéler l'input avant de pouvoir le cliquer.
     const advToggle = document.createElement('button');
     advToggle.type = 'button';
-    advToggle.className = 'color-picker-advanced-toggle';
-    advToggle.textContent = 'Couleur personnalisée…';
+    advToggle.className = 'color-picker-more-row';
+    const advToggleLabel = document.createElement('span');
+    advToggleLabel.textContent = 'Plus…';
+    const advToggleChevron = document.createElement('span');
+    advToggleChevron.className = 'color-picker-more-chevron';
+    advToggleChevron.textContent = '›';
+    advToggle.appendChild(advToggleLabel);
+    advToggle.appendChild(advToggleChevron);
     advToggle.addEventListener('click', (e)=>{
       e.stopPropagation();
-      advInput.classList.toggle('hidden');
+      advInput.click();
     });
+    // Met à jour l'aperçu en continu pendant qu'on ajuste (utile pour voir la
+    // teinte changer en direct), mais NE ferme PAS le panneau — seul le
+    // bouton OK ci-dessous le referme (voir son commentaire CSS : sur
+    // iPhone, le sélecteur système déclenche déjà un évènement au premier
+    // contact, pas seulement à la fermeture, donc s'appuyer sur "change"
+    // pour fermer refermait le panneau bien trop tôt).
     advInput.addEventListener('input', ()=>{
       selected = advInput.value;
       refresh();
       onChange(selected);
     });
-    // Ferme le panneau une fois le choix confirmé (change se déclenche à la
-    // fermeture du sélecteur natif), pas à chaque valeur survolée pendant
-    // qu'on fait glisser le curseur (input, géré au-dessus).
-    advInput.addEventListener('change', (e)=>{ e.stopPropagation(); closeAllColorPickerPanels(); });
-    advRow.appendChild(advToggle);
-    advRow.appendChild(advInput);
-    panel.appendChild(advRow);
+    advInput.addEventListener('change', (e)=>{
+      e.stopPropagation();
+      selected = advInput.value;
+      refresh();
+      onChange(selected);
+    });
+    panel.appendChild(advToggle);
+    panel.appendChild(advInput);
+    const okBtn = document.createElement('button');
+    okBtn.type = 'button';
+    okBtn.className = 'color-picker-ok-btn';
+    okBtn.textContent = 'OK';
+    okBtn.addEventListener('click', (e)=>{
+      e.stopPropagation();
+      closeAllColorPickerPanels();
+    });
+    panel.appendChild(okBtn);
     wrap.appendChild(swatchBtn);
     // Le panneau est rattaché à <body> (et non à wrap) : positionné en
     // "fixed" et centré à l'écran (voir CSS .color-picker-panel), il doit
@@ -3196,6 +3285,105 @@
   document.getElementById('calendarsModal').addEventListener('click', (e)=>{
     if(e.target.id === 'calendarsModal') document.getElementById('calendarsModal').classList.add('hidden');
   });
+  // ---- Recherche d'évènements ----
+  // Parcourt data.days entièrement (les 2 utilisateurs, tous calendriers
+  // visibles) et renvoie les évènements dont titre/lieu/notes contiennent la
+  // recherche. Un évènement "journée entière" multi-jours est dupliqué sur
+  // CHACUN de ses jours dans data.days (voir saveEvent) : on ne garde que sa
+  // première occurrence (userId+id) pour ne pas l'afficher plusieurs fois.
+  function searchAllEvents(query){
+    const q = query.trim().toLowerCase();
+    if(!q) return [];
+    const results = [];
+    const seenAllDay = new Set();
+    Object.keys(data.days).sort().forEach(ds=>{
+      const dayBucket = data.days[ds];
+      USER_KEYS.forEach(userId=>{
+        const bucket = dayBucket[userId];
+        if(!bucket) return;
+        (bucket.events || []).forEach(ev=>{
+          const hay = [ev.title, ev.location, ev.notes].filter(Boolean).join(' ').toLowerCase();
+          if(!hay.includes(q)) return;
+          const cal = findCalendar(userId, ev.calendarId);
+          if(cal && cal.visible === false) return;
+          if(ev.allDay){
+            const key = userId + ':' + ev.id;
+            if(seenAllDay.has(key)) return;
+            seenAllDay.add(key);
+          }
+          results.push(Object.assign({}, ev, { _owner: userId, _ds: ev.allDay ? (ev.dateStart || ds) : ds }));
+        });
+      });
+    });
+    results.sort((a, b)=> a._ds.localeCompare(b._ds) || (a.start || '').localeCompare(b.start || ''));
+    return results;
+  }
+  function formatSearchDate(ds, ev){
+    const d = new Date(ds + 'T00:00:00');
+    const label = JOURS[(d.getDay() + 6) % 7] + ' ' + d.getDate() + ' ' + MOIS[d.getMonth()].slice(0, 3);
+    if(ev.allDay){
+      if(ev.dateEnd && ev.dateEnd !== ev.dateStart){
+        const d2 = new Date(ev.dateEnd + 'T00:00:00');
+        return label + ' – ' + d2.getDate() + ' ' + MOIS[d2.getMonth()].slice(0, 3);
+      }
+      return label;
+    }
+    return label + (ev.start ? ' · ' + ev.start : '');
+  }
+  function renderSearchResults(query){
+    const body = document.getElementById('searchResultsBody');
+    body.innerHTML = '';
+    if(!query.trim()) return;
+    const results = searchAllEvents(query);
+    if(!results.length){
+      const empty = document.createElement('div');
+      empty.className = 'search-empty';
+      empty.textContent = 'Aucun évènement trouvé.';
+      body.appendChild(empty);
+      return;
+    }
+    results.forEach(ev=>{
+      const row = document.createElement('button');
+      row.type = 'button';
+      row.className = 'search-result-row';
+      const dot = document.createElement('span');
+      dot.className = 'search-result-dot';
+      dot.style.background = eventColor(ev);
+      row.appendChild(dot);
+      const text = document.createElement('div');
+      text.className = 'search-result-text';
+      const title = document.createElement('div');
+      title.className = 'search-result-title';
+      title.textContent = ev.title + (isMultiUserEnabled() ? ' — ' + userName(ev._owner) : '');
+      const meta = document.createElement('div');
+      meta.className = 'search-result-meta';
+      meta.textContent = formatSearchDate(ev._ds, ev) + (ev.location ? ' · ' + ev.location : '');
+      text.appendChild(title);
+      text.appendChild(meta);
+      row.appendChild(text);
+      row.addEventListener('click', ()=>{
+        document.getElementById('searchModal').classList.add('hidden');
+        goToDayView(ev._ds);
+        openEventModal(ev._ds, ev.id, ev._owner);
+      });
+      body.appendChild(row);
+    });
+  }
+  document.getElementById('searchBtn').addEventListener('click', ()=>{
+    document.getElementById('searchInput').value = '';
+    document.getElementById('searchResultsBody').innerHTML = '';
+    document.getElementById('searchModal').classList.remove('hidden');
+    document.getElementById('searchInput').focus();
+  });
+  document.getElementById('searchClose').addEventListener('click', ()=>{
+    document.getElementById('searchModal').classList.add('hidden');
+  });
+  document.getElementById('searchModal').addEventListener('click', (e)=>{
+    if(e.target.id === 'searchModal') document.getElementById('searchModal').classList.add('hidden');
+  });
+  document.getElementById('searchInput').addEventListener('input', (e)=>{
+    renderSearchResults(e.target.value);
+  });
   // Affiche/masque tout ce qui n'a de sens qu'en mode multi-utilisateur : le
   // "user-bar" en haut de page (sélecteur d'utilisateur actif + cases
   // "Afficher"), le bloc de réglages complet de l'Utilisateur 2 et son champ
@@ -3402,7 +3590,7 @@
     // au clic sur "mode multi-utilisateur"), ce qui effacerait un "hidden"
     // posé directement dessus — même bug, même solution que
     // #calendarGridWrap pour #calendarGrid.
-    const toHide = ['.pill-year-nav', '#addEventBtn', '.bottom-bar', '.brush-bar', '#stickyExtraWrap'];
+    const toHide = ['.pill-year-nav', '#addEventBtn', '#searchBtn', '.bottom-bar', '.brush-bar', '#stickyExtraWrap'];
     toHide.forEach(sel=>{
       const el = document.querySelector(sel);
       if(el) el.classList.toggle('hidden', opening);
