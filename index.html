@@ -214,7 +214,13 @@
   }
   .months-grid.single-view { display:block; max-width:900px; margin:0 auto; }
   .months-grid.wide-view { display:block; max-width:1200px; margin:0 auto; }
-  .month-block { background:var(--card-bg); border:1px solid var(--border); border-radius:10px; padding:10px; }
+  /* --sticky-h : hauteur réelle du bandeau figé, mise à jour en JS juste
+     avant de faire défiler jusqu'au mois en cours (voir
+     scrollToCurrentYearMonth) — scroll-margin-top laisse le NAVIGATEUR
+     calculer la position finale de scrollIntoView(), plus fiable qu'un
+     calcul manuel scrollY+rect.top (qui pouvait être faux au tout premier
+     rendu d'une web app iOS ajoutée à l'écran d'accueil). */
+  .month-block { background:var(--card-bg); border:1px solid var(--border); border-radius:10px; padding:10px; scroll-margin-top:calc(var(--sticky-h, 160px) + 12px); }
   .month-title { font-weight:600; font-size:14px; text-align:center; margin-bottom:8px; text-transform:capitalize; }
   .month-block.large .month-title { font-size:18px; margin-bottom:14px; }
   .week-header { display:grid; grid-template-columns: repeat(7,1fr); font-size:10px; color:#999; margin-bottom:4px; }
@@ -2816,21 +2822,28 @@
   document.getElementById('nextPeriod').addEventListener('click', ()=>navigatePeriod(1));
   // Vue Année : fait défiler jusqu'au bloc du mois en cours (celui de
   // viewDate) pour qu'il soit bien visible — un seul mois par ligne sur
-  // téléphone, plusieurs colonnes sur ordinateur. On positionne le HAUT du
-  // bloc juste sous le bandeau figé (+ une petite marge), plutôt que de le
-  // centrer dans l'écran : un centrage pur pouvait laisser le haut du bloc
-  // (avec le nom du mois) remonter sous le bandeau et se faire couper,
-  // surtout sur petit écran où le bandeau est plus haut (2 lignes).
+  // téléphone, plusieurs colonnes sur ordinateur. Plutôt qu'un calcul manuel
+  // (scrollY + rect.top - hauteur du bandeau), qui s'est révélé peu fiable
+  // en mode "web app" iOS (ajoutée à l'écran d'accueil) — probablement la
+  // mesure prise avant que le tout premier rendu ne soit stabilisé — on
+  // utilise scroll-margin-top (voir CSS .month-block) + scrollIntoView natif :
+  // c'est le NAVIGATEUR qui calcule la position finale après un layout
+  // complet, ce qui est plus robuste. On met juste à jour --sticky-h avec la
+  // hauteur RÉELLE actuelle du bandeau juste avant (elle varie selon
+  // l'écran/le mode multi-utilisateur/l'encoche). Double
+  // requestAnimationFrame : laisse le temps à un premier rendu de se
+  // stabiliser avant de mesurer, utile au tout premier chargement.
   function scrollToCurrentYearMonth(smooth){
     if(viewMode !== 'year') return;
     const targetMonth = viewDate.getMonth();
     requestAnimationFrame(()=>{
-      const el = document.querySelector('#calendarGrid .month-block[data-month="' + targetMonth + '"]');
-      const stickyTop = document.getElementById('stickyTop');
-      if(!el || !stickyTop) return;
-      const stickyH = stickyTop.getBoundingClientRect().height;
-      const target = window.scrollY + el.getBoundingClientRect().top - stickyH - 12;
-      window.scrollTo({ top: Math.max(0, target), behavior: smooth === false ? 'auto' : 'smooth' });
+      requestAnimationFrame(()=>{
+        const el = document.querySelector('#calendarGrid .month-block[data-month="' + targetMonth + '"]');
+        const stickyTop = document.getElementById('stickyTop');
+        if(!el || !stickyTop) return;
+        document.documentElement.style.setProperty('--sticky-h', stickyTop.getBoundingClientRect().height + 'px');
+        el.scrollIntoView({ behavior: smooth === false ? 'auto' : 'smooth', block:'start' });
+      });
     });
   }
   document.getElementById('todayBtn').addEventListener('click', ()=>{
@@ -2846,6 +2859,10 @@
       document.querySelectorAll('.view-btn').forEach(b=>b.classList.remove('active'));
       btn.classList.add('active');
       renderYear();
+      // Bascule vers Année : recentre sur le mois actuellement affiché
+      // (viewDate) — sans quoi on atterrit tout en haut (Janvier), pas
+      // forcément sur le bon mois.
+      if(viewMode === 'year') scrollToCurrentYearMonth();
     });
   });
 
