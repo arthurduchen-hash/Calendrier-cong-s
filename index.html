@@ -3689,7 +3689,11 @@
     const hm = String(ev.start).split(':');
     const startDt = new Date(parts[0], parts[1] - 1, parts[2], Number(hm[0]) || 0, Number(hm[1]) || 0, 0);
     const triggerDt = new Date(startDt.getTime() - Number(ev.reminder) * 60000);
-    if(triggerDt <= new Date()) return; // déjà passé : rien à programmer
+    // Plus de blocage si le déclenchement calculé est déjà passé (ou très
+    // proche, événement dans 5 minutes) : on transmet quand même la date au
+    // pont natif, qui gère ça sans problème (notification quasi immédiate si
+    // la date est déjà passée) — plus simple que de deviner ici ce qui doit
+    // être bloqué ou pas.
     try {
       window.webkit.messageHandlers.scheduleReminder.postMessage({
         id: reminderNotifId(userId, ev.id),
