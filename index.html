@@ -1056,6 +1056,31 @@
 
     <div class="ev-card">
       <div class="ev-card-row">
+        <span>Répétition</span>
+        <select id="evRepeat" class="ev-pill-select">
+          <option value="">Jamais</option>
+          <option value="daily">Tous les jours</option>
+          <option value="weekly">Toutes les semaines</option>
+          <option value="biweekly">Toutes les 2 semaines</option>
+          <option value="monthly">Tous les mois</option>
+          <option value="yearly">Tous les ans</option>
+        </select>
+      </div>
+      <div class="ev-card-row hidden" id="evRepeatEndRow">
+        <span>Fin</span>
+        <select id="evRepeatEndMode" class="ev-pill-select">
+          <option value="never">Jamais</option>
+          <option value="date">À une date</option>
+        </select>
+      </div>
+      <div class="ev-card-row hidden" id="evRepeatEndDateRow">
+        <span>Date de fin</span>
+        <input type="date" id="evRepeatEndDate" class="ev-pill-input">
+      </div>
+    </div>
+
+    <div class="ev-card">
+      <div class="ev-card-row">
         <span>Calendrier</span>
         <select id="evCalendar" class="ev-pill-select"></select>
       </div>
@@ -1987,38 +2012,133 @@
       cleanupDay(ds, userId);
     });
   }
+  // Décale un objet Date JS d'UN mois en préservant le quantième d'origine
+  // (ex. le 31) ; si le mois suivant n'a pas assez de jours (ex. 31 avril),
+  // saute directement au 1er mois suivant qui en a assez — même comportement
+  // que l'app Calendrier d'Apple pour une répétition mensuelle sur un jour
+  // qui n'existe pas dans tous les mois (plutôt que de dériver sur une autre
+  // date, ce que ferait new Date(...).setMonth() tout seul).
+  function addRecurrenceMonth(d, originDay){
+    let y = d.getFullYear(), m = d.getMonth() + 1;
+    while(true){
+      if(m > 11){ m = 0; y++; }
+      const daysInM = new Date(y, m + 1, 0).getDate();
+      if(originDay <= daysInM){ d.setFullYear(y, m, originDay); return; }
+      m++;
+    }
+  }
+  // Même principe pour une répétition annuelle (ex. 29 février, qui n'existe
+  // que les années bissextiles) : saute à la prochaine année où ce jour
+  // existe plutôt que de dériver sur une autre date.
+  function addRecurrenceYear(d, originMonth, originDay){
+    let y = d.getFullYear() + 1;
+    while(true){
+      const daysInM = new Date(y, originMonth + 1, 0).getDate();
+      if(originDay <= daysInM){ d.setFullYear(y, originMonth, originDay); return; }
+      y++;
+    }
+  }
+  // Calcule la liste des dates de départ (une par occurrence) d'une
+  // répétition, à partir de sa date d'origine (1ère occurrence). Comme cette
+  // appli stocke chaque occurrence comme un vrai jour dans data.days (pas de
+  // moteur de récurrence "live" recalculé à la volée), on ne peut pas
+  // générer une répétition réellement infinie : sans date de fin choisie
+  // ("Jamais"), on matérialise jusqu'à REPEAT_HORIZON_YEARS ans après le
+  // début — largement assez pour un usage courant ; il suffit de rouvrir et
+  // ré-enregistrer l'évènement plus tard pour prolonger la série au-delà. Un
+  // plafond dur supplémentaire (REPEAT_HARD_CAP_*) protège en plus contre tout
+  // emballement si une date de fin très lointaine était saisie.
+  const REPEAT_HORIZON_YEARS = 3;
+  const REPEAT_HARD_CAP_YEARS = 5;
+  const REPEAT_HARD_CAP_COUNT = 1500;
+  function generateRecurrenceDates(originDs, repeat, untilDs){
+    if(!repeat) return [originDs];
+    const originD = new Date(originDs + 'T00:00:00');
+    const originDay = originD.getDate();
+    const originMonth = originD.getMonth();
+    let limitD;
+    if(untilDs){
+      limitD = new Date(untilDs + 'T00:00:00');
+    } else {
+      limitD = new Date(originD);
+      limitD.setFullYear(limitD.getFullYear() + REPEAT_HORIZON_YEARS);
+    }
+    const hardLimitD = new Date(originD);
+    hardLimitD.setFullYear(hardLimitD.getFullYear() + REPEAT_HARD_CAP_YEARS);
+    if(limitD > hardLimitD) limitD = hardLimitD;
+    const dates = [];
+    const d = new Date(originD);
+    while(d <= limitD && dates.length < REPEAT_HARD_CAP_COUNT){
+      dates.push(dateStr(d.getFullYear(), d.getMonth(), d.getDate()));
+      switch(repeat){
+        case 'daily': d.setDate(d.getDate() + 1); break;
+        case 'weekly': d.setDate(d.getDate() + 7); break;
+        case 'biweekly': d.setDate(d.getDate() + 14); break;
+        case 'monthly': addRecurrenceMonth(d, originDay); break;
+        case 'yearly': addRecurrenceYear(d, originMonth, originDay); break;
+        default: d.setDate(d.getDate() + 1);
+      }
+    }
+    return dates;
+  }
   // Enregistre un évènement pour l'utilisateur userId (son propriétaire).
   // Pour un évènement "journée entière", ev.dateStart/ev.dateEnd définissent
   // une plage (un seul jour si identiques) : le même évènement (même id) est
   // dupliqué sur chaque jour de la plage, ce qui permet ensuite de le
   // fusionner en un seul bandeau en vue Mois. Pour un évènement horaire, il
-  // n'existe que sur son unique jour (ev.ds).
+  // n'existe que sur son unique jour (ev.ds) — SAUF en cas de répétition (voir
+  // ev.repeat) : le même principe de duplication par id s'applique alors en
+  // plus à chaque occurrence (voir generateRecurrenceDates), ev.ds/
+  // ev.dateStart servant d'ORIGINE (1ère occurrence). repeat/repeatUntil/
+  // repeatOrigin sont recopiés sur CHAQUE occurrence générée (comme
+  // dateStart/dateEnd pour une plage journée entière) pour que rouvrir
+  // n'importe laquelle permette de modifier/supprimer la série entière de
+  // façon cohérente (voir openEventModal).
   function saveEvent(ev, userId){
     deleteEventEverywhere(ev.id, userId);
+    const repeat = ev.repeat || '';
+    const repeatUntil = repeat ? (ev.repeatUntil || '') : '';
+    const TOTAL_CAP = 3000; // garde-fou global (plage longue x répétition rapprochée)
+    let totalWritten = 0;
     if(ev.allDay){
-      const dateStart = ev.dateStart;
-      const dateEnd = ev.dateEnd && ev.dateEnd >= dateStart ? ev.dateEnd : dateStart;
-      const d = new Date(dateStart + 'T00:00:00');
-      const end = new Date(dateEnd + 'T00:00:00');
-      while(d <= end){
-        const ds2 = dateStr(d.getFullYear(), d.getMonth(), d.getDate());
+      const spanStart = ev.dateStart;
+      const spanEnd = ev.dateEnd && ev.dateEnd >= spanStart ? ev.dateEnd : spanStart;
+      const durationDays = Math.round((new Date(spanEnd + 'T00:00:00') - new Date(spanStart + 'T00:00:00')) / 86400000);
+      const originDates = generateRecurrenceDates(spanStart, repeat, repeatUntil);
+      occLoop:
+      for(const occStart of originDates){
+        const occEndD = new Date(occStart + 'T00:00:00');
+        occEndD.setDate(occEndD.getDate() + durationDays);
+        const occEnd = dateStr(occEndD.getFullYear(), occEndD.getMonth(), occEndD.getDate());
+        const d = new Date(occStart + 'T00:00:00');
+        const end = new Date(occEnd + 'T00:00:00');
+        while(d <= end){
+          if(totalWritten >= TOTAL_CAP) break occLoop;
+          const ds2 = dateStr(d.getFullYear(), d.getMonth(), d.getDate());
+          if(!data.days[ds2]) data.days[ds2] = {};
+          if(!data.days[ds2][userId]) data.days[ds2][userId] = { status:'', events:[] };
+          data.days[ds2][userId].events.push({
+            id: ev.id, title: ev.title, allDay: true, dateStart: occStart, dateEnd: occEnd,
+            calendarId: ev.calendarId, location: ev.location || '', notes: ev.notes || '',
+            repeat, repeatUntil, repeatOrigin: repeat ? spanStart : ''
+          });
+          totalWritten++;
+          d.setDate(d.getDate() + 1);
+        }
+      }
+    } else {
+      const originDates = generateRecurrenceDates(ev.ds, repeat, repeatUntil);
+      for(const ds2 of originDates){
+        if(totalWritten >= TOTAL_CAP) break;
         if(!data.days[ds2]) data.days[ds2] = {};
         if(!data.days[ds2][userId]) data.days[ds2][userId] = { status:'', events:[] };
         data.days[ds2][userId].events.push({
-          id: ev.id, title: ev.title, allDay: true, dateStart, dateEnd,
-          calendarId: ev.calendarId, location: ev.location || '', notes: ev.notes || ''
+          id: ev.id, title: ev.title, allDay: false, start: ev.start, end: ev.end,
+          calendarId: ev.calendarId, location: ev.location || '', notes: ev.notes || '',
+          reminder: ev.reminder || '', repeat, repeatUntil, repeatOrigin: repeat ? ev.ds : ''
         });
-        d.setDate(d.getDate() + 1);
+        totalWritten++;
       }
-    } else {
-      const ds2 = ev.ds;
-      if(!data.days[ds2]) data.days[ds2] = {};
-      if(!data.days[ds2][userId]) data.days[ds2][userId] = { status:'', events:[] };
-      data.days[ds2][userId].events.push({
-        id: ev.id, title: ev.title, allDay: false, start: ev.start, end: ev.end,
-        calendarId: ev.calendarId, location: ev.location || '', notes: ev.notes || '',
-        reminder: ev.reminder || ''
-      });
     }
     save();
   }
@@ -3849,9 +3969,14 @@
   function openEventModal(ds, eventId, ownerUserId, defaults){
     defaults = defaults || {};
     ownerUserId = ownerUserId || activeUserId();
-    eventModalCtx = { ds, id: eventId || null, owner: ownerUserId };
+    eventModalCtx = { ds, id: eventId || null, owner: ownerUserId, repeatOrigin: null };
     const isEdit = !!eventId;
     const ev = isEdit ? (getDayEvents(ds, ownerUserId).find(e=>e.id === eventId) || {}) : null;
+    // Origine de la série pour un évènement qui se répète (voir saveEvent) :
+    // chaque occurrence générée porte la MÊME repeatOrigin — rouvrir
+    // n'importe laquelle et l'enregistrer régénère donc la série complète au
+    // bon endroit, plutôt que de la faire glisser sur le jour cliqué.
+    eventModalCtx.repeatOrigin = (ev && ev.repeat && ev.repeatOrigin) ? ev.repeatOrigin : ds;
     document.getElementById('eventModalTitle').textContent = (isEdit ? "Modifier l'évènement" : 'Nouvel évènement') + ' — ' + userName(ownerUserId);
     document.getElementById('evTitle').value = ev ? (ev.title || '') : '';
     const allDay = ev ? !!ev.allDay : !!defaults.allDay;
@@ -3862,12 +3987,29 @@
     document.getElementById('evEnd').value = ev ? (ev.end || '') : (defaults.end || addOneHour(startVal));
     // Plage de dates (évènement journée entière) : par défaut le jour sur
     // lequel on a cliqué ; si on édite un évènement existant, sa plage réelle
-    // (dateStart/dateEnd), disponible sur chacune de ses copies quotidiennes.
-    document.getElementById('evDateStart').value = ev ? (ev.dateStart || ds) : (defaults.dateStart || ds);
-    document.getElementById('evDateEnd').value = ev ? (ev.dateEnd || ev.dateStart || ds) : (defaults.dateEnd || defaults.dateStart || ds);
+    // (dateStart/dateEnd) — ou, s'il se répète, celle de sa 1ère occurrence
+    // (repeatOrigin, même durée reportée), pour ne jamais faire glisser toute
+    // la série en ré-enregistrant une occurrence ultérieure sans y toucher.
+    let originDateStart, originDateEnd;
+    if(ev && ev.repeat && ev.repeatOrigin){
+      const durationDays = ev.dateStart && ev.dateEnd
+        ? Math.round((new Date(ev.dateEnd + 'T00:00:00') - new Date(ev.dateStart + 'T00:00:00')) / 86400000)
+        : 0;
+      originDateStart = ev.repeatOrigin;
+      originDateEnd = shiftDs(ev.repeatOrigin, durationDays);
+    } else {
+      originDateStart = ev ? (ev.dateStart || ds) : (defaults.dateStart || ds);
+      originDateEnd = ev ? (ev.dateEnd || ev.dateStart || ds) : (defaults.dateEnd || defaults.dateStart || ds);
+    }
+    document.getElementById('evDateStart').value = originDateStart;
+    document.getElementById('evDateEnd').value = originDateEnd;
     document.getElementById('evLocation').value = ev ? (ev.location || '') : '';
     document.getElementById('evNotes').value = ev ? (ev.notes || '') : '';
     document.getElementById('evReminder').value = ev ? (ev.reminder || '') : '';
+    document.getElementById('evRepeat').value = ev ? (ev.repeat || '') : '';
+    document.getElementById('evRepeatEndMode').value = ev && ev.repeatUntil ? 'date' : 'never';
+    document.getElementById('evRepeatEndDate').value = ev ? (ev.repeatUntil || '') : '';
+    updateRepeatRowsVisibility();
     document.getElementById('evTimeRow').style.display = allDay ? 'none' : 'flex';
     document.getElementById('evDateRow').style.display = allDay ? 'flex' : 'none';
     // Le rappel n'a de sens que pour un évènement avec une heure précise :
@@ -3888,6 +4030,18 @@
     document.getElementById('evDateRow').style.display = allDay ? 'flex' : 'none';
     document.getElementById('evReminderRow').style.display = allDay ? 'none' : 'flex';
   });
+  // Ligne "Fin" (jamais/à une date) affichée seulement si une répétition est
+  // choisie, et le champ "Date de fin" affiché seulement si "Fin" = "à une
+  // date" — même logique de repli progressif que le toggle "Journée entière"
+  // juste au-dessus.
+  function updateRepeatRowsVisibility(){
+    const repeat = document.getElementById('evRepeat').value;
+    const endMode = document.getElementById('evRepeatEndMode').value;
+    document.getElementById('evRepeatEndRow').classList.toggle('hidden', !repeat);
+    document.getElementById('evRepeatEndDateRow').classList.toggle('hidden', !repeat || endMode !== 'date');
+  }
+  document.getElementById('evRepeat').addEventListener('change', updateRepeatRowsVisibility);
+  document.getElementById('evRepeatEndMode').addEventListener('change', updateRepeatRowsVisibility);
   // En changeant l'heure de début, l'heure de fin suit automatiquement pour
   // rester une heure plus tard.
   document.getElementById('evStart').addEventListener('change', (e)=>{
@@ -3917,6 +4071,9 @@
     const calendarId = document.getElementById('evCalendar').value;
     lastUsedCalendarId[ownerUserId] = calendarId;
     const reminder = allDay ? '' : document.getElementById('evReminder').value;
+    const repeat = document.getElementById('evRepeat').value;
+    const repeatEndMode = document.getElementById('evRepeatEndMode').value;
+    const repeatUntil = repeat && repeatEndMode === 'date' ? document.getElementById('evRepeatEndDate').value : '';
     // On annule d'abord toute notification native déjà programmée pour cet
     // id (utile en édition : heure changée, rappel retiré, ou passage en
     // journée entière), puis on reprogramme si un rappel est toujours actif
@@ -3928,13 +4085,21 @@
       if(dateEnd < dateStart){ const tmp = dateStart; dateStart = dateEnd; dateEnd = tmp; }
       const spanDays = Math.round((new Date(dateEnd) - new Date(dateStart)) / 86400000) + 1;
       if(spanDays > 366){ alert('Cette période est trop longue (plus d\'un an).'); return; }
-      saveEvent({ id, title, allDay: true, dateStart, dateEnd, location, notes, calendarId, reminder: '' }, ownerUserId);
+      saveEvent({ id, title, allDay: true, dateStart, dateEnd, location, notes, calendarId, reminder: '', repeat, repeatUntil }, ownerUserId);
     } else {
       const start = document.getElementById('evStart').value || '00:00';
       const end = document.getElementById('evEnd').value || '';
-      saveEvent({ id, title, allDay: false, ds: eventModalCtx.ds, start, end, location, notes, calendarId, reminder }, ownerUserId);
+      // ds : origine de la série si l'évènement se répète (voir
+      // eventModalCtx.repeatOrigin, calculé dans openEventModal), sinon le
+      // jour cliqué comme avant.
+      const originDs = eventModalCtx.repeatOrigin || eventModalCtx.ds;
+      saveEvent({ id, title, allDay: false, ds: originDs, start, end, location, notes, calendarId, reminder, repeat, repeatUntil }, ownerUserId);
       if(reminder){
-        scheduleNativeReminder(ownerUserId, { id, ds: eventModalCtx.ds, start, title, location, reminder });
+        // Rappel natif programmé seulement pour l'origine de la série (pas
+        // une notification par occurrence future) — le mécanisme web plus
+        // bas (checkReminders) prend lui le relais au jour le jour pour les
+        // occurrences suivantes tant que l'app est ouverte ce jour-là.
+        scheduleNativeReminder(ownerUserId, { id, ds: originDs, start, title, location, reminder });
       }
     }
     closeEventModal();
