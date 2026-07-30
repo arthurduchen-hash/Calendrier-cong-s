@@ -369,7 +369,7 @@
      calendrier Apple — couleur pastel du calendrier/catégorie via
      pastelOf()/darkOf() (déjà utilisés ailleurs dans l'app), juste la forme
      qui change (pleinement arrondie plutôt que coins légèrement arrondis). */
-  .day-events { flex:1; display:flex; flex-direction:column; gap:2px; padding:0 4px 4px; overflow:hidden; }
+  .day-events { flex:1; display:flex; flex-direction:column; gap:3px; padding:0 4px 4px; margin-top:5px; overflow:hidden; }
   .event-chip {
     background:#e3f2fd; color:#0d47a1; border-radius:999px; padding:1px 6px; font-size:9px;
     overflow:hidden; text-overflow:ellipsis; white-space:nowrap; cursor:pointer;
@@ -489,6 +489,20 @@
     border-left:3px solid var(--bleu-conge-dark); z-index:1;
   }
   .event-block:hover { filter:brightness(0.96); }
+  /* Évènement horaire à cheval sur minuit (ex. 23:00 → 06:00) : le bloc du
+     jour de départ va jusqu'à minuit (voir buildEventBlock/isOvernightEvent)
+     et se termine par un petit chevron plutôt qu'un bord net, pour montrer
+     qu'il continue le lendemain. Le bloc "suite" du lendemain commence lui
+     aussi par un chevron (pointant vers le haut) au lieu d'un bord net, coin
+     supérieur non arrondi pour bien le rattacher visuellement à la veille. */
+  .event-block.continues-next { border-bottom-left-radius:2px; border-bottom-right-radius:2px; }
+  .event-block.continues-next::after {
+    content:"⌄"; position:absolute; right:6px; bottom:-1px; font-size:9px; line-height:1; opacity:0.65;
+  }
+  .event-block.continues-prev { border-top-left-radius:2px; border-top-right-radius:2px; }
+  .event-block.continues-prev::before {
+    content:"⌃"; position:absolute; right:6px; top:-1px; font-size:9px; line-height:1; opacity:0.65;
+  }
 
   /* Modale évènement, restylée façon calendrier Apple : fond gris clair,
      cartes blanches arrondies séparées (titre+lieu / journée entière+dates /
@@ -617,6 +631,20 @@
   .search-result-title { font-size:14px; font-weight:600; color:var(--text); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   .search-result-meta { font-size:12px; color:#8e8e93; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   .search-empty { font-size:13px; color:#8e8e93; text-align:center; padding:24px 8px; }
+  /* La recherche partage le même gabarit .modal-overlay/.modal-box que les
+     autres modales, lequel centre la boîte verticalement (align-items:center)
+     — très bien pour un formulaire de taille fixe, mais gênant ici : le
+     nombre de résultats change à chaque frappe, donc la hauteur de la boîte
+     change, et avec un centrage vertical tout (y compris le champ de
+     recherche tout en haut) se remettait à bouger à l'écran pendant la
+     frappe. On verrouille donc CETTE modale en haut (align-items:flex-start
+     + une marge fixe), pour que seule la liste de résultats en dessous du
+     champ s'allonge ou se raccourcisse, jamais le champ lui-même. */
+  #searchModal { align-items:flex-start; }
+  #searchModal .modal-box {
+    margin-top:calc(32px + env(safe-area-inset-top));
+    max-height:calc(100vh - 64px - env(safe-area-inset-top));
+  }
 
   /* Sélecteur de couleur — évènements, calendriers et catégories. N'affiche
      que le rond de la couleur actuelle ; cliquer dessus ouvre un panneau
@@ -1724,6 +1752,14 @@
   }
   function pad(n){ return String(n).padStart(2,'0'); }
   function dateStr(y,m,d){ return `${y}-${pad(m+1)}-${pad(d)}`; }
+  // Renvoie la date (ds) décalée de `delta` jours (delta peut être négatif) —
+  // utilisé pour retrouver la veille/le lendemain d'un ds donné, notamment
+  // pour les évènements horaires qui se terminent après minuit.
+  function shiftDs(ds, delta){
+    const d = new Date(ds + 'T00:00:00');
+    d.setDate(d.getDate() + delta);
+    return dateStr(d.getFullYear(), d.getMonth(), d.getDate());
+  }
   // Meeus/Jones/Butcher Easter algorithm
   function easterDate(year){
     const a = year % 19;
@@ -2301,28 +2337,49 @@
     }
     const evList = document.createElement('div');
     evList.className = 'day-events';
-    // BAR_PITCH doit être exactement le même chiffre que dans renderMonth/
-    // renderYear (positionnement des bandeaux "journée entière" en absolu) —
-    // c'est ce qui garantit qu'ils ne chevauchent JAMAIS le premier évènement
-    // horaire en dessous : le pas vertical (pitch) entre 2 bandeaux empilés
-    // est supérieur à leur hauteur visuelle réelle (voir .day-allday-bar /
-    // .day-allday-bar.small), ce qui laisse toujours une petite marge, aussi
-    // bien entre 2 bandeaux qu'entre le dernier bandeau et la 1ère chip.
-    const BAR_PITCH = big ? 23 : 18;
+    // CHIP_GAP doit être exactement le même chiffre que le "gap" CSS de
+    // .day-events (voir plus bas) : .day-events est un flex column avec ce
+    // gap, appliqué AUTOMATIQUEMENT entre CHAQUE enfant direct — y compris
+    // entre le spacer ci-dessous (qui réserve la place des bandeaux) et la
+    // 1ère chip normale qui suit. BAR_PITCH doit être exactement le même
+    // chiffre que dans renderMonth/renderYear (positionnement des bandeaux
+    // "journée entière" en absolu) — c'est ce qui garantit qu'ils ne
+    // chevauchent JAMAIS le premier évènement horaire en dessous. BAR_PITCH =
+    // hauteur réelle du bandeau (voir .day-allday-bar/.day-allday-bar.small)
+    // + CHIP_GAP : ainsi l'écart est identique entre 2 bandeaux empilés,
+    // entre le dernier bandeau et la 1ère chip, et entre 2 chips normales —
+    // peu importe la nature (journée entière ou horaire) des évènements
+    // empilés.
+    const CHIP_GAP = 3;
+    const BAR_PITCH = big ? 23 : (14 + CHIP_GAP);
     if(laneCount && laneCount > 0){
-      // Réserve la place occupée visuellement par le(s) bandeau(x) qui
-      // recouvre(nt) cette case (un par lane empilé), + une marge de sécurité
-      // (4px) pour que le 1er évènement horaire ne touche jamais le bas du
-      // dernier bandeau.
+      // Réserve la place occupée par le(s) bandeau(x) empilé(s) sur ce jour
+      // (un par lane) — SANS compter le dernier écart de fin, puisque le
+      // "gap" CSS de .day-events l'ajoute déjà tout seul entre le spacer et
+      // ce qui suit (voir commentaire ci-dessus).
       const spacer = document.createElement('div');
-      spacer.style.height = (laneCount * BAR_PITCH + 4) + 'px';
+      spacer.style.height = (laneCount * BAR_PITCH - CHIP_GAP) + 'px';
       spacer.style.flexShrink = '0';
       evList.appendChild(spacer);
     }
     // Évènements des 2 utilisateurs visibles, combinés (voir
     // getVisibleDayEvents) : chacun garde son propriétaire (_owner) pour la
     // couleur (son calendrier) et pour router le clic vers la bonne édition.
-    const events = getVisibleDayEvents(ds).filter(ev=> !(hiddenIds && hiddenIds.has(ev.id)));
+    const ownEvents = getVisibleDayEvents(ds).filter(ev=> !(hiddenIds && hiddenIds.has(ev.id)));
+    // Un évènement horaire qui déborde après minuit (23h → 6h par exemple,
+    // voir isOvernightEvent) n'est rattaché qu'à son jour de départ dans les
+    // données (voir saveEvent) — sans ça il ne serait visible QUE ce
+    // jour-là. On ajoute donc ici, en plus, sa chip sur le jour SUIVANT
+    // (_srcDs le fait pointer vers son vrai jour pour l'ouverture de la
+    // modale) pour qu'il apparaisse bien sur ses 2 jours, comme en vue Jour/
+    // Semaine (voir renderTimeGrid).
+    const overnightPrevDs = shiftDs(ds, -1);
+    const overnightContinuations = getVisibleDayEvents(overnightPrevDs)
+      .filter(ev=> !ev.allDay && isOvernightEvent(ev))
+      .map(ev=>Object.assign({}, ev, { _srcDs: overnightPrevDs }));
+    const allDayPart = ownEvents.filter(e=>e.allDay);
+    const timedPart = ownEvents.filter(e=>!e.allDay);
+    const events = allDayPart.concat(overnightContinuations, timedPart);
     // Nombre de chips affichables : diminue avec le nombre de bandeaux déjà
     // empilés (chacun "mange" à peu près la place d'une chip), pour que la
     // case reste globalement de la même hauteur au lieu de s'étirer sans fin
@@ -2336,7 +2393,7 @@
     const baseMaxShow = big ? 4 : 3;
     const maxShow = Math.max(0, baseMaxShow - laneCount - (holidayLabel ? 1 : 0));
     events.slice(0, maxShow).forEach(ev=>{
-      evList.appendChild(buildEventChip(ds, ev));
+      evList.appendChild(buildEventChip(ev._srcDs || ds, ev));
     });
     if(events.length > maxShow){
       const more = document.createElement('div');
@@ -2561,23 +2618,13 @@
       // sort complètement les bandeaux du flux de la grille et évite ce
       // conflit. Le décalage vertical et la taille du bandeau s'adaptent
       // à la taille des cases (grande case en vue Mois, mini-case en Année).
-      const topOffset = big ? 27 : 34;
       // BAR_PITCH (et non plus la hauteur réelle du bandeau) sert de pas
       // vertical entre lanes empilées : identique à BAR_PITCH dans
       // buildDayCell, pour que la réserve de place (spacer) et la position
       // réelle des bandeaux restent alignées et ne se chevauchent jamais,
       // avec toujours une petite marge entre 2 bandeaux (pitch > hauteur
       // visuelle réelle du bandeau, voir .day-allday-bar/.small).
-      const barPitch = big ? 23 : 18;
-      // Un bandeau qui recouvre un jour de fête doit être poussé sous son
-      // libellé (voir .holiday-label, affiché sous le numéro) au lieu de
-      // passer par-dessus. Comme UN SEUL bandeau peut s'étirer sur plusieurs
-      // jours, on décale TOUT le bandeau (quitte à afficher moins
-      // d'évènements en dessous, via maxShow dans buildDayCell) dès qu'AU
-      // MOINS un des jours qu'il traverse a une fête — demande explicite :
-      // "décale tout quand il y a une fête quitte à afficher moins
-      // d'évènements".
-      const HOLIDAY_EXTRA = big ? 15 : 13;
+      const barPitch = big ? 23 : 17;
       grid.style.position = 'relative';
       requestAnimationFrame(()=>{
         if(!grid.isConnected) return;
@@ -2588,11 +2635,26 @@
           if(!startEl || !endEl) return;
           const r1 = startEl.getBoundingClientRect();
           const r2 = endEl.getBoundingClientRect();
-          let holidayExtra = 0;
+          // Départ vertical du bandeau : mesuré en vrai (via le conteneur
+          // .day-events de chaque case traversée), plutôt qu'un décalage fixe
+          // en pixels — c'est ce qui garantit le MÊME écartement avec le
+          // numéro du jour que les évènements horaires normaux (qui démarrent
+          // pile en haut de .day-events, voir buildDayCell), au lieu d'un
+          // nombre "au pif" qui pouvait tomber plus haut ou plus bas selon
+          // les cases. .day-events démarre déjà sous le libellé de fête (voir
+          // .holiday-label, posé juste avant lui dans buildDayCell) : on n'a
+          // donc plus besoin d'un HOLIDAY_EXTRA séparé, on prend simplement
+          // le plus bas des .day-events parmi toutes les cases traversées par
+          // ce bandeau, pour ne jamais recouvrir un libellé de fête.
+          let top = null;
           for(let col=sp.colStart; col<=sp.colEnd; col++){
-            const dsCol = dsAtGridIndex(year, month, firstDow, sp.row*7 + col);
-            if(getHolidayLabel(dsCol)){ holidayExtra = HOLIDAY_EXTRA; break; }
+            const cellEl = cellByIndex[sp.row*7 + col];
+            const evListEl = cellEl && cellEl.querySelector('.day-events');
+            if(!evListEl) continue;
+            const t = evListEl.getBoundingClientRect().top - gridRect.top;
+            if(top === null || t > top) top = t;
           }
+          if(top === null) top = r1.top - gridRect.top;
           const bar = document.createElement('div');
           bar.className = 'day-allday-bar' + (big ? '' : ' small');
           bar.textContent = sp.title;
@@ -2600,7 +2662,7 @@
           bar.style.background = pastelOf(sp.color);
           bar.style.color = darkOf(sp.color);
           bar.style.left = (r1.left - gridRect.left) + 'px';
-          bar.style.top = (r1.top - gridRect.top + topOffset + holidayExtra + sp.lane*barPitch) + 'px';
+          bar.style.top = (top + sp.lane*barPitch) + 'px';
           bar.style.width = (r2.right - r1.left) + 'px';
           bar.addEventListener('click', (e)=>{ e.stopPropagation(); openEventModal(sp.ds, sp.id, sp.userId); });
           grid.appendChild(bar);
@@ -2622,23 +2684,55 @@
     const mins = (timeToMinutes(t || '00:00') + 60) % (24 * 60);
     return pad(Math.floor(mins / 60)) + ':' + pad(mins % 60);
   }
+  // Un évènement horaire n'a qu'un seul jour de rattachement (ev.ds, voir
+  // saveEvent) : quand son heure de fin est plus petite ou égale à son heure
+  // de début (ex. 23:00 → 06:00), ça ne peut vouloir dire qu'une chose, il se
+  // termine le lendemain. isOvernightEvent centralise ce test, utilisé à la
+  // fois par buildEventBlock (pour ne plus tronquer le bloc à 30 minutes) et
+  // par renderTimeGrid (pour savoir quand afficher un second bloc "suite" le
+  // jour suivant).
+  function isOvernightEvent(ev){
+    return !!ev.end && timeToMinutes(ev.end) < timeToMinutes(ev.start || '00:00');
+  }
   // Bloc positionné (top/height) représentant un évènement avec horaire,
   // affiché dans la colonne du jour concerné. showTime : n'affiche l'horaire
   // en toutes lettres sur le bloc qu'en vue Jour (la position verticale sur
   // la grille horaire suffit en vue Semaine, sans le répéter en texte).
-  function buildEventBlock(ds, ev, showTime){
-    const startMin = timeToMinutes(ev.start || '00:00');
-    let endMin = timeToMinutes(ev.end || ev.start || '00:00');
-    if(endMin <= startMin) endMin = startMin + 30;
+  // opts.continuesFromPrev : ce bloc est la "suite" (après minuit) d'un
+  // évènement commencé la veille — on l'affiche depuis 00:00 jusqu'à sa vraie
+  // heure de fin, dans la colonne du LENDEMAIN, plutôt que de perdre sa fin.
+  // opts.continuesToNext : ce bloc (jour de départ) déborde sur le lendemain
+  // (voir isOvernightEvent) — il va jusqu'à minuit au lieu d'être tronqué à
+  // 30 minutes, et affiche un petit repère visuel (voir .event-block.
+  // continues-next) pour indiquer qu'il continue le jour suivant.
+  function buildEventBlock(ds, ev, showTime, opts){
+    opts = opts || {};
+    const overnight = isOvernightEvent(ev);
+    let startMin, endMin;
+    if(opts.continuesFromPrev){
+      startMin = 0;
+      endMin = Math.max(timeToMinutes(ev.end || '00:00'), 30);
+    } else {
+      startMin = timeToMinutes(ev.start || '00:00');
+      if(overnight){
+        endMin = 24 * 60;
+      } else {
+        endMin = timeToMinutes(ev.end || ev.start || '00:00');
+        if(endMin <= startMin) endMin = startMin + 30;
+      }
+    }
     const block = document.createElement('div');
-    block.className = 'event-block';
+    block.className = 'event-block'
+      + (opts.continuesFromPrev ? ' continues-prev' : '')
+      + (!opts.continuesFromPrev && overnight ? ' continues-next' : '');
     const color = eventColor(ev);
     block.style.background = pastelOf(color);
     block.style.color = darkOf(color);
     block.style.borderLeftColor = color;
     block.style.top = ((startMin/60) * HOUR_H) + 'px';
     block.style.height = Math.max(((endMin-startMin)/60) * HOUR_H, 18) + 'px';
-    block.textContent = (showTime && ev.start ? ev.start + ' ' : '') + ev.title;
+    const timeLabel = opts.continuesFromPrev ? ('→' + ev.end + ' ') : (showTime && ev.start ? ev.start + ' ' : '');
+    block.textContent = timeLabel + ev.title;
     block.title = ev.title + (ev.start ? ' (' + ev.start + (ev.end ? '–' + ev.end : '') + ')' : '') + (ev.location ? ' · ' + ev.location : '');
     block.addEventListener('click', (e)=>{ e.stopPropagation(); openEventModal(ds, ev.id, ev._owner); });
     return block;
@@ -2880,7 +2974,16 @@
         col.appendChild(line);
       }
       getVisibleDayEvents(ds).filter(e=>!e.allDay).forEach(ev=>{
-        col.appendChild(buildEventBlock(ds, ev, showTime));
+        col.appendChild(buildEventBlock(ds, ev, showTime, { continuesToNext: isOvernightEvent(ev) }));
+      });
+      // Évènements de la veille qui débordent après minuit (23h → 6h par
+      // exemple) : on ne les voit plus s'arrêter dans le vide à minuit — un
+      // second bloc "suite" est affiché ici, de 00:00 jusqu'à leur vraie
+      // heure de fin (voir isOvernightEvent/buildEventBlock). On regarde la
+      // veille même si elle n'est pas dans les colonnes affichées (ex. vue
+      // Jour, ou 1er jour d'une vue Semaine).
+      getVisibleDayEvents(shiftDs(ds, -1)).filter(e=>!e.allDay && isOvernightEvent(e)).forEach(ev=>{
+        col.appendChild(buildEventBlock(shiftDs(ds, -1), ev, showTime, { continuesFromPrev: true }));
       });
       inner.appendChild(col);
     });
