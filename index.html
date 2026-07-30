@@ -98,7 +98,7 @@
      petite icône calendrier dans une pilule ronde, comme dans le calendrier
      Apple), posée par-dessus le contenu, jamais dans le flux normal de la page. */
   .bottom-bar {
-    position:fixed; left:0; right:0; bottom:0; display:flex; justify-content:space-between;
+    position:fixed; left:0; right:0; bottom:0; display:flex; justify-content:flex-end;
     padding:10px 16px calc(10px + env(safe-area-inset-bottom)); pointer-events:none; z-index:60;
   }
   .bottom-pill {
@@ -106,6 +106,14 @@
     -webkit-backdrop-filter:blur(10px); border-radius:999px; padding:11px 20px; font-size:15px; font-weight:600;
     color:var(--text); cursor:pointer; box-shadow:0 2px 10px rgba(0,0,0,0.12);
   }
+  /* margin-right:auto (et non justify-content:space-between sur .bottom-bar,
+     voir plus haut) : "Aujourd'hui" est poussé à gauche quand il est visible,
+     mais le groupe de droite (.bottom-bar-right) reste TOUJOURS ancré à
+     droite même quand "Aujourd'hui" disparaît (onglet Congés, voir
+     switchTab) — avec space-between, ce groupe se serait retrouvé seul et
+     aurait sauté à gauche, faisant bouger le bouton parasol entre les 2
+     onglets. */
+  #todayBtn { margin-right:auto; }
   .bottom-pill:hover { background:#fff; }
   .bottom-pill-icon {
     pointer-events:auto; border:none; background:rgba(255,255,255,0.85); backdrop-filter:blur(10px);
@@ -114,6 +122,12 @@
     display:flex; align-items:center; justify-content:center;
   }
   .bottom-pill-icon:hover { background:#fff; }
+  .bottom-bar-right { display:flex; gap:10px; }
+  /* Bouton parasol actif = on est sur l'onglet Congés (le recliquer y ramène
+     au calendrier normal, voir switchTab) — même traitement visuel "actif"
+     que les autres pilules à bascule de l'app (ex. .user-toggle-btn.active). */
+  #congesToggleBtn.active { background:#1c1c1e; color:#fff; }
+  #congesToggleBtn.active:hover { background:#1c1c1e; }
   /* Un peu d'espace en bas de page pour que le dernier contenu ne soit pas
      masqué par la pilule flottante "Aujourd'hui". */
   #calendarGridWrap { padding-bottom:64px; }
@@ -167,10 +181,9 @@
     display:flex; align-items:center; gap:8px; flex-wrap:wrap;
   }
   .pending-hint.hidden { display:none; }
-  #cancelPending {
+  .pending-hint button {
     border:1px solid var(--border); background:#fff; border-radius:10px; padding:3px 10px; cursor:pointer; font-size:12px;
   }
-  .day.pending { outline:2px dashed #555; outline-offset:-2px; }
   #settingsPanel h3 { margin:18px 0 8px; font-size:15px; }
   #settingsPanel h3:first-child { margin-top:0; }
   .settings-row { display:flex; align-items:center; gap:10px; margin-bottom:10px; flex-wrap:wrap; }
@@ -223,6 +236,51 @@
     font-size:13px; font-weight:600; color:#999;
   }
   .user-toggle-btn.active { background:#1c1c1e; border-color:#1c1c1e; color:#fff; }
+  /* ==================== Onglet Congés ==================== */
+  /* En-tête figé propre à l'onglet Congés (même principe que #stickyTop côté
+     Calendrier, voir updateStickyHeightVar qui mesure celui des 2 qui est
+     actuellement affiché) : récap, sélecteurs utilisateur/catégorie et
+     navigation d'année restent visibles pendant qu'on fait défiler l'année. */
+  #congesSticky {
+    position:sticky; top:0; z-index:50; background:var(--bg);
+    margin:-24px -24px 16px; padding:calc(24px + env(safe-area-inset-top)) 24px 12px;
+    box-shadow:0 4px 6px -4px rgba(0,0,0,0.08);
+  }
+  @media (max-width:640px){
+    #congesSticky { margin:-10px -10px 16px; padding:calc(10px + env(safe-area-inset-top)) 10px 12px; }
+  }
+  .conge-year-nav { justify-content:center; margin:0 auto 4px; width:fit-content; }
+  /* Récap minimal ("X restants" seulement, voir updateCongeRecap) : pas de
+     détail dispo/pris/report ici, volontairement — ce niveau reste réservé
+     aux Paramètres. */
+  .conge-recap { display:flex; flex-wrap:wrap; justify-content:center; gap:8px 20px; margin-bottom:10px; }
+  .conge-recap-item { display:flex; align-items:center; gap:6px; font-size:13px; font-weight:700; }
+  .conge-recap-dot { width:9px; height:9px; border-radius:50%; flex-shrink:0; }
+  /* Case-jour de l'onglet Congés (voir buildCongeDayCell) : coupée en 1 ou 2
+     colonnes (utilisateurs visibles) x 1 ou 2 lignes (demi-journée autorisée
+     ou non pour la catégorie active) — chaque zone est un vrai bouton
+     cliquable pour poser un début/une fin de plage (voir
+     handleCongeZoneClick). Fond blanc par défaut (pas de statut) ; coloré en
+     JS (pastelOf) selon le statut réel de chaque utilisateur/demi-journée. */
+  .conge-day {
+    min-height:64px; border:none; border-top:1px solid #e5e5ea; position:relative;
+    display:flex; flex-direction:column; overflow:hidden; background:#fff;
+  }
+  .conge-day.empty { border:none; background:transparent; }
+  .conge-day.off .conge-daynum { color:#c3c3c8; }
+  .conge-day.today .conge-daynum { color:#ff3b30; font-weight:800; }
+  .conge-daynum {
+    font-size:11px; font-weight:600; text-align:center; padding:3px 0 2px; color:var(--text); flex-shrink:0;
+  }
+  .conge-zones { flex:1; display:flex; }
+  .conge-col { flex:1; display:flex; flex-direction:column; min-width:0; }
+  .conge-col + .conge-col { border-left:1px solid #e5e5ea; }
+  .conge-zone { flex:1; min-height:14px; cursor:pointer; transition:filter 0.1s; }
+  .conge-zone:hover { filter:brightness(0.94); }
+  .conge-zone.readonly { cursor:default; }
+  .conge-zone.readonly:hover { filter:none; }
+  .conge-zone + .conge-zone { border-top:1px solid rgba(0,0,0,0.06); }
+  .conge-zone.pending { outline:2px dashed #555; outline-offset:-2px; }
   .user-settings-block + .user-settings-block { margin-top:22px; padding-top:18px; border-top:1px dashed var(--border); }
   .del-btn { background:none; border:none; border-radius:0; color:#c0392b; cursor:pointer; font-size:15px; }
   #addHoliday, .add-calendar-btn { margin-top:4px; border:1px dashed #aaa; background:#fff; padding:6px 12px; border-radius:10px; cursor:pointer; font-size:13px; }
@@ -768,6 +826,7 @@
   body.widget-mode .brush-bar,
   body.widget-mode #stickyExtra,
   body.widget-mode #todayBtn,
+  body.widget-mode #congesToggleBtn,
   body.widget-mode #toggleSettings,
   body.widget-mode footer{
     display:none !important;
@@ -784,6 +843,7 @@
   }
 </script>
 <div id="app">
+  <div id="calendarTabContent">
   <div id="stickyTop">
     <div class="pill-nav">
       <div class="pill-year-nav">
@@ -804,16 +864,6 @@
         <option value="user2">Utilisateur 2</option>
       </select>
       <button type="button" class="user-toggle-btn active" id="showUser2">Utilisateur 2</button>
-    </div>
-    <div class="brush-bar">
-      <button class="brush-btn conge active" data-brush="conge"><span id="brushLabelConge">Congé</span></button>
-      <button class="brush-btn rtt" data-brush="rtt"><span id="brushLabelRtt">RTT</span></button>
-      <button class="brush-btn teletravail" data-brush="teletravail"><span id="brushLabelTeletravail">Télétravail</span></button>
-      <button class="brush-btn erase" data-brush="">Effacer</button>
-      <span id="pendingHint" class="pending-hint hidden">
-        Depuis <b id="pendingDateLabel"></b>
-        <button id="cancelPending">Annuler</button>
-      </span>
     </div>
     <div id="stickyExtraWrap"><div id="stickyExtra"></div></div>
   </div>
@@ -1016,12 +1066,50 @@
     <div id="calendarGrid" class="months-grid"></div>
   </div>
   <footer>Les données sont enregistrées automatiquement dans le stockage local de ce navigateur. Si une synchronisation Google Sheet est configurée (Paramètres), elles sont aussi envoyées vers le Sheet pour être accessibles depuis tes autres appareils. Pensez à exporter régulièrement une sauvegarde JSON.</footer>
+  </div>
+  <!-- Onglet Congés : gestion dédiée congé/RTT/télétravail par demi-journée,
+       cases coupées en zones cliquables (2 ou 4 selon le nombre d'utilisateurs
+       visibles et l'autorisation de demi-journée de la catégorie active) —
+       voir renderConges/buildCongeDayCell. Complètement séparé de l'onglet
+       Calendrier (pas d'évènements ici), mais partage les mêmes données de
+       statut/catégories/utilisateurs. -->
+  <div id="congesTabContent" class="hidden">
+    <div id="congesSticky">
+      <div id="congesRecap" class="conge-recap"></div>
+      <div class="user-bar">
+        <button type="button" class="user-toggle-btn active" id="congeShowUser1">Utilisateur 1</button>
+        <select id="congeActiveUserSelect">
+          <option value="user1">Utilisateur 1</option>
+          <option value="user2">Utilisateur 2</option>
+        </select>
+        <button type="button" class="user-toggle-btn active" id="congeShowUser2">Utilisateur 2</button>
+      </div>
+      <div class="brush-bar">
+        <button class="brush-btn conge active" data-brush="conge"><span id="congeBrushLabelConge">Congé</span></button>
+        <button class="brush-btn rtt" data-brush="rtt"><span id="congeBrushLabelRtt">RTT</span></button>
+        <button class="brush-btn teletravail" data-brush="teletravail"><span id="congeBrushLabelTeletravail">Télétravail</span></button>
+        <button class="brush-btn erase" data-brush="">Effacer</button>
+        <span id="congePendingHint" class="pending-hint hidden">
+          Depuis <b id="congePendingDateLabel"></b>
+          <button id="congeCancelPending">Annuler</button>
+        </span>
+      </div>
+      <div class="pill-year-nav conge-year-nav">
+        <button id="congePrevYear">‹</button>
+        <span id="congeYearLabel">2026</span>
+        <button id="congeNextYear">›</button>
+      </div>
+    </div>
+    <div id="congeGrid" class="months-grid"></div>
+  </div>
 </div>
 <div class="bottom-bar">
   <button id="todayBtn" class="bottom-pill">Aujourd'hui</button>
-  <button id="calendarsBtn" class="bottom-pill-icon" title="Calendriers" aria-label="Calendriers">📅</button>
+  <div class="bottom-bar-right">
+    <button id="congesToggleBtn" class="bottom-pill-icon" title="Congés" aria-label="Congés">⛱️</button>
+    <button id="calendarsBtn" class="bottom-pill-icon" title="Calendriers" aria-label="Calendriers">📅</button>
+  </div>
 </div>
-<div id="statusMenu" class="status-menu hidden"></div>
 
 <div id="eventModal" class="modal-overlay hidden">
   <div class="modal-box">
@@ -1955,7 +2043,11 @@
     USER_KEYS.forEach(u=>updateCategoryCardsForUser(year, u));
   }
   let currentBrush = 'conge'; // clé de catégorie ('conge'|'rtt'|'teletravail') | '' (effacer)
-  let pendingStart = null; // dateStr of the first click, awaiting a second click
+  // Onglet actif ('calendar' = Calendrier avec évènements/statuts existant,
+  // 'conges' = nouvel onglet dédié congé/RTT/télétravail, voir switchTab) —
+  // partage les mêmes données/réglages (statuts, catégories, utilisateurs),
+  // seule la présentation/interaction change.
+  let activeTab = 'calendar';
   // Toutes les fonctions de lecture/écriture d'un jour prennent désormais un
   // userId : chaque utilisateur a son propre casier {status, events} dans
   // data.days[ds] (voir migrateDaysToUsers).
@@ -2157,11 +2249,6 @@
     }
     save();
   }
-  function closeStatusMenu(){
-    const menu = document.getElementById('statusMenu');
-    menu.classList.add('hidden');
-    menu.innerHTML = '';
-  }
   // Petit menu "où ouvrir ce lieu ?" (Apple Plans / Google Maps), affiché
   // près du bouton lieu de la modale évènement. On ne peut pas deviner
   // depuis une simple adresse texte si l'utilisateur préfère Apple ou
@@ -2206,55 +2293,11 @@
       closeMapsChoice();
     }
   });
-  // Small popup shown when re-clicking the same (pending) day: lets you pick
-  // journée entière / matin / après-midi (or clear) for that single day.
-  function openHalfDayMenu(ds, rect){
-    const menu = document.getElementById('statusMenu');
-    menu.innerHTML = '';
-    const userId = activeUserId();
-    const catForBrush = data.settings.categories[userId][currentBrush];
-    const brushLabel = (catForBrush && catForBrush.label) || currentBrush;
-    const brushColor = currentBrush ? categoryColor(userId, currentBrush) : '#ccc';
-    const options = [
-      {value: currentBrush, label: brushLabel + ' — journée entière', color: brushColor},
-      {value: currentBrush + '_am', label: brushLabel + ' — matin', color: brushColor},
-      {value: currentBrush + '_pm', label: brushLabel + ' — après-midi', color: brushColor},
-      {value: '', label: 'Rien (effacer ce jour)', color: null}
-    ];
-    options.forEach(opt=>{
-      const btn = document.createElement('button');
-      if(opt.color){
-        const sw = document.createElement('span');
-        sw.className = 'sw';
-        sw.style.background = opt.color;
-        btn.appendChild(sw);
-      }
-      btn.appendChild(document.createTextNode(opt.label));
-      btn.addEventListener('click', (e)=>{
-        e.stopPropagation();
-        setStatus(ds, opt.value, userId);
-        closeStatusMenu();
-        renderYear();
-      });
-      menu.appendChild(btn);
-    });
-    menu.classList.remove('hidden');
-    const menuWidth = 210;
-    let left = rect.left;
-    if(left + menuWidth > window.innerWidth) left = window.innerWidth - menuWidth - 8;
-    let top = rect.bottom + 4;
-    if(top + 220 > window.innerHeight) top = Math.max(8, rect.top - 224);
-    menu.style.left = left + 'px';
-    menu.style.top = top + 'px';
-  }
-  document.addEventListener('click', (e)=>{
-    const menu = document.getElementById('statusMenu');
-    if(!menu.classList.contains('hidden') && !menu.contains(e.target)){
-      closeStatusMenu();
-    }
-  });
   // Applies currentBrush (or clears, if '') as a full-day status across every
-  // working day between dsA and dsB inclusive (order-independent).
+  // working day between dsA and dsB inclusive (order-independent). Utilisée
+  // uniquement par applyCongeRange désormais (onglet Congés) — l'onglet
+  // Calendrier n'a plus son propre système de pose de statut (voir la
+  // demande "plus de sélecteur congé/RTT/télétravail" dans le Calendrier).
   function applyRange(dsA, dsB, brush){
     const userId = activeUserId();
     let start = new Date(dsA + 'T00:00:00');
@@ -2275,42 +2318,297 @@
       d.setDate(d.getDate() + 1);
     }
   }
-  function updatePendingHint(){
-    const hint = document.getElementById('pendingHint');
-    if(pendingStart){
-      document.getElementById('pendingDateLabel').textContent = pendingStart;
+  // ==================== Onglet Congés ====================
+  // Vue dédiée congé/RTT/télétravail (voir switchTab) : chaque case-jour est
+  // coupée en zones cliquables — 1 colonne par utilisateur VISIBLE (voir
+  // visibleUserKeys), et dans la colonne de l'utilisateur ACTIF (le seul
+  // éditable ici, voir activeUserId), 2 lignes matin/après-midi si la
+  // catégorie actuellement sélectionnée (currentBrush) autorise la
+  // demi-journée, sinon 1 seule ligne. Cliquer une 1ère zone (ds+demi-journée)
+  // puis une 2nde pose la plage entre les deux (ou juste cette demi-journée
+  // si on reclique la même zone) — directement via la zone cliquée, sans
+  // menu contextuel intermédiaire.
+  let congePendingStart = null; // { ds, half, userId } | null
+  // Numéro d'ordre STRICT et continu d'une demi-journée (ex. 2026-07-30 matin
+  // < 2026-07-30 après-midi < 2026-07-31 matin < ...) : Date.UTC (et non
+  // new Date(ds).getTime()) pour un pas EXACT de 86400000 entre 2 jours,
+  // insensible au changement d'heure été/hiver local. Sert à déterminer, pour
+  // toute plage [début, fin] posée par 2 clics (dans n'importe quel ordre),
+  // quelles demi-journées de chaque jour traversé tombent dedans.
+  function ordinalOfHalf(ds, half){
+    const parts = ds.split('-').map(Number);
+    const dayIndex = Date.UTC(parts[0], parts[1]-1, parts[2]) / 86400000;
+    return dayIndex * 2 + (half === 'pm' ? 1 : 0);
+  }
+  // Efface le statut d'UN jour pour la portion demandée (markAM/markPM : la
+  // demi-journée touche-t-elle ce jour ?), en respectant la nature du statut
+  // ACTUELLEMENT posé (pas de currentBrush, l'effacement n'a pas de
+  // catégorie) : si sa catégorie n'autorise pas la demi-journée (RTT/
+  // Télétravail par défaut), ou si les 2 moitiés du jour sont visées, tout le
+  // jour est effacé d'un coup. Sinon (catégorie à demi-journée, ex. Congé, et
+  // une seule moitié visée), seule cette moitié est effacée — l'autre reste
+  // intacte (un Congé journée entière devient alors un Congé demi-journée).
+  function eraseAtDay(ds, markAM, markPM, userId){
+    const current = getDayStatus(ds, userId);
+    if(!current) return;
+    const info = describeStatus(current, userId);
+    if(!info) return;
+    const cat = data.settings.categories[userId][info.key];
+    const catHalfOK = !!(cat && cat.halfDayAllowed);
+    if(!catHalfOK || (markAM && markPM)){
+      setStatus(ds, '', userId);
+      return;
+    }
+    if(!info.half){
+      // Statut actuel posé sur la journée entière : ne reste que l'autre moitié.
+      setStatus(ds, info.key + (markAM ? '_pm' : '_am'), userId);
+    } else if((info.half === 'am' && markAM) || (info.half === 'pm' && markPM)){
+      setStatus(ds, '', userId);
+    }
+    // Sinon : la demi-journée visée n'a de toute façon aucun statut à
+    // effacer (ex. on efface l'après-midi alors que seul le matin est posé).
+  }
+  // Pose currentBrush (ou efface, si '') sur la plage entre (dsA,halfA) et
+  // (dsB,halfB) incluses, dans l'ordre indifférent, pour l'utilisateur actif
+  // — jours de weekend/fériés ignorés (comme applyRange). Si halfA/halfB sont
+  // tous deux null (catégorie/grille sans demi-journée), retombe directement
+  // sur l'applyRange existant (jour entier partout). Sinon, chaque jour
+  // traversé reçoit journée entière / matin seul / après-midi seul selon la
+  // portion de CE jour réellement comprise dans [début, fin] — permet par ex.
+  // de commencer un congé l'après-midi et de le terminer le matin. Effacer
+  // (brush === '') passe par eraseAtDay plutôt que par un simple '_am'/'_pm'
+  // littéral : sans ça, "effacer le matin" écrirait un statut '_am' vide de
+  // sens au lieu de vraiment effacer, et une catégorie sans demi-journée
+  // (RTT/Télétravail) ne serait qu'à moitié effacée.
+  function applyCongeRange(dsA, halfA, dsB, halfB, brush){
+    if(!halfA && !halfB){ applyRange(dsA, dsB, brush); return; }
+    const userId = activeUserId();
+    let startOrd = ordinalOfHalf(dsA, halfA || 'am');
+    let endOrd = ordinalOfHalf(dsB, halfB || 'pm');
+    if(startOrd > endOrd){ const tmp = startOrd; startOrd = endOrd; endOrd = tmp; }
+    let start = new Date(dsA + 'T00:00:00');
+    let end = new Date(dsB + 'T00:00:00');
+    if(start > end){ const tmp = start; start = end; end = tmp; }
+    const holidayCache = {};
+    const d = new Date(start);
+    while(d <= end){
+      const y = d.getFullYear();
+      if(!holidayCache[y]) holidayCache[y] = holidaysForYear(y);
+      const ds = dateStr(y, d.getMonth(), d.getDate());
+      const dow = d.getDay();
+      const isWeekend = (dow === 0 || dow === 6);
+      const isHoliday = !!holidayCache[y][ds];
+      if(!isWeekend && !isHoliday){
+        const amOrd = ordinalOfHalf(ds, 'am');
+        const pmOrd = amOrd + 1;
+        const markAM = amOrd >= startOrd && amOrd <= endOrd;
+        const markPM = pmOrd >= startOrd && pmOrd <= endOrd;
+        if(brush === ''){
+          eraseAtDay(ds, markAM, markPM, userId);
+        } else if(markAM && markPM){
+          setStatus(ds, brush, userId);
+        } else if(markAM){
+          setStatus(ds, brush + '_am', userId);
+        } else if(markPM){
+          setStatus(ds, brush + '_pm', userId);
+        }
+      }
+      d.setDate(d.getDate() + 1);
+    }
+  }
+  function updateCongePendingHint(){
+    const hint = document.getElementById('congePendingHint');
+    if(congePendingStart){
+      const halfSuffix = congePendingStart.half === 'am' ? ' (matin)' : congePendingStart.half === 'pm' ? ' (après-midi)' : '';
+      document.getElementById('congePendingDateLabel').textContent = congePendingStart.ds + halfSuffix;
       hint.classList.remove('hidden');
     } else {
       hint.classList.add('hidden');
     }
   }
-  function handleDayClick(ds, numEl){
-    if(pendingStart === null){
-      pendingStart = ds;
-      updatePendingHint();
-      renderYear();
-    } else if(pendingStart === ds){
-      const catNow = data.settings.categories[activeUserId()][currentBrush];
-      if(catNow && catNow.halfDayAllowed){
-        // Seules les catégories autorisant la demi-journée proposent ce menu.
-        const rect = numEl.getBoundingClientRect();
-        pendingStart = null;
-        updatePendingHint();
-        renderYear();
-        openHalfDayMenu(ds, rect);
-      } else {
-        // Catégories sans demi-journée (ou "Effacer") : re-cliquer applique/efface directement la journée entière.
-        setStatus(ds, currentBrush, activeUserId());
-        pendingStart = null;
-        updatePendingHint();
-        renderYear();
-      }
+  // Clic sur une zone (ds, demi-journée ou null si pas de split) de la
+  // colonne de l'utilisateur ACTIF uniquement (la colonne de l'autre
+  // utilisateur, si affichée, n'a pas d'écouteur — lecture seule).
+  function handleCongeZoneClick(ds, half){
+    const userId = activeUserId();
+    if(!congePendingStart){
+      congePendingStart = { ds, half, userId };
     } else {
-      applyRange(pendingStart, ds, currentBrush);
-      pendingStart = null;
-      updatePendingHint();
-      renderYear();
+      applyCongeRange(congePendingStart.ds, congePendingStart.half, ds, half, currentBrush);
+      congePendingStart = null;
     }
+    updateCongePendingHint();
+    renderConges();
+  }
+  // Construit une case-jour de l'onglet Congés : 1 colonne par utilisateur
+  // visible, chacune coupée en matin/après-midi si halfSplit (déterminé par
+  // renderConges à partir de la catégorie active), sinon 1 seule zone pleine
+  // journée. Seule la colonne de l'utilisateur ACTIF est cliquable.
+  function buildCongeDayCell(ds, halfSplit, isOff, isToday){
+    const cell = document.createElement('div');
+    cell.className = 'conge-day' + (isOff ? ' off' : '') + (isToday ? ' today' : '');
+    cell.dataset.ds = ds;
+    const num = document.createElement('div');
+    num.className = 'conge-daynum';
+    num.textContent = Number(ds.slice(8, 10));
+    cell.appendChild(num);
+    const zonesWrap = document.createElement('div');
+    zonesWrap.className = 'conge-zones';
+    const activeUser = activeUserId();
+    visibleUserKeys().forEach(userId=>{
+      const col = document.createElement('div');
+      col.className = 'conge-col';
+      const status = getDayStatus(ds, userId);
+      const info = describeStatus(status, userId);
+      const halves = halfSplit ? ['am', 'pm'] : [null];
+      halves.forEach(half=>{
+        const zone = document.createElement('div');
+        const isActiveCol = userId === activeUser;
+        zone.className = 'conge-zone' + (isActiveCol ? '' : ' readonly');
+        zone.dataset.user = userId;
+        zone.dataset.half = half || 'full';
+        if(info){
+          // Statut journée entière : colore chaque zone de la colonne. Statut
+          // demi-journée : colore seulement la zone correspondante — sauf si
+          // la grille n'a pas de split ici (half===null), auquel cas on
+          // colore quand même la zone unique (meilleur rendu possible sans
+          // sous-division visuelle disponible).
+          const show = !info.half || !half || info.half === half;
+          if(show){
+            zone.style.background = pastelOf(info.color);
+            zone.title = info.label + (info.half === 'am' ? ' (matin)' : info.half === 'pm' ? ' (après-midi)' : '') + ' — ' + userName(userId);
+          }
+        }
+        if(congePendingStart && congePendingStart.ds === ds && congePendingStart.userId === userId && congePendingStart.half === half){
+          zone.classList.add('pending');
+        }
+        if(isActiveCol){
+          zone.addEventListener('click', ()=>handleCongeZoneClick(ds, half));
+        }
+        col.appendChild(zone);
+      });
+      zonesWrap.appendChild(col);
+    });
+    cell.appendChild(zonesWrap);
+    return cell;
+  }
+  function renderCongeMonth(year, month, halfSplit){
+    const wrap = document.createElement('div');
+    wrap.className = 'month-block';
+    wrap.dataset.month = String(month);
+    const stickyHead = document.createElement('div');
+    stickyHead.className = 'month-sticky-head';
+    const title = document.createElement('div');
+    title.className = 'month-title';
+    title.textContent = MOIS[month] + ' ' + year;
+    stickyHead.appendChild(title);
+    stickyHead.appendChild(buildWeekHeaderRow());
+    wrap.appendChild(stickyHead);
+    const grid = document.createElement('div');
+    grid.className = 'days-grid';
+    const firstDow = (new Date(year, month, 1).getDay() + 6) % 7;
+    const daysInMonth = new Date(year, month+1, 0).getDate();
+    const totalCells = Math.ceil((firstDow + daysInMonth) / 7) * 7;
+    const todayStr = dateStr(new Date().getFullYear(), new Date().getMonth(), new Date().getDate());
+    for(let gridIndex=0; gridIndex<totalCells; gridIndex++){
+      const dayNum = gridIndex - firstDow + 1;
+      const isAdjacent = dayNum < 1 || dayNum > daysInMonth;
+      if(isAdjacent){
+        const empty = document.createElement('div');
+        empty.className = 'conge-day empty';
+        grid.appendChild(empty);
+        continue;
+      }
+      const ds = dsAtGridIndex(year, month, firstDow, gridIndex);
+      const dow = new Date(ds + 'T00:00:00').getDay();
+      const isWeekend = (dow === 0 || dow === 6);
+      const holidayLabel = getHolidayLabel(ds);
+      grid.appendChild(buildCongeDayCell(ds, halfSplit, isWeekend || !!holidayLabel, ds === todayStr));
+    }
+    wrap.appendChild(grid);
+    return wrap;
+  }
+  // Récap minimal en haut de l'onglet Congés : "posés/quota annuel" par
+  // catégorie à quota (une catégorie sans quota — Télétravail par défaut —
+  // n'a pas de quota annuel à afficher, donc pas affichée ici), pour chaque
+  // utilisateur visible — pas de détail supplémentaire (disponible/report),
+  // ce niveau d'explication reste réservé aux Paramètres.
+  function updateCongeRecap(){
+    const el = document.getElementById('congesRecap');
+    if(!el) return;
+    el.innerHTML = '';
+    const users = visibleUserKeys();
+    users.forEach(userId=>{
+      CATEGORY_KEYS.forEach(catKey=>{
+        const cat = data.settings.categories[userId][catKey];
+        if(!cat.enabled || !(Number(cat.quotaParAn) > 0)) return;
+        const b = computeCategoryBalance(catKey, currentYear, userId);
+        const item = document.createElement('div');
+        item.className = 'conge-recap-item';
+        const dot = document.createElement('span');
+        dot.className = 'conge-recap-dot';
+        dot.style.background = categoryColor(userId, catKey);
+        item.appendChild(dot);
+        const prefix = users.length > 1 ? (userName(userId) + ' · ') : '';
+        item.appendChild(document.createTextNode(prefix + categoryLabel(userId, catKey) + ' : ' + b.pris + '/' + cat.quotaParAn));
+        el.appendChild(item);
+      });
+    });
+  }
+  // Reflète l'état partagé (utilisateurs visibles/actif, catégorie choisie)
+  // sur les contrôles PROPRES à l'onglet Congés (copie visuelle du user-bar/
+  // brush-bar de l'onglet Calendrier, mêmes réglages sous-jacents — voir
+  // isUserVisible/activeUserId/currentBrush) : appelée à chaque renderConges
+  // et depuis les handlers de l'onglet Calendrier pour rester synchronisée
+  // même si on ne regarde pas cet onglet au moment du changement.
+  function syncCongeControlsUI(){
+    const show1 = document.getElementById('congeShowUser1');
+    const show2 = document.getElementById('congeShowUser2');
+    if(show1){ show1.textContent = userName('user1'); show1.classList.toggle('active', isUserVisible('user1')); }
+    if(show2){ show2.textContent = userName('user2'); show2.classList.toggle('active', isUserVisible('user2')); }
+    const sel = document.getElementById('congeActiveUserSelect');
+    if(sel){
+      Array.from(sel.options).forEach(opt=>{ opt.textContent = userName(opt.value); });
+      sel.value = activeUserId();
+    }
+    const bar = document.querySelector('#congesTabContent .user-bar');
+    if(bar) bar.classList.toggle('hidden', !isMultiUserEnabled());
+    CATEGORY_KEYS.forEach(catKey=>{
+      const cat = data.settings.categories[activeUserId()][catKey];
+      const cap = catKey.charAt(0).toUpperCase() + catKey.slice(1);
+      const btn = document.querySelector('#congesTabContent .brush-btn.' + catKey);
+      const labelEl = document.getElementById('congeBrushLabel' + cap);
+      if(labelEl) labelEl.textContent = categoryLabel(activeUserId(), catKey);
+      if(btn){
+        btn.classList.toggle('hidden', !cat.enabled);
+        const color = categoryColor(activeUserId(), catKey);
+        btn.style.setProperty('--cat-bg', pastelOf(color));
+        btn.style.setProperty('--cat-border', darkOf(color));
+        btn.style.setProperty('--cat-text', darkOf(color));
+      }
+    });
+    document.querySelectorAll('#congesTabContent .brush-btn').forEach(b=>{
+      b.classList.toggle('active', b.dataset.brush === currentBrush);
+    });
+  }
+  function renderConges(){
+    currentYear = viewDate.getFullYear();
+    document.getElementById('congeYearLabel').textContent = String(currentYear);
+    syncCongeControlsUI();
+    updateCongeRecap();
+    const catNow = currentBrush ? data.settings.categories[activeUserId()][currentBrush] : null;
+    // Effacer (currentBrush === '') n'a pas de catégorie propre — il doit
+    // pourtant TOUJOURS proposer la précision demi-journée (voir eraseAtDay,
+    // qui se charge lui-même d'effacer la journée entière si le statut
+    // réellement posé ce jour-là appartient à une catégorie sans
+    // demi-journée, comme RTT/Télétravail).
+    const halfSplit = currentBrush === '' ? true : !!(catNow && catNow.halfDayAllowed);
+    const grid = document.getElementById('congeGrid');
+    grid.innerHTML = '';
+    for(let m=0; m<12; m++){
+      grid.appendChild(renderCongeMonth(currentYear, m, halfSplit));
+    }
+    updateStickyHeightVar();
   }
   // Bascule vers la vue "Jour" pour la date donnée (déclenchée en cliquant
   // n'importe où dans une case des vues semaine/mois/année, hors numéro
@@ -2420,7 +2718,6 @@
     const cell = document.createElement('div');
     cell.className = 'day' + (big ? ' big' : '');
     if(ds === todayStr) cell.classList.add('today');
-    if(ds === pendingStart) cell.classList.add('pending');
     if(isWeekend || holidayLabel) cell.classList.add('off');
     // Statut de chaque utilisateur visible sur ce jour ("Afficher Utilisateur
     // X" en haut de page) : plus de fond coloré sur toute la case (jugé trop
@@ -2454,9 +2751,6 @@
     const num = document.createElement('div');
     num.className = 'daynum';
     num.textContent = Number(ds.slice(8, 10));
-    if(!isWeekend && !holidayLabel){
-      num.addEventListener('click', (e)=>{ e.stopPropagation(); handleDayClick(ds, num); });
-    }
     cluster.appendChild(num);
     const slotRight = document.createElement('div');
     slotRight.className = 'daynum-slot slot-right';
@@ -3754,8 +4048,10 @@
   function updateMultiUserUI(){
     const enabled = isMultiUserEnabled();
     document.getElementById('multiUserToggle').checked = enabled;
-    const bar = document.querySelector('.user-bar');
-    if(bar) bar.classList.toggle('hidden', !enabled || settingsPageOpen);
+    const mainBar = document.querySelector('#stickyTop .user-bar');
+    if(mainBar) mainBar.classList.toggle('hidden', !enabled || settingsPageOpen);
+    const congeBar = document.querySelector('#congesTabContent .user-bar');
+    if(congeBar) congeBar.classList.toggle('hidden', !enabled);
     const block2 = document.getElementById('userSettingsBlock_user2');
     if(block2) block2.classList.toggle('hidden', !enabled);
     const row2 = document.getElementById('userName2Row');
@@ -3908,23 +4204,81 @@
   // Utilisateur actif (pour qui on édite en cliquant sur une case/en créant
   // un évènement) et visibilité de chaque utilisateur sur le calendrier :
   // 2 contrôles bien séparés (voir le "user-bar" en haut de page), l'un
-  // n'affecte jamais l'autre.
-  document.getElementById('activeUserSelect').addEventListener('change', (e)=>{
-    uiState.activeUser = e.target.value === 'user2' ? 'user2' : 'user1';
+  // n'affecte jamais l'autre. Factorisé en 2 helpers réutilisés par les
+  // contrôles de l'onglet Calendrier ET par leur miroir de l'onglet Congés
+  // (mêmes réglages sous-jacents, voir syncCongeControlsUI) : que le
+  // changement vienne d'un onglet ou de l'autre, les 2 jeux de boutons
+  // restent synchronisés et seul l'onglet actuellement affiché se redessine.
+  function setUserVisible(userId, visible){
+    uiState.visible[userId] = visible;
     saveUIState();
-    renderYear();
+    updateMultiUserUI();
+    syncCongeControlsUI();
+    if(activeTab === 'conges') renderConges(); else renderYear();
+  }
+  function setActiveUser(userId){
+    uiState.activeUser = userId === 'user2' ? 'user2' : 'user1';
+    saveUIState();
+    // Changer d'utilisateur actif invalide toute plage en cours de sélection
+    // (1er clic déjà posé) dans l'onglet Congés, pour éviter d'appliquer un
+    // statut au mauvais utilisateur.
+    congePendingStart = null;
+    updateCongePendingHint();
+    updateMultiUserUI();
+    syncCongeControlsUI();
+    if(activeTab === 'conges') renderConges(); else renderYear();
+  }
+  document.getElementById('activeUserSelect').addEventListener('change', (e)=>setActiveUser(e.target.value));
+  document.getElementById('showUser1').addEventListener('click', ()=>setUserVisible('user1', !uiState.visible.user1));
+  document.getElementById('showUser2').addEventListener('click', ()=>setUserVisible('user2', !uiState.visible.user2));
+  document.getElementById('congeActiveUserSelect').addEventListener('change', (e)=>setActiveUser(e.target.value));
+  document.getElementById('congeShowUser1').addEventListener('click', ()=>setUserVisible('user1', !uiState.visible.user1));
+  document.getElementById('congeShowUser2').addEventListener('click', ()=>setUserVisible('user2', !uiState.visible.user2));
+  document.getElementById('congePrevYear').addEventListener('click', ()=>{
+    viewDate.setFullYear(viewDate.getFullYear() - 1);
+    renderConges();
   });
-  document.getElementById('showUser1').addEventListener('click', (e)=>{
-    uiState.visible.user1 = !uiState.visible.user1;
-    e.currentTarget.classList.toggle('active', uiState.visible.user1);
-    saveUIState();
-    renderYear();
+  document.getElementById('congeNextYear').addEventListener('click', ()=>{
+    viewDate.setFullYear(viewDate.getFullYear() + 1);
+    renderConges();
   });
-  document.getElementById('showUser2').addEventListener('click', (e)=>{
-    uiState.visible.user2 = !uiState.visible.user2;
-    e.currentTarget.classList.toggle('active', uiState.visible.user2);
-    saveUIState();
-    renderYear();
+  document.getElementById('congeCancelPending').addEventListener('click', ()=>{
+    congePendingStart = null;
+    updateCongePendingHint();
+    renderConges();
+  });
+  // Bascule entre l'onglet Calendrier (évènements + statuts, existant) et
+  // l'onglet Congés (nouveau, dédié congé/RTT/télétravail par demi-journée) —
+  // mêmes données, présentation différente. On redessine toujours l'onglet
+  // qu'on vient d'activer (jamais de cache) pour refléter tout changement
+  // fait pendant qu'on regardait l'autre.
+  function switchTab(tab){
+    activeTab = tab;
+    document.getElementById('calendarTabContent').classList.toggle('hidden', tab !== 'calendar');
+    document.getElementById('congesTabContent').classList.toggle('hidden', tab !== 'conges');
+    // "Aujourd'hui" n'a de sens que côté Calendrier (Jour/Semaine/Année) ;
+    // le bouton parasol (bascule Congés) et "Calendriers" restent eux
+    // toujours visibles/cliquables, y compris depuis l'onglet Congés — c'est
+    // en le recliquant qu'on revient au calendrier normal.
+    document.getElementById('todayBtn').classList.toggle('hidden', tab !== 'calendar');
+    document.getElementById('congesToggleBtn').classList.toggle('active', tab === 'conges');
+    // Changer d'onglet doit toujours ramener sur la vue d'aujourd'hui —
+    // demande explicite, même logique que le bouton "Aujourd'hui" (reset de
+    // viewDate, puis défilement vers le mois en cours dans la grille de
+    // l'onglet qu'on vient d'ouvrir).
+    viewDate = new Date();
+    viewDate.setHours(0, 0, 0, 0);
+    if(tab === 'conges'){
+      renderConges();
+      scrollToCurrentYearMonth(false, 'congeGrid');
+    } else {
+      if(viewMode === 'day') pendingOpenHourScroll = true;
+      renderYear();
+      if(viewMode === 'year') scrollToCurrentYearMonth(false, 'calendarGrid');
+    }
+  }
+  document.getElementById('congesToggleBtn').addEventListener('click', ()=>{
+    switchTab(activeTab === 'conges' ? 'calendar' : 'conges');
   });
   // Les Paramètres s'affichent comme une page à part : le calendrier (grille
   // du bas) est masqué tant qu'ils sont ouverts, plutôt que de rester
@@ -3949,7 +4303,7 @@
     // au clic sur "mode multi-utilisateur"), ce qui effacerait un "hidden"
     // posé directement dessus — même bug, même solution que
     // #calendarGridWrap pour #calendarGrid.
-    const toHide = ['.pill-year-nav', '#addEventBtn', '#searchBtn', '.bottom-bar', '.brush-bar', '#stickyExtraWrap'];
+    const toHide = ['.pill-year-nav', '#addEventBtn', '#searchBtn', '.bottom-bar', '#stickyExtraWrap'];
     toHide.forEach(sel=>{
       const el = document.querySelector(sel);
       if(el) el.classList.toggle('hidden', opening);
@@ -3978,20 +4332,13 @@
   document.querySelectorAll('.brush-btn').forEach(btn=>{
     btn.addEventListener('click', ()=>{
       currentBrush = btn.dataset.brush;
-      document.querySelectorAll('.brush-btn').forEach(b=>b.classList.remove('active'));
-      btn.classList.add('active');
-      // changing brush mid-selection cancels any pending range to avoid ambiguity
-      if(pendingStart !== null){
-        pendingStart = null;
-        updatePendingHint();
-        renderYear();
-      }
+      document.querySelectorAll('.brush-btn').forEach(b=>b.classList.toggle('active', b.dataset.brush === currentBrush));
+      // Changer de catégorie en cours de sélection annule toute plage déjà
+      // commencée, pour éviter toute ambiguïté.
+      congePendingStart = null;
+      updateCongePendingHint();
+      renderConges();
     });
-  });
-  document.getElementById('cancelPending').addEventListener('click', ()=>{
-    pendingStart = null;
-    updatePendingHint();
-    renderYear();
   });
   function navigatePeriod(dir){
     if(viewMode === 'day') viewDate.setDate(viewDate.getDate() + dir);
@@ -4020,9 +4367,9 @@
   // chaque rendu (renderYear), pas seulement ponctuellement avant un scroll,
   // car la hauteur du bandeau varie (mode multi-utilisateur, écran, encoche).
   function updateStickyHeightVar(){
-    const stickyTop = document.getElementById('stickyTop');
-    if(!stickyTop) return;
-    document.documentElement.style.setProperty('--sticky-h', stickyTop.getBoundingClientRect().height + 'px');
+    const stickyEl = document.getElementById(activeTab === 'conges' ? 'congesSticky' : 'stickyTop');
+    if(!stickyEl) return;
+    document.documentElement.style.setProperty('--sticky-h', stickyEl.getBoundingClientRect().height + 'px');
   }
   // Vue Année : fait défiler jusqu'au bloc du mois en cours (celui de
   // viewDate) pour qu'il soit bien visible — un seul mois par ligne sur
@@ -4037,12 +4384,13 @@
   // l'écran/le mode multi-utilisateur/l'encoche). Double
   // requestAnimationFrame : laisse le temps à un premier rendu de se
   // stabiliser avant de mesurer, utile au tout premier chargement.
-  function scrollToCurrentYearMonth(smooth){
-    if(viewMode !== 'year') return;
+  function scrollToCurrentYearMonth(smooth, gridId){
+    gridId = gridId || 'calendarGrid';
+    if(gridId === 'calendarGrid' && viewMode !== 'year') return;
     const targetMonth = viewDate.getMonth();
     requestAnimationFrame(()=>{
       requestAnimationFrame(()=>{
-        const el = document.querySelector('#calendarGrid .month-block[data-month="' + targetMonth + '"]');
+        const el = document.querySelector('#' + gridId + ' .month-block[data-month="' + targetMonth + '"]');
         if(!el) return;
         updateStickyHeightVar();
         el.scrollIntoView({ behavior: smooth === false ? 'auto' : 'smooth', block:'start' });
