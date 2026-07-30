@@ -503,6 +503,21 @@
   .event-block.continues-prev::before {
     content:"⌃"; position:absolute; right:6px; top:-1px; font-size:9px; line-height:1; opacity:0.65;
   }
+  /* Glisser pour déplacer/redimensionner (vue Jour uniquement, voir
+     enableEventDragResize) : touch-action:none indispensable sur le bloc ET
+     la poignée pour qu'un glissé tactile ne déclenche pas le défilement de
+     la page pendant qu'on déplace/redimensionne l'évènement. */
+  .event-block.draggable { touch-action:none; }
+  .event-block-resize-handle {
+    position:absolute; left:0; right:0; bottom:0; height:12px; cursor:ns-resize; touch-action:none;
+  }
+  .event-block-resize-handle::after {
+    content:''; position:absolute; left:50%; bottom:2px; width:22px; height:3px; border-radius:2px;
+    background:rgba(0,0,0,0.25); transform:translateX(-50%);
+  }
+  .event-block.dragging {
+    opacity:0.9; box-shadow:0 4px 14px rgba(0,0,0,0.28); z-index:5; cursor:grabbing;
+  }
 
   /* Modale évènement, restylée façon calendrier Apple : fond gris clair,
      cartes blanches arrondies séparées (titre+lieu / journée entière+dates /
@@ -2854,8 +2869,135 @@
     const timeLabel = opts.continuesFromPrev ? ('→' + ev.end + ' ') : (showTime && ev.start ? ev.start + ' ' : '');
     block.textContent = timeLabel + ev.title;
     block.title = ev.title + (ev.start ? ' (' + ev.start + (ev.end ? '–' + ev.end : '') + ')' : '') + (ev.location ? ' · ' + ev.location : '');
-    block.addEventListener('click', (e)=>{ e.stopPropagation(); openEventModal(ds, ev.id, ev._owner); });
+    // Glisser pour déplacer/redimensionner (voir enableEventDragResize) :
+    // vue Jour uniquement (showTime, une seule colonne — en vue Semaine ça
+    // resterait ambigu de savoir si on change l'heure ou le jour), jamais
+    // sur un bloc "suite" (continuesFromPrev, rattaché à la veille, pas de
+    // vrai évènement à modifier ici) ni sur un évènement qui déborde après
+    // minuit (overnight : sa vraie fin n'est pas dans ce jour). Dans tous
+    // les autres cas (vue Semaine, blocs non interactifs), on garde le
+    // simple clic → modale comme avant.
+    const interactive = showTime && !opts.continuesFromPrev && !overnight;
+    if(interactive){
+      enableEventDragResize(block, ds, ev, startMin, endMin);
+    } else {
+      block.addEventListener('click', (e)=>{ e.stopPropagation(); openEventModal(ds, ev.id, ev._owner); });
+    }
     return block;
+  }
+  // Rend un bloc d'évènement horaire (voir buildEventBlock) déplaçable en
+  // glissant son corps (change l'heure de début, durée conservée) et
+  // redimensionnable en glissant une poignée au bas du bloc (change l'heure
+  // de fin, début conservé) — "comme pour agrandir une fenêtre". Un seul
+  // jeu d'écouteurs Pointer Events (pointerdown/move/up/cancel) couvre à la
+  // fois la souris (ordinateur) et le tactile (iPhone) sans code séparé.
+  // Un simple tap/clic (sans déplacement au-delà de DRAG_THRESHOLD) ouvre
+  // toujours la modale d'édition, exactement comme avant.
+  function enableEventDragResize(block, ds, ev, startMin, endMinInit){
+    block.classList.add('draggable');
+    const handle = document.createElement('div');
+    handle.className = 'event-block-resize-handle';
+    block.appendChild(handle);
+    const DRAG_THRESHOLD = 6; // px, avant de considérer que c'est un glissé et pas un tap
+    const SNAP_MIN = 15; // arrondi au quart d'heure, plus prévisible sans repère visuel fin
+    const MIN_DURATION = 15; // durée minimale en minutes lors d'un redimensionnement
+    function snap(min){ return Math.max(0, Math.min(24*60, Math.round(min / SNAP_MIN) * SNAP_MIN)); }
+    function minutesToLabel(min){ return pad(Math.floor(min/60)) + ':' + pad(min%60); }
+    // ---- Déplacer (glisser le corps) : change le début, garde la durée. ----
+    let moveState = null;
+    block.addEventListener('pointerdown', (e)=>{
+      if(e.target === handle) return; // le redimensionnement a son propre gestionnaire
+      if(e.button !== undefined && e.button !== 0) return; // bouton gauche / tactile seulement
+      moveState = {
+        startY: e.clientY, origStart: startMin, duration: endMinInit - startMin,
+        dragging: false, pointerId: e.pointerId, liveStart: null, liveEnd: null
+      };
+      block.setPointerCapture(e.pointerId);
+    });
+    block.addEventListener('pointermove', (e)=>{
+      if(!moveState || moveState.pointerId !== e.pointerId) return;
+      const dy = e.clientY - moveState.startY;
+      if(!moveState.dragging && Math.abs(dy) < DRAG_THRESHOLD) return;
+      moveState.dragging = true;
+      block.classList.add('dragging');
+      const deltaMin = (dy / HOUR_H) * 60;
+      let newStart = snap(moveState.origStart + deltaMin);
+      let newEnd = newStart + moveState.duration;
+      // Bornée à la journée visible : un glissé ne fait pas déborder sur le
+      // lendemain (pour ça, toujours passer par la modale).
+      if(newEnd > 24*60){ newEnd = 24*60; newStart = newEnd - moveState.duration; }
+      if(newStart < 0){ newStart = 0; newEnd = moveState.duration; }
+      block.style.top = ((newStart/60) * HOUR_H) + 'px';
+      moveState.liveStart = newStart;
+      moveState.liveEnd = newEnd;
+    });
+    function finishMove(e){
+      if(!moveState || moveState.pointerId !== e.pointerId) return;
+      const wasDragging = moveState.dragging;
+      block.classList.remove('dragging');
+      if(wasDragging && moveState.liveStart != null){
+        updateEventTime(ds, ev.id, ev._owner, minutesToLabel(moveState.liveStart), minutesToLabel(moveState.liveEnd));
+      } else if(!wasDragging){
+        openEventModal(ds, ev.id, ev._owner);
+      }
+      moveState = null;
+    }
+    block.addEventListener('pointerup', finishMove);
+    block.addEventListener('pointercancel', ()=>{ moveState = null; block.classList.remove('dragging'); });
+    // ---- Redimensionner (glisser la poignée du bas) : change la fin,
+    // garde le début. ----
+    let resizeState = null;
+    handle.addEventListener('pointerdown', (e)=>{
+      e.stopPropagation();
+      resizeState = { startY: e.clientY, origStart: startMin, liveEnd: null, pointerId: e.pointerId };
+      handle.setPointerCapture(e.pointerId);
+      block.classList.add('dragging');
+    });
+    handle.addEventListener('pointermove', (e)=>{
+      if(!resizeState || resizeState.pointerId !== e.pointerId) return;
+      e.stopPropagation();
+      const dy = e.clientY - resizeState.startY;
+      const deltaMin = (dy / HOUR_H) * 60;
+      let newEnd = snap(endMinInit + deltaMin);
+      if(newEnd < resizeState.origStart + MIN_DURATION) newEnd = resizeState.origStart + MIN_DURATION;
+      if(newEnd > 24*60) newEnd = 24*60;
+      block.style.height = Math.max(((newEnd - resizeState.origStart)/60) * HOUR_H, 18) + 'px';
+      resizeState.liveEnd = newEnd;
+    });
+    function finishResize(e){
+      if(!resizeState || resizeState.pointerId !== e.pointerId) return;
+      block.classList.remove('dragging');
+      if(resizeState.liveEnd != null){
+        updateEventTime(ds, ev.id, ev._owner, minutesToLabel(resizeState.origStart), minutesToLabel(resizeState.liveEnd));
+      }
+      resizeState = null;
+    }
+    handle.addEventListener('pointerup', finishResize);
+    handle.addEventListener('pointercancel', ()=>{ resizeState = null; block.classList.remove('dragging'); });
+  }
+  // Persiste un nouvel horaire (début/fin) suite à un glissé (voir
+  // enableEventDragResize), en réutilisant saveEvent avec tous les autres
+  // champs de l'évènement existant inchangés (titre, lieu, notes, calendrier,
+  // répétition...) — si l'évènement se répète, l'heure change alors pour
+  // TOUTE la série, comme depuis la modale (voir repeatOrigin dans saveEvent/
+  // openEventModal).
+  function updateEventTime(ds, id, ownerUserId, newStart, newEnd){
+    const existing = getDayEvents(ds, ownerUserId).find(e=>e.id === id);
+    if(!existing) return;
+    cancelNativeReminder(ownerUserId, id);
+    const originDs = existing.repeat ? (existing.repeatOrigin || ds) : ds;
+    saveEvent({
+      id, title: existing.title, allDay: false, ds: originDs, start: newStart, end: newEnd,
+      location: existing.location || '', notes: existing.notes || '', calendarId: existing.calendarId,
+      reminder: existing.reminder || '', repeat: existing.repeat || '', repeatUntil: existing.repeatUntil || ''
+    }, ownerUserId);
+    if(existing.reminder){
+      scheduleNativeReminder(ownerUserId, {
+        id, ds: originDs, start: newStart, title: existing.title,
+        location: existing.location || '', reminder: existing.reminder
+      });
+    }
+    renderYear();
   }
   // Regroupe, pour une liste de jours consécutifs (vue Jour = 1 jour, vue
   // Semaine = 7 jours), les évènements "journée entière" identiques (même id,
