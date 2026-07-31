@@ -124,10 +124,12 @@
   .bottom-pill-icon:hover { background:#fff; }
   .bottom-bar-right { display:flex; gap:10px; }
   /* Bouton parasol actif = on est sur l'onglet Congés (le recliquer y ramène
-     au calendrier normal, voir switchTab) — même traitement visuel "actif"
-     que les autres pilules à bascule de l'app (ex. .user-toggle-btn.active). */
-  #congesToggleBtn.active { background:#1c1c1e; color:#fff; }
-  #congesToggleBtn.active:hover { background:#1c1c1e; }
+     au calendrier normal, voir switchTab). Contrairement aux autres pilules
+     à bascule (ex. .user-toggle-btn.active), on NE passe PAS le fond en noir
+     ici : sur iPhone ça rendait l'icône illisible (fond noir sous l'emoji).
+     On garde le même fond blanc/flou que l'état inactif et on indique l'état
+     actif juste par un léger anneau de couleur. */
+  #congesToggleBtn.active { box-shadow:0 2px 10px rgba(0,0,0,0.12), 0 0 0 2px var(--bleu-conge-dark); }
   /* Un peu d'espace en bas de page pour que le dernier contenu ne soit pas
      masqué par la pilule flottante "Aujourd'hui". */
   #calendarGridWrap { padding-bottom:64px; }
@@ -2550,7 +2552,13 @@
         dot.style.background = categoryColor(userId, catKey);
         item.appendChild(dot);
         const prefix = users.length > 1 ? (userName(userId) + ' · ') : '';
-        item.appendChild(document.createTextNode(prefix + categoryLabel(userId, catKey) + ' : ' + b.pris + '/' + cat.quotaParAn));
+        // b.restant (et non pris/quotaParAn) : restant tient compte du report
+        // des années précédentes (voir computeCategoryBalance), exactement
+        // comme le "restant" affiché dans Paramètres — sinon ce récap
+        // ignorait le report et affichait un compte différent de celui des
+        // Paramètres pour un même utilisateur/catégorie.
+        const restantLabel = b.restant + (Math.abs(b.restant) >= 2 || Math.abs(b.restant) === 0 ? ' restants' : ' restant');
+        item.appendChild(document.createTextNode(prefix + categoryLabel(userId, catKey) + ' : ' + restantLabel));
         el.appendChild(item);
       });
     });
