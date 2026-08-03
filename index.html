@@ -451,6 +451,15 @@
   }
   .day-allday-bar.small { height:14px; line-height:14px; font-size:8px; padding:0 6px; border-radius:999px; }
   .day-allday-bar:hover { filter:brightness(0.95); }
+  /* Évènement importé d'un calendrier externe (Google/Apple, voir
+     refreshExternalCalendar) : lecture seule, distingué visuellement par un
+     contour pointillé (au lieu d'un fond plein) plutôt qu'une nouvelle
+     couleur — reste lisible sur n'importe quelle teinte de calendrier. */
+  .event-chip.event-external, .day-allday-bar.event-external, .event-block.event-external {
+    background:transparent !important; border:1.5px dashed var(--text-secondary, #8e8e93);
+    color:var(--text-secondary, #8e8e93) !important; font-style:italic;
+  }
+  .event-block.event-external { border-left-style:dashed; }
 
   /* Vue Jour, façon calendrier Apple : plus de "carte" blanche à coins
      arrondis derrière chaque colonne — juste de fines lignes horizontales
@@ -1057,6 +1066,83 @@
       <span id="syncStatus" class="sync-status none"></span>
     </div>
     <div class="hint">Colle ici l'URL obtenue après avoir déployé le script Google Apps Script fourni (Code.gs). Utilise la même URL sur tous tes appareils pour qu'ils partagent les mêmes données. Sans URL, le calendrier fonctionne comme avant, uniquement en local.</div>
+    <h3>Calendriers externes (Google / Apple)</h3>
+    <div class="hint">Affiche ici, en lecture seule, les évènements d'un calendrier Google ou Apple/iCloud existant — colle son lien .ics public (voir "Comment obtenir ce lien ?" ci-dessous). Ces évènements apparaissent en gris pointillé, ne comptent dans aucun solde et ne peuvent pas être modifiés depuis cette appli.</div>
+    <div class="user-settings-block" id="externalCalBlock_user1">
+      <h4 id="externalCalLabel_user1">Calendrier externe — Utilisateur 1</h4>
+      <div class="settings-field">
+        <label for="icsUrl_user1">Lien .ics public (Google ou Apple/iCloud)</label>
+        <input type="text" id="icsUrl_user1" placeholder="https://calendar.google.com/calendar/ical/.../public/basic.ics">
+      </div>
+      <div class="settings-row">
+        <button type="button" class="icsRefreshBtn" data-user="user1">🔄 Synchroniser maintenant</button>
+        <span id="icsStatus_user1" class="sync-status none"></span>
+      </div>
+    </div>
+    <div class="user-settings-block" id="externalCalBlock_user2">
+      <h4 id="externalCalLabel_user2">Calendrier externe — Utilisateur 2</h4>
+      <div class="settings-field">
+        <label for="icsUrl_user2">Lien .ics public (Google ou Apple/iCloud)</label>
+        <input type="text" id="icsUrl_user2" placeholder="https://calendar.google.com/calendar/ical/.../public/basic.ics">
+      </div>
+      <div class="settings-row">
+        <button type="button" class="icsRefreshBtn" data-user="user2">🔄 Synchroniser maintenant</button>
+        <span id="icsStatus_user2" class="sync-status none"></span>
+      </div>
+    </div>
+    <div class="hint">
+      <b>Google Calendar</b> : sur calendar.google.com, Réglages du calendrier concerné → "Intégrer le calendrier" → copier "Adresse publique au format iCal" (le calendrier doit être rendu public dans "Autorisations d'accès").<br>
+      <b>Apple/iCloud</b> : sur icloud.com/calendar (ou l'app Calendrier), clic droit sur le calendrier → Partager le calendrier → activer "Calendrier public" → copier le lien (commence par webcal://, à remplacer par https:// devant le coller ici).
+    </div>
+    <h3>Export vers iCloud (Apple Calendar)</h3>
+    <div class="hint">Envoie tes congés/RTT/télétravail posés et tes évènements vers ton calendrier Apple/iCloud, pour les retrouver dans l'app Calendrier de ton iPhone/Mac. Nécessite un <b>mot de passe d'application</b> (pas ton mot de passe Apple ID habituel) : sur <a href="https://appleid.apple.com" target="_blank" rel="noopener">appleid.apple.com</a> → Connexion et sécurité → "Mots de passe des applications" → générer. Ce mot de passe n'est jamais stocké dans ce fichier ni dans le Sheet : il part directement, une seule fois, vers ton script Apps Script qui le garde de son côté (voir Code.gs).</div>
+    <div class="user-settings-block" id="icloudExportBlock_user1">
+      <h4 id="icloudExportLabel_user1">Export iCloud — Utilisateur 1</h4>
+      <div class="settings-field">
+        <label for="icloudEmail_user1">Identifiant Apple (email)</label>
+        <input type="email" id="icloudEmail_user1" placeholder="prenom@icloud.com" autocomplete="off">
+      </div>
+      <div class="settings-field">
+        <label for="icloudPwd_user1">Mot de passe d'application</label>
+        <input type="password" id="icloudPwd_user1" placeholder="xxxx-xxxx-xxxx-xxxx" autocomplete="off">
+      </div>
+      <div class="settings-row">
+        <button type="button" class="icloudSaveCredsBtn" data-user="user1">Enregistrer les identifiants</button>
+        <button type="button" class="icloudTestBtn" data-user="user1">Tester la connexion</button>
+        <span id="icloudCredsStatus_user1" class="sync-status none"></span>
+      </div>
+      <div class="settings-row">
+        <label for="icloudExportEnabled_user1">Activer l'export vers iCloud</label>
+        <span class="ev-switch">
+          <input type="checkbox" id="icloudExportEnabled_user1">
+          <span class="ev-switch-track"></span>
+        </span>
+      </div>
+    </div>
+    <div class="user-settings-block" id="icloudExportBlock_user2">
+      <h4 id="icloudExportLabel_user2">Export iCloud — Utilisateur 2</h4>
+      <div class="settings-field">
+        <label for="icloudEmail_user2">Identifiant Apple (email)</label>
+        <input type="email" id="icloudEmail_user2" placeholder="prenom@icloud.com" autocomplete="off">
+      </div>
+      <div class="settings-field">
+        <label for="icloudPwd_user2">Mot de passe d'application</label>
+        <input type="password" id="icloudPwd_user2" placeholder="xxxx-xxxx-xxxx-xxxx" autocomplete="off">
+      </div>
+      <div class="settings-row">
+        <button type="button" class="icloudSaveCredsBtn" data-user="user2">Enregistrer les identifiants</button>
+        <button type="button" class="icloudTestBtn" data-user="user2">Tester la connexion</button>
+        <span id="icloudCredsStatus_user2" class="sync-status none"></span>
+      </div>
+      <div class="settings-row">
+        <label for="icloudExportEnabled_user2">Activer l'export vers iCloud</label>
+        <span class="ev-switch">
+          <input type="checkbox" id="icloudExportEnabled_user2">
+          <span class="ev-switch-track"></span>
+        </span>
+      </div>
+    </div>
+    <div class="hint">Après un changement (congé posé, évènement créé...), l'envoi vers iCloud se fait en arrière-plan quelques secondes après — pas besoin d'action supplémentaire. Un évènement déjà envoyé et modifié à nouveau est mis à jour (jamais dupliqué) ; un congé retiré ou un évènement supprimé est retiré d'iCloud à son tour.</div>
     <div class="settings-actions">
       <button id="exportBtn">⬇ Exporter mes données (JSON)</button>
       <button id="importBtn">⬆ Importer un fichier JSON</button>
@@ -1646,7 +1732,17 @@
         categories: { user1: defaultCategories(), user2: defaultCategories() },
         calendars: { user1: defaultCalendarsForUser('user1'), user2: defaultCalendarsForUser('user2') },
         startYear: y,
-        holidayRules: defaultHolidayRules()
+        holidayRules: defaultHolidayRules(),
+        // Calendrier externe (Google/Apple) par utilisateur — voir section
+        // "Calendriers externes" des Paramètres. icsImport : URL .ics
+        // PUBLIQUE en lecture seule (aucune donnée sensible, peut être
+        // synchronisée telle quelle) ; icloudExportEnabled : simple
+        // interrupteur, les vrais identifiants (Apple ID + mot de passe
+        // d'application) ne transitent JAMAIS par ici — voir
+        // saveIcloudCredentials, qui les envoie séparément au script Apps
+        // Script pour un stockage strictement côté serveur.
+        icsImport: { user1: '', user2: '' },
+        icloudExportEnabled: { user1: false, user2: false }
       },
       lastViewedYear: y,
       // "YYYY-MM-DD": { user1:{status,events:[...]}, user2:{status,events:[...]} }
@@ -1719,6 +1815,7 @@
   function save(){
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
     scheduleRemoteSync();
+    scheduleIcloudExport();
   }
   let data = load();
   // ---- État d'interface local uniquement (jamais synchronisé/exporté) :
@@ -1844,6 +1941,10 @@
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
     renderSettings();
     renderYear();
+    // Le lien .ics importé (Paramètres) peut avoir changé sur un autre
+    // appareil depuis le dernier chargement — on relit le calendrier externe
+    // avec la valeur qui vient d'être adoptée.
+    refreshAllExternalCalendars();
   }
   // Recharge inconditionnellement depuis le Sheet (le Sheet fait autorité).
   function pullFromRemote(){
@@ -1860,6 +1961,186 @@
   function autoPull(){
     if(!syncUrl || pendingPush) return;
     pullFromRemote();
+  }
+  // ---- Calendrier externe importé (Google/Apple, lecture seule) ----
+  // Le lien .ics étant public, on pourrait le fetch() directement depuis le
+  // navigateur, mais la plupart des serveurs (Google, iCloud) ne posent pas
+  // les en-têtes CORS nécessaires : le fetch() échouerait silencieusement
+  // avec une erreur réseau. On passe donc par le script Apps Script déjà en
+  // place (action=icsImport) qui, lui, fait le fetch() côté serveur (aucune
+  // restriction CORS pour Apps Script) et renvoie les évènements déjà
+  // parsés en JSON.
+  function refreshExternalCalendar(userId){
+    const url = (data.settings.icsImport && data.settings.icsImport[userId]) || '';
+    const statusEl = document.getElementById('icsStatus_' + userId);
+    const setSt = (state, text)=>{
+      if(!statusEl) return;
+      statusEl.textContent = text || '';
+      statusEl.className = 'sync-status ' + state;
+    };
+    if(!url){
+      externalEvents[userId] = [];
+      setSt('none', '');
+      return Promise.resolve();
+    }
+    if(!syncUrl){
+      setSt('error', "⚠️ Configure d'abord l'URL de synchronisation Google Sheet ci-dessus");
+      return Promise.resolve();
+    }
+    setSt('syncing', '🔄 Synchronisation…');
+    return fetch(syncUrl + '?action=icsImport&url=' + encodeURIComponent(url))
+      .then(r=>r.json())
+      .then(resp=>{
+        if(resp && resp.ok){
+          externalEvents[userId] = resp.events || [];
+          setSt('ok', '✅ ' + externalEvents[userId].length + ' évènement(s)');
+        } else {
+          setSt('error', '⚠️ ' + ((resp && resp.error) || 'Erreur de lecture du calendrier'));
+        }
+        if(activeTab === 'calendar') renderYear();
+      })
+      .catch(()=>{ setSt('error', '⚠️ Erreur de connexion'); });
+  }
+  function refreshAllExternalCalendars(){
+    USER_KEYS.forEach(u=>{
+      if(data.settings.icsImport && data.settings.icsImport[u]) refreshExternalCalendar(u);
+    });
+  }
+  // ---- Export vers iCloud (CalDAV, voir Code.gs) ----
+  // Les identifiants (email Apple + mot de passe d'application) ne transitent
+  // JAMAIS par data/localStorage/le Sheet : un simple POST dédié les envoie
+  // une fois vers le script Apps Script, qui les garde de son côté
+  // (PropertiesService, jamais renvoyé par doGet). Ici on ne garde en mémoire
+  // que le nécessaire pour savoir SI des identifiants sont enregistrés (pas
+  // leur valeur), via checkIcloudCredsStatus.
+  function postAction(action, extra){
+    if(!syncUrl) return Promise.reject(new Error('Aucune URL de synchronisation configurée'));
+    return fetch(syncUrl, { method:'POST', body: JSON.stringify(Object.assign({ action }, extra)) })
+      .then(r=>r.json());
+  }
+  function checkIcloudCredsStatus(userId){
+    const el = document.getElementById('icloudCredsStatus_' + userId);
+    if(!el || !syncUrl) return;
+    postAction('icloudStatus', { user: userId }).then(resp=>{
+      if(resp && resp.ok){
+        el.textContent = resp.hasCreds ? '✅ Identifiants enregistrés' : '';
+        el.className = 'sync-status ' + (resp.hasCreds ? 'ok' : 'none');
+      }
+    }).catch(()=>{});
+  }
+  function saveIcloudCredentials(userId){
+    const emailInput = document.getElementById('icloudEmail_' + userId);
+    const pwdInput = document.getElementById('icloudPwd_' + userId);
+    const statusEl = document.getElementById('icloudCredsStatus_' + userId);
+    const appleId = emailInput.value.trim();
+    const appPassword = pwdInput.value.trim();
+    if(!appleId || !appPassword){ alert("Renseigne l'identifiant Apple et le mot de passe d'application."); return; }
+    if(statusEl){ statusEl.textContent = '🔄 Enregistrement…'; statusEl.className = 'sync-status syncing'; }
+    postAction('icloudSetCreds', { user: userId, appleId, appPassword })
+      .then(resp=>{
+        // Le mot de passe ne reste JAMAIS affiché ni en mémoire après l'envoi,
+        // qu'il ait réussi ou non — à ressaisir en cas d'échec.
+        pwdInput.value = '';
+        if(resp && resp.ok){
+          if(statusEl){ statusEl.textContent = '✅ Identifiants enregistrés'; statusEl.className = 'sync-status ok'; }
+        } else {
+          if(statusEl){ statusEl.textContent = '⚠️ ' + ((resp && resp.error) || 'Échec'); statusEl.className = 'sync-status error'; }
+        }
+      })
+      .catch(()=>{
+        pwdInput.value = '';
+        if(statusEl){ statusEl.textContent = '⚠️ Erreur de connexion'; statusEl.className = 'sync-status error'; }
+      });
+  }
+  function testIcloudConnection(userId){
+    const statusEl = document.getElementById('icloudCredsStatus_' + userId);
+    if(statusEl){ statusEl.textContent = '🔄 Test en cours…'; statusEl.className = 'sync-status syncing'; }
+    postAction('icloudTest', { user: userId })
+      .then(resp=>{
+        if(resp && resp.ok){
+          if(statusEl){ statusEl.textContent = '✅ Connexion réussie'; statusEl.className = 'sync-status ok'; }
+        } else {
+          if(statusEl){ statusEl.textContent = '⚠️ ' + ((resp && resp.error) || 'Échec de connexion'); statusEl.className = 'sync-status error'; }
+        }
+      })
+      .catch(()=>{
+        if(statusEl){ statusEl.textContent = '⚠️ Erreur de connexion'; statusEl.className = 'sync-status error'; }
+      });
+  }
+  // Fusionne les jours consécutifs partageant le même statut (catégorie, en
+  // ignorant le détail demi-journée AM/PM — l'évènement iCloud exporté reste
+  // "journée entière", cette granularité n'est pas reflétée côté iCloud) en
+  // périodes {start, end} pour CETTE catégorie chez CET utilisateur.
+  function buildStatusRanges(userId, catKey){
+    const dates = Object.keys(data.days).filter(ds=>{
+      const st = data.days[ds][userId] && data.days[ds][userId].status;
+      return st && st.replace(/_am$|_pm$/, '') === catKey;
+    }).sort();
+    const ranges = [];
+    let start = null, prev = null;
+    dates.forEach(ds=>{
+      if(start && prev && shiftDs(prev, 1) === ds){ prev = ds; return; }
+      if(start) ranges.push({ start, end: prev });
+      start = ds; prev = ds;
+    });
+    if(start) ranges.push({ start, end: prev });
+    return ranges;
+  }
+  // État complet à exporter pour un utilisateur (évènements réels + périodes
+  // congé/RTT/télétravail posées) : recalculé à chaque tentative d'envoi, JAMAIS
+  // stocké dans data (voir runIcloudExport pour la comparaison qui évite les
+  // envois inutiles).
+  function buildIcloudExportItems(userId){
+    const items = [];
+    Object.keys(data.days).sort().forEach(ds=>{
+      const bucket = data.days[ds][userId];
+      const evs = (bucket && bucket.events) || [];
+      evs.forEach(ev=>{
+        // Un évènement "journée entière" multi-jours partage le même id sur
+        // chacun des jours qu'il couvre (voir saveEvent) : on ne le prend
+        // qu'une fois, sur son 1er jour, pour ne pas l'envoyer en double.
+        if(ev.allDay && ev.dateStart && ev.dateStart !== ds) return;
+        items.push({
+          kind: 'event', id: ev.id, title: ev.title, allDay: !!ev.allDay, ds,
+          dateStart: ev.dateStart, dateEnd: ev.dateEnd, start: ev.start, end: ev.end,
+          location: ev.location || '', notes: ev.notes || ''
+        });
+      });
+    });
+    CATEGORY_KEYS.forEach(catKey=>{
+      const cat = data.settings.categories[userId][catKey];
+      if(!cat || !cat.enabled) return;
+      buildStatusRanges(userId, catKey).forEach(r=>{
+        items.push({ kind: 'status', catKey, startDs: r.start, endDs: r.end, label: categoryLabel(userId, catKey) });
+      });
+    });
+    return items;
+  }
+  let icloudExportTimer = null;
+  let lastIcloudSnapshot = { user1: null, user2: null };
+  function scheduleIcloudExport(){
+    clearTimeout(icloudExportTimer);
+    icloudExportTimer = setTimeout(runIcloudExport, 1500);
+  }
+  function runIcloudExport(){
+    if(!syncUrl) return;
+    USER_KEYS.forEach(userId=>{
+      if(!(data.settings.icloudExportEnabled && data.settings.icloudExportEnabled[userId])) return;
+      const items = buildIcloudExportItems(userId);
+      const snapshot = JSON.stringify(items);
+      // Rien de pertinent (congés/RTT/évènements) n'a changé depuis le
+      // dernier envoi réussi : on évite de repousser en boucle pour un
+      // changement sans rapport (renommer un utilisateur, changer une
+      // couleur...), qui appelle quand même save() → scheduleIcloudExport().
+      if(snapshot === lastIcloudSnapshot[userId]) return;
+      postAction('icloudReconcile', { user: userId, items })
+        .then(resp=>{
+          if(resp && resp.ok) lastIcloudSnapshot[userId] = snapshot;
+          // En cas d'échec, on NE mémorise PAS ce snapshot : le prochain
+          // changement (ou le prochain cycle) redéclenchera un essai.
+        })
+        .catch(()=>{});
+    });
   }
   // Utilisé quand on connecte une nouvelle URL : si le Sheet est déjà rempli
   // (autre appareil), on l'adopte ; s'il est vide, on l'alimente avec les
@@ -2081,6 +2362,37 @@
       return (a.start || '').localeCompare(b.start || '');
     });
   }
+  // ---- Calendrier externe importé (lecture seule, voir refreshExternalCalendar) ----
+  // Jamais fusionné dans data.days : ce cache mémoire n'est ni sauvegardé en
+  // localStorage, ni renvoyé au Sheet par pushToRemote (qui n'envoie que
+  // `data`) — sinon chaque synchronisation dupliquerait pour de bon des
+  // copies en lecture seule d'évènements externes dans les données réelles.
+  let externalEvents = { user1: [], user2: [] };
+  const EXTERNAL_EVENT_COLOR = '#8e8e93'; // gris système Apple, neutre
+  function getExternalDayEvents(ds, userId){
+    const list = externalEvents[userId] || [];
+    return list.filter(ev=>{
+      if(ev.allDay){
+        return ds >= (ev.dateStart || ds) && ds <= (ev.dateEnd || ev.dateStart || ds);
+      }
+      return ev.ds === ds;
+    }).map(ev=>Object.assign({}, ev, { external: true, color: EXTERNAL_EVENT_COLOR }));
+  }
+  // Résumé en lecture seule d'un évènement importé (Google/Apple) : pas de
+  // modale d'édition (rien à modifier ici, la source de vérité est le
+  // calendrier externe) — un simple alert() suffit et fonctionne de façon
+  // fiable jusque dans l'appli Xcode (voir WKUIDelegate côté Swift).
+  function showExternalEventInfo(ev){
+    const lines = [ev.title || '(sans titre)'];
+    if(ev.allDay){
+      lines.push(ev.dateStart === ev.dateEnd || !ev.dateEnd ? ev.dateStart : (ev.dateStart + ' → ' + ev.dateEnd));
+    } else {
+      lines.push(ev.ds + (ev.start ? ' ' + ev.start + (ev.end ? '–' + ev.end : '') : ''));
+    }
+    if(ev.location) lines.push('📍 ' + ev.location);
+    lines.push('— Importé depuis un calendrier externe (lecture seule)');
+    alert(lines.join('\n'));
+  }
   // Combine les évènements des utilisateurs VISIBLES sur ce jour (cases
   // "Afficher" en haut de page) : chaque évènement est renvoyé sur une copie
   // superficielle taggée _owner (jamais l'objet original), pour router
@@ -2090,6 +2402,10 @@
     let combined = [];
     visibleUserKeys().forEach(u=>{
       combined = combined.concat(getDayEvents(ds, u).map(ev=>Object.assign({}, ev, { _owner: u })));
+      // Évènements du calendrier externe importé (voir refreshExternalCalendar) :
+      // ajoutés en plus, jamais stockés dans data.days (lecture seule, pas de
+      // calendarId donc eventColor() retombe sur ev.color = gris neutre).
+      combined = combined.concat(getExternalDayEvents(ds, u).map(ev=>Object.assign({}, ev, { _owner: u })));
     });
     // Écran "Calendriers" (façon Apple) : un calendrier décoché (cal.visible
     // === false) masque ses évènements du calendrier, sans les supprimer —
@@ -2634,13 +2950,17 @@
   // Jour, sur le bloc positionné dans la grille horaire).
   function buildEventChip(ds, ev){
     const chip = document.createElement('div');
-    chip.className = 'event-chip';
-    chip.textContent = ev.title;
+    chip.className = 'event-chip' + (ev.external ? ' event-external' : '');
+    chip.textContent = (ev.external ? '☁ ' : '') + ev.title;
     chip.title = ev.title + (ev.location ? ' · ' + ev.location : '');
     const color = eventColor(ev);
     chip.style.background = pastelOf(color);
     chip.style.color = darkOf(color);
-    chip.addEventListener('click', (e)=>{ e.stopPropagation(); openEventModal(ds, ev.id, ev._owner); });
+    chip.addEventListener('click', (e)=>{
+      e.stopPropagation();
+      if(ev.external) showExternalEventInfo(Object.assign({}, ev, { ds }));
+      else openEventModal(ds, ev.id, ev._owner);
+    });
     return chip;
   }
   // Pose le fond (plein ou dégradé demi-journée) d'un statut sur un élément
@@ -2882,6 +3202,7 @@
           openSpans.set(key, {
             colStart: col, colEnd: col, title: ev.title, ds: cell.ds, id: ev.id,
             color: eventColor(ev), location: ev.location || '', userId: ev._owner,
+            external: !!ev.external,
             hiddenIds: [{ ds: cell.ds, id: ev.id }]
           });
         }
@@ -3093,15 +3414,19 @@
           }
           if(top === null) top = r1.top - gridRect.top;
           const bar = document.createElement('div');
-          bar.className = 'day-allday-bar' + (big ? '' : ' small');
-          bar.textContent = sp.title;
+          bar.className = 'day-allday-bar' + (big ? '' : ' small') + (sp.external ? ' event-external' : '');
+          bar.textContent = (sp.external ? '☁ ' : '') + sp.title;
           bar.title = sp.title + (sp.location ? ' · ' + sp.location : '');
           bar.style.background = pastelOf(sp.color);
           bar.style.color = darkOf(sp.color);
           bar.style.left = (r1.left - gridRect.left) + 'px';
           bar.style.top = (top + sp.lane*barPitch) + 'px';
           bar.style.width = (r2.right - r1.left) + 'px';
-          bar.addEventListener('click', (e)=>{ e.stopPropagation(); openEventModal(sp.ds, sp.id, sp.userId); });
+          bar.addEventListener('click', (e)=>{
+            e.stopPropagation();
+            if(sp.external) showExternalEventInfo({ title: sp.title, location: sp.location, allDay: true, dateStart: sp.ds, dateEnd: sp.ds });
+            else openEventModal(sp.ds, sp.id, sp.userId);
+          });
           grid.appendChild(bar);
         });
       });
@@ -3161,7 +3486,8 @@
     const block = document.createElement('div');
     block.className = 'event-block'
       + (opts.continuesFromPrev ? ' continues-prev' : '')
-      + (!opts.continuesFromPrev && overnight ? ' continues-next' : '');
+      + (!opts.continuesFromPrev && overnight ? ' continues-next' : '')
+      + (ev.external ? ' event-external' : '');
     const color = eventColor(ev);
     block.style.background = pastelOf(color);
     block.style.color = darkOf(color);
@@ -3169,21 +3495,26 @@
     block.style.top = ((startMin/60) * HOUR_H) + 'px';
     block.style.height = Math.max(((endMin-startMin)/60) * HOUR_H, 18) + 'px';
     const timeLabel = opts.continuesFromPrev ? ('→' + ev.end + ' ') : (showTime && ev.start ? ev.start + ' ' : '');
-    block.textContent = timeLabel + ev.title;
+    block.textContent = (ev.external ? '☁ ' : '') + timeLabel + ev.title;
     block.title = ev.title + (ev.start ? ' (' + ev.start + (ev.end ? '–' + ev.end : '') + ')' : '') + (ev.location ? ' · ' + ev.location : '');
     // Glisser pour déplacer/redimensionner (voir enableEventDragResize) :
     // vue Jour uniquement (showTime, une seule colonne — en vue Semaine ça
     // resterait ambigu de savoir si on change l'heure ou le jour), jamais
     // sur un bloc "suite" (continuesFromPrev, rattaché à la veille, pas de
-    // vrai évènement à modifier ici) ni sur un évènement qui déborde après
-    // minuit (overnight : sa vraie fin n'est pas dans ce jour). Dans tous
+    // vrai évènement à modifier ici), sur un évènement qui déborde après
+    // minuit (overnight : sa vraie fin n'est pas dans ce jour), ni sur un
+    // évènement externe importé (lecture seule, rien à déplacer). Dans tous
     // les autres cas (vue Semaine, blocs non interactifs), on garde le
     // simple clic → modale comme avant.
-    const interactive = showTime && !opts.continuesFromPrev && !overnight;
+    const interactive = showTime && !opts.continuesFromPrev && !overnight && !ev.external;
     if(interactive){
       enableEventDragResize(block, ds, ev, startMin, endMin);
     } else {
-      block.addEventListener('click', (e)=>{ e.stopPropagation(); openEventModal(ds, ev.id, ev._owner); });
+      block.addEventListener('click', (e)=>{
+        e.stopPropagation();
+        if(ev.external) showExternalEventInfo(Object.assign({}, ev, { ds }));
+        else openEventModal(ds, ev.id, ev._owner);
+      });
     }
     return block;
   }
@@ -3490,15 +3821,19 @@
           const r1 = startEl.getBoundingClientRect();
           const r2 = endEl.getBoundingClientRect();
           const bar = document.createElement('div');
-          bar.className = 'day-allday-bar';
-          bar.textContent = sp.title;
+          bar.className = 'day-allday-bar' + (sp.external ? ' event-external' : '');
+          bar.textContent = (sp.external ? '☁ ' : '') + sp.title;
           bar.title = sp.title + (sp.location ? ' · ' + sp.location : '');
           bar.style.background = pastelOf(sp.color);
           bar.style.color = darkOf(sp.color);
           bar.style.left = (r1.left - rowRect.left) + 'px';
           bar.style.top = (5 + sp.lane * 21) + 'px';
           bar.style.width = (r2.right - r1.left) + 'px';
-          bar.addEventListener('click', (e)=>{ e.stopPropagation(); openEventModal(sp.ds, sp.id, sp.userId); });
+          bar.addEventListener('click', (e)=>{
+            e.stopPropagation();
+            if(sp.external) showExternalEventInfo({ title: sp.title, location: sp.location, allDay: true, dateStart: sp.ds, dateEnd: sp.ds });
+            else openEventModal(sp.ds, sp.id, sp.userId);
+          });
           allDayRow.appendChild(bar);
         });
       });
@@ -4086,6 +4421,15 @@
       if(recTitle) recTitle.textContent = 'Récapitulatif des jours — ' + name;
       renderCalendarsTable(u);
       renderCategoriesTable(u);
+      const extLabel = document.getElementById('externalCalLabel_' + u);
+      if(extLabel) extLabel.textContent = 'Calendrier externe — ' + name;
+      const icsInput = document.getElementById('icsUrl_' + u);
+      if(icsInput) icsInput.value = (data.settings.icsImport && data.settings.icsImport[u]) || '';
+      const icloudLabel = document.getElementById('icloudExportLabel_' + u);
+      if(icloudLabel) icloudLabel.textContent = 'Export iCloud — ' + name;
+      const icloudToggle = document.getElementById('icloudExportEnabled_' + u);
+      if(icloudToggle) icloudToggle.checked = !!(data.settings.icloudExportEnabled && data.settings.icloudExportEnabled[u]);
+      checkIcloudCredsStatus(u);
     });
     // Bouton (et non plus case à cocher) : le texte du bouton EST déjà le nom
     // de l'utilisateur, plus besoin d'un <span> de libellé séparé à côté.
@@ -4867,6 +5211,39 @@
     if(!syncUrl){ alert('Renseigne d\'abord une URL de script.'); return; }
     pushToRemote().then(()=>alert('Données envoyées vers le Sheet.'));
   });
+  USER_KEYS.forEach(u=>{
+    const input = document.getElementById('icsUrl_' + u);
+    if(!input) return;
+    input.addEventListener('change', (e)=>{
+      if(!data.settings.icsImport) data.settings.icsImport = { user1:'', user2:'' };
+      data.settings.icsImport[u] = e.target.value.trim();
+      save();
+      refreshExternalCalendar(u);
+    });
+  });
+  document.querySelectorAll('.icsRefreshBtn').forEach(btn=>{
+    btn.addEventListener('click', ()=>{ refreshExternalCalendar(btn.dataset.user); });
+  });
+  document.querySelectorAll('.icloudSaveCredsBtn').forEach(btn=>{
+    btn.addEventListener('click', ()=>{ saveIcloudCredentials(btn.dataset.user); });
+  });
+  document.querySelectorAll('.icloudTestBtn').forEach(btn=>{
+    btn.addEventListener('click', ()=>{ testIcloudConnection(btn.dataset.user); });
+  });
+  USER_KEYS.forEach(u=>{
+    const toggle = document.getElementById('icloudExportEnabled_' + u);
+    if(!toggle) return;
+    toggle.addEventListener('change', (e)=>{
+      if(!data.settings.icloudExportEnabled) data.settings.icloudExportEnabled = { user1:false, user2:false };
+      data.settings.icloudExportEnabled[u] = e.target.checked;
+      // Repart d'un état "jamais envoyé" pour cet utilisateur : activer (ou
+      // réactiver) doit forcer un envoi complet immédiat, même si le contenu
+      // à exporter est identique à un précédent essai (ex. juste après avoir
+      // désactivé puis réactivé sans rien changer d'autre entre-temps).
+      lastIcloudSnapshot[u] = null;
+      save();
+    });
+  });
   // Navigation par glissement (souris) / balayage (tactile / trackpad) : swipe
   // vers la gauche = période suivante, vers la droite = période précédente.
   (function setupSwipeNav(){
@@ -4984,6 +5361,11 @@
     }, 200);
   });
   setInterval(autoPull, 10 * 60 * 1000);
+  // Calendrier externe : pas besoin d'un rythme aussi soutenu que le Sheet
+  // partagé (ce sont des évènements en lecture seule, qui bougent rarement
+  // d'une minute à l'autre) — 10 minutes également, au démarrage puis en
+  // continu.
+  setInterval(refreshAllExternalCalendars, 10 * 60 * 1000);
   renderSettings();
   renderYear();
   // Vue Année par défaut : directement positionné sur le mois en cours (pas
@@ -4993,6 +5375,7 @@
   scrollToCurrentYearMonth(false);
   setSyncStatus(syncUrl ? 'ok' : 'none');
   if(syncUrl){ autoPull(); }
+  refreshAllExternalCalendars();
 })();
 </script>
 </body>
