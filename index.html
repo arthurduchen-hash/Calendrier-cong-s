@@ -285,7 +285,15 @@
   .conge-zone.pending { outline:2px dashed #555; outline-offset:-2px; }
   .user-settings-block + .user-settings-block { margin-top:22px; padding-top:18px; border-top:1px dashed var(--border); }
   .del-btn { background:none; border:none; border-radius:0; color:#c0392b; cursor:pointer; font-size:15px; }
-  #addHoliday, .add-calendar-btn { margin-top:4px; border:1px dashed #aaa; background:#fff; padding:6px 12px; border-radius:10px; cursor:pointer; font-size:13px; }
+  #addHoliday, .add-calendar-btn, .icsAddBtn { margin-top:4px; border:1px dashed #aaa; background:#fff; padding:6px 12px; border-radius:10px; cursor:pointer; font-size:13px; }
+  /* Une ligne par calendrier .ics abonné (voir renderIcsSubsList) : libellé
+     court à gauche (juste pour s'y retrouver, ex. "Boulot"), lien complet au
+     milieu, suppression à droite — même esprit compact que les lignes de la
+     table Catégories/Calendriers. */
+  .ics-sub-row { display:flex; gap:6px; align-items:center; margin-bottom:6px; }
+  .ics-sub-row input[type="text"] { flex:1; min-width:0; }
+  .ics-sub-row .ics-sub-label { flex:0 0 90px; }
+  .ics-sub-row .ics-sub-url { flex:1 1 auto; }
   .settings-actions { display:flex; gap:10px; margin-top:16px; flex-wrap:wrap; }
   .months-grid {
     display:grid; grid-template-columns: repeat(3, 1fr); gap:16px;
@@ -1067,28 +1075,24 @@
     </div>
     <div class="hint">Colle ici l'URL obtenue après avoir déployé le script Google Apps Script fourni (Code.gs). Utilise la même URL sur tous tes appareils pour qu'ils partagent les mêmes données. Sans URL, le calendrier fonctionne comme avant, uniquement en local.</div>
     <h3>Calendriers externes (Google / Apple)</h3>
-    <div class="hint">Affiche ici, en lecture seule, les évènements d'un calendrier Google ou Apple/iCloud existant — colle son lien .ics public (voir "Comment obtenir ce lien ?" ci-dessous). Ces évènements apparaissent en gris pointillé, ne comptent dans aucun solde et ne peuvent pas être modifiés depuis cette appli.</div>
+    <div class="hint">Affiche ici, en lecture seule, les évènements d'un ou plusieurs calendriers Google/Apple existants — colle leurs liens .ics publics (voir "Comment obtenir ce lien ?" ci-dessous). Autant de calendriers que tu veux par utilisateur. Ces évènements apparaissent en gris pointillé, ne comptent dans aucun solde et ne peuvent pas être modifiés depuis cette appli.</div>
     <div class="user-settings-block" id="externalCalBlock_user1">
-      <h4 id="externalCalLabel_user1">Calendrier externe — Utilisateur 1</h4>
-      <div class="settings-field">
-        <label for="icsUrl_user1">Lien .ics public (Google ou Apple/iCloud)</label>
-        <input type="text" id="icsUrl_user1" placeholder="https://calendar.google.com/calendar/ical/.../public/basic.ics">
-      </div>
+      <h4 id="externalCalLabel_user1">Calendriers externes — Utilisateur 1</h4>
+      <div id="icsSubsList_user1"></div>
       <div class="settings-row">
+        <button type="button" class="icsAddBtn" data-user="user1">+ Ajouter un calendrier externe</button>
         <button type="button" class="icsRefreshBtn" data-user="user1">🔄 Synchroniser maintenant</button>
-        <span id="icsStatus_user1" class="sync-status none"></span>
       </div>
+      <span id="icsStatus_user1" class="sync-status none"></span>
     </div>
     <div class="user-settings-block" id="externalCalBlock_user2">
-      <h4 id="externalCalLabel_user2">Calendrier externe — Utilisateur 2</h4>
-      <div class="settings-field">
-        <label for="icsUrl_user2">Lien .ics public (Google ou Apple/iCloud)</label>
-        <input type="text" id="icsUrl_user2" placeholder="https://calendar.google.com/calendar/ical/.../public/basic.ics">
-      </div>
+      <h4 id="externalCalLabel_user2">Calendriers externes — Utilisateur 2</h4>
+      <div id="icsSubsList_user2"></div>
       <div class="settings-row">
+        <button type="button" class="icsAddBtn" data-user="user2">+ Ajouter un calendrier externe</button>
         <button type="button" class="icsRefreshBtn" data-user="user2">🔄 Synchroniser maintenant</button>
-        <span id="icsStatus_user2" class="sync-status none"></span>
       </div>
+      <span id="icsStatus_user2" class="sync-status none"></span>
     </div>
     <div class="hint">
       <b>Google Calendar</b> : sur calendar.google.com, Réglages du calendrier concerné → "Intégrer le calendrier" → copier "Adresse publique au format iCal" (le calendrier doit être rendu public dans "Autorisations d'accès").<br>
@@ -1682,6 +1686,26 @@
     result.user2 = defaultCalendarsForUser('user2');
     return result;
   }
+  function makeIcsSubId(){
+    return 'ics' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+  }
+  // Plusieurs calendriers externes (.ics) possibles par utilisateur, voir
+  // renderIcsSubsList. Migre l'ancien format (une seule URL en texte brut par
+  // utilisateur, avant que le multi-calendriers n'existe) vers une liste
+  // d'un seul élément, pour ne rien perdre pour qui l'avait déjà configuré.
+  function resolveIcsImport(incoming){
+    const raw = incoming && incoming.icsImport;
+    const result = { user1: [], user2: [] };
+    USER_KEYS.forEach(u=>{
+      const v = raw && raw[u];
+      if(Array.isArray(v)){
+        result[u] = v.filter(s=>s && s.url).map(s=>({ id: s.id || makeIcsSubId(), label: s.label || '', url: s.url }));
+      } else if(typeof v === 'string' && v.trim()){
+        result[u] = [{ id: makeIcsSubId(), label: '', url: v.trim() }];
+      }
+    });
+    return result;
+  }
   // S'assure que chaque évènement d'UN utilisateur (dans days) a un
   // calendarId valide, en rattachant au calendrier par défaut ceux créés
   // avant cette fonctionnalité (qui n'avaient qu'une couleur individuelle
@@ -1733,15 +1757,17 @@
         calendars: { user1: defaultCalendarsForUser('user1'), user2: defaultCalendarsForUser('user2') },
         startYear: y,
         holidayRules: defaultHolidayRules(),
-        // Calendrier externe (Google/Apple) par utilisateur — voir section
-        // "Calendriers externes" des Paramètres. icsImport : URL .ics
-        // PUBLIQUE en lecture seule (aucune donnée sensible, peut être
-        // synchronisée telle quelle) ; icloudExportEnabled : simple
-        // interrupteur, les vrais identifiants (Apple ID + mot de passe
-        // d'application) ne transitent JAMAIS par ici — voir
-        // saveIcloudCredentials, qui les envoie séparément au script Apps
-        // Script pour un stockage strictement côté serveur.
-        icsImport: { user1: '', user2: '' },
+        // Calendrier(s) externe(s) (Google/Apple) par utilisateur — voir
+        // section "Calendriers externes" des Paramètres. icsImport : LISTE
+        // de { id, label, url } par utilisateur (plusieurs calendriers
+        // externes possibles, voir renderIcsSubsList) — URL .ics PUBLIQUE en
+        // lecture seule, aucune donnée sensible, peut être synchronisée
+        // telle quelle ; icloudExportEnabled : simple interrupteur, les
+        // vrais identifiants (Apple ID + mot de passe d'application) ne
+        // transitent JAMAIS par ici — voir saveIcloudCredentials, qui les
+        // envoie séparément au script Apps Script pour un stockage
+        // strictement côté serveur.
+        icsImport: { user1: [], user2: [] },
         icloudExportEnabled: { user1: false, user2: false }
       },
       lastViewedYear: y,
@@ -1802,6 +1828,7 @@
       d.settings.users = resolveUsers(incoming);
       d.settings.categories = resolveCategories(incoming);
       d.settings.calendars = resolveCalendars(incoming);
+      d.settings.icsImport = resolveIcsImport(incoming);
       delete d.settings.congesParAn; delete d.settings.rttParAn;
       delete d.settings.capReportEnabled; delete d.settings.capReport;
       d.lastViewedYear = parsed.lastViewedYear || d.lastViewedYear;
@@ -1927,6 +1954,7 @@
     merged.settings.users = resolveUsers(incoming);
     merged.settings.categories = resolveCategories(incoming);
     merged.settings.calendars = resolveCalendars(incoming);
+    merged.settings.icsImport = resolveIcsImport(incoming);
     delete merged.settings.congesParAn; delete merged.settings.rttParAn;
     delete merged.settings.capReportEnabled; delete merged.settings.capReport;
     if(!(remote.settings && remote.settings.holidayRules && remote.settings.holidayRules.length)){
@@ -1970,15 +1998,20 @@
   // place (action=icsImport) qui, lui, fait le fetch() côté serveur (aucune
   // restriction CORS pour Apps Script) et renvoie les évènements déjà
   // parsés en JSON.
+  // Récupère et fusionne TOUS les calendriers .ics abonnés par cet
+  // utilisateur (voir renderIcsSubsList — plusieurs calendriers possibles) :
+  // un fetch séparé par abonnement (en parallèle), fusionnés en une seule
+  // liste. Chaque abonnement garde son fuseau/format propre, mais le rendu
+  // (getExternalDayEvents) ne distingue pas leur origine.
   function refreshExternalCalendar(userId){
-    const url = (data.settings.icsImport && data.settings.icsImport[userId]) || '';
+    const subs = (data.settings.icsImport && data.settings.icsImport[userId]) || [];
     const statusEl = document.getElementById('icsStatus_' + userId);
     const setSt = (state, text)=>{
       if(!statusEl) return;
       statusEl.textContent = text || '';
       statusEl.className = 'sync-status ' + state;
     };
-    if(!url){
+    if(!subs.length){
       externalEvents[userId] = [];
       setSt('none', '');
       return Promise.resolve();
@@ -1988,23 +2021,87 @@
       return Promise.resolve();
     }
     setSt('syncing', '🔄 Synchronisation…');
-    return fetch(syncUrl + '?action=icsImport&url=' + encodeURIComponent(url))
-      .then(r=>r.json())
-      .then(resp=>{
-        if(resp && resp.ok){
-          externalEvents[userId] = resp.events || [];
-          setSt('ok', '✅ ' + externalEvents[userId].length + ' évènement(s)');
-        } else {
-          setSt('error', '⚠️ ' + ((resp && resp.error) || 'Erreur de lecture du calendrier'));
-        }
-        if(activeTab === 'calendar') renderYear();
-      })
-      .catch(()=>{ setSt('error', '⚠️ Erreur de connexion'); });
+    return Promise.all(subs.map(sub=>
+      fetch(syncUrl + '?action=icsImport&url=' + encodeURIComponent(sub.url))
+        .then(r=>r.json())
+        .then(resp=>({ sub, resp }))
+        .catch(()=>({ sub, resp: { ok:false, error:'Erreur de connexion' } }))
+    )).then(results=>{
+      let merged = [];
+      const errors = [];
+      results.forEach(({ sub, resp })=>{
+        if(resp && resp.ok) merged = merged.concat(resp.events || []);
+        else errors.push((sub.label || sub.url) + ' : ' + ((resp && resp.error) || 'échec'));
+      });
+      externalEvents[userId] = merged;
+      if(errors.length){
+        setSt('error', '⚠️ ' + merged.length + ' évènement(s), ' + errors.length + ' calendrier(s) en erreur — ' + errors[0]);
+      } else {
+        setSt('ok', '✅ ' + merged.length + ' évènement(s) sur ' + subs.length + ' calendrier(s)');
+      }
+      if(activeTab === 'calendar') renderYear();
+    });
   }
   function refreshAllExternalCalendars(){
     USER_KEYS.forEach(u=>{
-      if(data.settings.icsImport && data.settings.icsImport[u]) refreshExternalCalendar(u);
+      if(data.settings.icsImport && data.settings.icsImport[u] && data.settings.icsImport[u].length) refreshExternalCalendar(u);
     });
+  }
+  // Construit la liste éditable des calendriers .ics abonnés (Paramètres >
+  // "Calendriers externes") : une ligne par abonnement (libellé court + lien
+  // complet + suppression), plus le bouton "+ Ajouter" géré séparément (voir
+  // wiring .icsAddBtn). Reconstruit entièrement à chaque appel, comme
+  // renderCalendarsTable/renderCategoriesTable.
+  function renderIcsSubsList(userId){
+    const container = document.getElementById('icsSubsList_' + userId);
+    if(!container) return;
+    container.innerHTML = '';
+    const subs = (data.settings.icsImport && data.settings.icsImport[userId]) || [];
+    subs.forEach(sub=>{
+      const row = document.createElement('div');
+      row.className = 'ics-sub-row';
+      const labelInput = document.createElement('input');
+      labelInput.type = 'text';
+      labelInput.className = 'ics-sub-label';
+      labelInput.placeholder = 'Nom (ex. Boulot)';
+      labelInput.value = sub.label || '';
+      labelInput.addEventListener('change', ()=>{
+        sub.label = labelInput.value.trim();
+        save();
+      });
+      const urlInput = document.createElement('input');
+      urlInput.type = 'text';
+      urlInput.className = 'ics-sub-url';
+      urlInput.placeholder = 'https://.../basic.ics';
+      urlInput.value = sub.url || '';
+      urlInput.addEventListener('change', ()=>{
+        sub.url = urlInput.value.trim();
+        save();
+        refreshExternalCalendar(userId);
+      });
+      const delBtn = document.createElement('button');
+      delBtn.type = 'button';
+      delBtn.className = 'del-btn';
+      delBtn.textContent = '✕';
+      delBtn.title = 'Supprimer ce calendrier externe';
+      delBtn.addEventListener('click', ()=>{
+        data.settings.icsImport[userId] = data.settings.icsImport[userId].filter(s=>s.id !== sub.id);
+        save();
+        renderIcsSubsList(userId);
+        refreshExternalCalendar(userId);
+      });
+      row.appendChild(labelInput);
+      row.appendChild(urlInput);
+      row.appendChild(delBtn);
+      container.appendChild(row);
+    });
+  }
+  function addIcsSub(userId){
+    if(!data.settings.icsImport) data.settings.icsImport = { user1:[], user2:[] };
+    if(!data.settings.icsImport[userId]) data.settings.icsImport[userId] = [];
+    data.settings.icsImport[userId].push({ id: makeIcsSubId(), label: '', url: '' });
+    save();
+    renderIcsSubsList(userId);
   }
   // ---- Export vers iCloud (CalDAV, voir Code.gs) ----
   // Les identifiants (email Apple + mot de passe d'application) ne transitent
@@ -4422,9 +4519,8 @@
       renderCalendarsTable(u);
       renderCategoriesTable(u);
       const extLabel = document.getElementById('externalCalLabel_' + u);
-      if(extLabel) extLabel.textContent = 'Calendrier externe — ' + name;
-      const icsInput = document.getElementById('icsUrl_' + u);
-      if(icsInput) icsInput.value = (data.settings.icsImport && data.settings.icsImport[u]) || '';
+      if(extLabel) extLabel.textContent = 'Calendriers externes — ' + name;
+      renderIcsSubsList(u);
       const icloudLabel = document.getElementById('icloudExportLabel_' + u);
       if(icloudLabel) icloudLabel.textContent = 'Export iCloud — ' + name;
       const icloudToggle = document.getElementById('icloudExportEnabled_' + u);
@@ -5211,15 +5307,8 @@
     if(!syncUrl){ alert('Renseigne d\'abord une URL de script.'); return; }
     pushToRemote().then(()=>alert('Données envoyées vers le Sheet.'));
   });
-  USER_KEYS.forEach(u=>{
-    const input = document.getElementById('icsUrl_' + u);
-    if(!input) return;
-    input.addEventListener('change', (e)=>{
-      if(!data.settings.icsImport) data.settings.icsImport = { user1:'', user2:'' };
-      data.settings.icsImport[u] = e.target.value.trim();
-      save();
-      refreshExternalCalendar(u);
-    });
+  document.querySelectorAll('.icsAddBtn').forEach(btn=>{
+    btn.addEventListener('click', ()=>{ addIcsSub(btn.dataset.user); });
   });
   document.querySelectorAll('.icsRefreshBtn').forEach(btn=>{
     btn.addEventListener('click', ()=>{ refreshExternalCalendar(btn.dataset.user); });
